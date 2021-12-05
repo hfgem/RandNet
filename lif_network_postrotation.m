@@ -15,11 +15,11 @@ n = 200; %number of neurons
 clusters = round(n/20); %number of clusters of neurons (for small n round(n/5), for large n round(n/20)) 
 
 %Interaction constants
-t_max = 1; %maximum amount of time (s)
+t_max = 2; %maximum amount of time (s)
 dt = 0.1*10^(-3); %timestep (s)
 tau_syn_E = 10*10^(-3); %AMPA/NMDA synaptic decay time constant (s)
 tau_syn_I = 5*10^(-3); %GABA synaptic decay time constant (s)
-tau_sra = 30*10^(-3); %spike rate adaptation time constant (s)
+tau_sra = 15*10^(-3); %spike rate adaptation time constant (s)
 tau_stdp = 5*10^(-3); %STDP time constant (s)
 E_K = -80*10^(-3); %potassium reversal potential (V) %-75 or -80 mV
 E_L = -70*10^(-3); %leak reversal potential (V) %-60 - -70 mV range
@@ -33,13 +33,13 @@ V_syn_I = -70*10^(-3); %synaptic reversal potential (inhibitory) %generally -70 
 %______Split del_G_syn______
 % del_G_syn_E = 2*10^(-9); %synaptic conductance step following spike (S)
 % del_G_syn_I = 8*10^(-9); %synaptic conductance step following spike (S)
-del_G_syn_E_E = 2*10^(-9); %synaptic conductance step following spike (S)
-del_G_syn_I_I = 8*10^(-9); %synaptic conductance step following spike (S)
-del_G_syn_E_I = 2*10^(-9); %synaptic conductance step following spike (S)
-del_G_syn_I_E = 8*10^(-9); %synaptic conductance step following spike (S)
+del_G_syn_E_E = 9.5*10^(-9); %synaptic conductance step following spike (S)
+del_G_syn_I_I = 1.4*del_G_syn_E_E; %synaptic conductance step following spike (S)
+del_G_syn_E_I = 9.5*10^(-9); %synaptic conductance step following spike (S)
+del_G_syn_I_E = 1.4*del_G_syn_E_E; %synaptic conductance step following spike (S)
 
 %___________________________
-del_G_sra = 200*10^(-9); %spike rate adaptation conductance step following spike %ranges from 1-200 *10^(-9) (S)
+del_G_sra = 354e-09; %spike rate adaptation conductance step following spike %ranges from 1-200 *10^(-9) (S)
 %If want to have STDP, change connectivity_gain to > 0.
 connectivity_gain = 0; %0.005; %amount to increase or decrease connectivity by with each spike (more at the range of 0.002-0.005)
 IEI = 1; %inter-event-interval (s) the elapsed time between spikes to count separate events
@@ -48,7 +48,7 @@ IEI = 1; %inter-event-interval (s) the elapsed time between spikes to count sepa
 %'cluster' sets a cluster to threshold;
 %'current' means spikes depend on an input current of I_in; 
 %'neuron' sets a random selection of 2% of neurons to threshold
-type = 'neuron'; %'current'; %'cluster';
+type = 'current'; %'neuron'; %'cluster';
 
 % %Rhythmic current input: (uncomment if desired)
 % I_coeff = 0; %5.1*10^(-10); %set to 0 for no input current

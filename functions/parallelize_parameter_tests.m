@@ -57,20 +57,22 @@ function success = parallelize_parameter_tests(parameters,num_nets,...
     %   num_nets = number of network structures to test per parameter set 
     %   num_inits = number of network initializations to test per network
     %       structure
+    %   parameter_vec = 
     %OUTPUTS:
     %   success = A value in the range of [0,1] describing the fraction of
     %       successful initializations (passing criteria).
     %_________
     %Get index values for parameter combination
-    indices = 1:test_n^4;
-    [tau_ind,del_G_sra_ind,del_G_syn_E_ind,del_G_syn_I_ind] = ind2sub([test_n,test_n,test_n,test_n],indices);
+    [num_params, ~] = size(parameter_vec);
+    indices = 1:test_n^num_params;
+    size_vec = test_n * ones(1,num_params);
+    [ind_1,ind_2] = ind2sub(size_vec,indices);
     %Pull parameter combination
-    parameters.tau_sra = parameter_vec(1,tau_ind(ind));
-    parameters.del_G_sra = parameter_vec(2,del_G_sra_ind(ind));
-    parameters.del_G_syn_E_E = parameter_vec(3,del_G_syn_E_ind(ind));
-    parameters.del_G_syn_E_I = parameter_vec(3,del_G_syn_E_ind(ind));
-    parameters.del_G_syn_I_E = parameter_vec(4,del_G_syn_I_ind(ind));
-    parameters.del_G_syn_I_I = parameter_vec(4,del_G_syn_I_ind(ind));
+    parameters.del_G_sra = parameter_vec(1,ind_1(ind));
+    parameters.tau_sra = (-2.4*10^5)*parameters.del_G_sra + 0.11;
+    parameters.G_coeff = parameter_vec(1,ind_2(ind));
+    G_in = parameters.G_coeff*randn(parameters.n,parameters.t_steps+1)*parameters.G_scale;
+    parameters.G_in = G_in;
     %Run network initialization code
     passing_trials = zeros(1,num_nets);
     parfor i = 1:num_nets, passing_trials(i) = parallelize_networks(parameters,i, num_inits); end

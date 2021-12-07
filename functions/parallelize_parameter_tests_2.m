@@ -1,4 +1,4 @@
-function success = parallelize_parameter_tests(parameters,num_nets,...
+function avg_mat = parallelize_parameter_tests_2(parameters,num_nets,...
     num_inits, parameter_vec, test_n, ind)
     %_________
     %ABOUT: This function runs through a series of commands to test the
@@ -59,8 +59,15 @@ function success = parallelize_parameter_tests(parameters,num_nets,...
     %       structure
     %   parameter_vec = 
     %OUTPUTS:
-    %   success = A value in the range of [0,1] describing the fraction of
-    %       successful initializations (passing criteria).
+    %   avg_mat = A vector representing average values from all network
+    %   initializations and the firing initializations for each network
+    %   structure. Namely, the first dimension length is the number of
+    %   networks, the second dimension length is the number of
+    %   initializations, and the third dimension length is the 3 parameters
+    %   from each combination:
+    %       1. number of spiking neurons
+    %       2. average firing rate
+    %       3. average event length
     %_________
     %Get index values for parameter combination
     [num_params, ~] = size(parameter_vec);
@@ -74,9 +81,8 @@ function success = parallelize_parameter_tests(parameters,num_nets,...
     G_in = parameters.G_coeff*randn(parameters.n,parameters.t_steps+1)*parameters.G_scale;
     parameters.G_in = G_in;
     %Run network initialization code
-    passing_trials = zeros(1,num_nets);
-    parfor i = 1:num_nets, passing_trials(i) = parallelize_networks(parameters,i, num_inits); end
-    passing_trials = sum(passing_trials,'all');
-    success = passing_trials/(num_nets*num_inits); %store fraction of successful trials
-    disp([ind, success])
+    resp_mat = zeros(num_nets, 3);
+    parfor i = 1:num_nets, resp_mat(i,:) = parallelize_networks_2(parameters,i, num_inits); end
+    avg_mat = mean(resp_mat,1);
+    disp(strcat('Index #',string(ind),'= complete'))
 end

@@ -78,12 +78,12 @@ parameters.('n_I') = n_I;
 
 %% Set Up Grid Search Parameters
 %Number of parameter values to test
-test_n = 11;
+test_n = 21;
 
 %Define parameter vectors - and which parameters to test. Do not forget to
 %modify parallelize_parameter_tests.m
 del_G_sra_vec = linspace(200*10^(-9),400*10^(-9),test_n);
-G_coeff_vec = linspace(500,1000,test_n);
+G_coeff_vec = linspace(-100,0,test_n);
 
 parameter_vec = [del_G_sra_vec; G_coeff_vec];
 clear del_G_sra_vec G_i_vec
@@ -92,7 +92,6 @@ clear del_G_sra_vec G_i_vec
 save(strcat(save_path,'/parameter_vec.mat'),'parameter_vec','-v7.3')
 
 %Set up storage matrix
-%success = zeros(test_n,test_n,test_n,test_n);
 [num_params, ~] = size(parameter_vec);
 success = zeros(test_n*ones(1,num_params));
 %dim 1 = del_G_sra
@@ -102,7 +101,7 @@ success = zeros(test_n*ones(1,num_params));
 num_nets = 5; %number of network structure initializations
 num_inits = 5; %number of firing initializations
 
-%% Run Grid Search
+%% Run Grid Search With Only Success Parameters
 %Start parallel pool for parallelizing the grid search
 % parpool(4)
 
@@ -112,7 +111,7 @@ parfor ind = 1:test_n^2, success(ind) = parallelize_parameter_tests(parameters,n
     num_inits, parameter_vec, test_n, ind); end
 save(strcat(save_path,'/success.mat'),'success','-v7.3')
 
-%% Visualize Grid Search Results
+%% Visualize Success Grid Search Results
 %Recall dimensions:
 %dim 1 = tau_sra
 %dim 2 = del_G_sra
@@ -174,7 +173,7 @@ xlabel('\delta G_{syn_I}')
 ylabel('\delta G_{syn_E}')
 title('Avg Synaptic Step Success')
 
-%% Custom 3D Visualizations Based on Data
+%% Custom 3D Visualizations Based on Success Grid Search Data
 %Recall dimensions:
 %dim 1 = tau_sra
 %dim 2 = del_G_sra
@@ -232,7 +231,7 @@ for i = 1:test_n
 end
 linkaxes(axes)
 
-%% Plotting the relationship for 2 parameter test
+%% Plotting the Relationship for 2 Parameter Test in Success Grid Search
 [test_n,~] = size(success); 
 
 %Finding the maximum values and indices
@@ -257,3 +256,32 @@ hold on
 plot(unique(x_val), fit_curve_exp(unique(x_val)), 'DisplayName', 'Exponential Fit')
 plot(unique(x_val), fit_curve_poly(unique(x_val)), 'DisplayName', 'Polynomial Fit')
 legend()
+
+%% Run Value Grid Search
+
+results = zeros(test_n^2,3);
+
+%Loop through all parameter sets
+parfevalOnAll(gcp(), @warning, 0, 'off', 'MATLAB:singularMatrix');
+parfor ind = 1:test_n^2, results(ind,:) = parallelize_parameter_tests_2(parameters,num_nets,...
+    num_inits, parameter_vec, test_n, ind); end
+% parfor ind = 1:test_n^2, [num_spikers(ind), avg_fr(ind), avg_event_length(ind)] = parallelize_parameter_tests_2(parameters,num_nets,...
+%      num_inits, parameter_vec, test_n, ind); end
+save(strcat(save_path,'/results.mat'),'results','-v7.3')
+
+num_spikers = reshape(squeeze(results(:,1)),test_n,test_n);
+avg_fr = reshape(squeeze(results(:,2)),test_n,test_n);
+avg_event_length = reshape(squeeze(results(:,3)),test_n,test_n);
+
+%% Visualize Value Grid Search Results
+
+figure;
+subplot(1,3,1)
+imagesc(num_spikers)
+colorbar()
+subplot(1,3,2)
+imagesc(avg_fr)
+colorbar()
+subplot(1,3,3)
+imagesc(avg_event_length)
+colorbar()

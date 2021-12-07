@@ -1,12 +1,11 @@
-function success = parallelize_parameter_tests(parameters,num_nets,...
-    num_inits, parameter_vec, test_n, ind)
+function avg_mat = parallelize_networks_2(parameters, i, num_inits)
     %_________
     %ABOUT: This function runs through a series of commands to test the
     %outputs of a particular parameter set in comparison to a strict set of
     %criteria. This function is to be used in conjunction with
-    %network_tests2.m where a parallelized for loop calls this function,
-    %parallelize_networks.m where network initializations are parallelized,
-    %and parallelize_network_tests.m where network tests are parallelized.
+    %network_tests2.m where a parallelized for loop calls this function.
+    %This function then calls parallelize_network_tests.m to further
+    %parallelize the code.
     %
     %INPUTS:
     %   parameters = struct containing the following
@@ -54,29 +53,30 @@ function success = parallelize_parameter_tests(parameters,num_nets,...
     %           threshold at step 1, where the fraction is set on line 
     %           3. type = 'current', which means spiking depends entirely on
     %           I_in and noise for initialization
-    %   num_nets = number of network structures to test per parameter set 
-    %   num_inits = number of network initializations to test per network
-    %       structure
-    %   parameter_vec = 
+    %   i = random number generator seed
+    %   num_inits = number of initializations to test
     %OUTPUTS:
-    %   success = A value in the range of [0,1] describing the fraction of
-    %       successful initializations (passing criteria).
+    %   avg_mat = A vector of averaged resulting values from different
+    %   initializations. Namely, the rows are different initializations,
+    %   and the columns are:
+    %       1. number of spiking neurons
+    %       2. average firing rate
+    %       3. average event length
     %_________
-    %Get index values for parameter combination
-    [num_params, ~] = size(parameter_vec);
-    indices = 1:test_n^num_params;
-    size_vec = test_n * ones(1,num_params);
-    [ind_1,ind_2] = ind2sub(size_vec,indices);
-    %Pull parameter combination
-    parameters.del_G_sra = parameter_vec(1,ind_1(ind));
-    parameters.tau_sra = (-2.4*10^5)*parameters.del_G_sra + 0.11;
-    parameters.G_coeff = parameter_vec(2,ind_2(ind));
-    G_in = parameters.G_coeff*randn(parameters.n,parameters.t_steps+1)*parameters.G_scale;
-    parameters.G_in = G_in;
-    %Run network initialization code
-    passing_trials = zeros(1,num_nets);
-    parfor i = 1:num_nets, passing_trials(i) = parallelize_networks(parameters,i, num_inits); end
-    passing_trials = sum(passing_trials,'all');
-    success = passing_trials/(num_nets*num_inits); %store fraction of successful trials
-    disp([ind, success])
+
+    rng(i) %set random number generator for network structure
+    [cluster_mat, conns] = create_clusters(parameters, i, 1);
+    all_indices = [1:parameters.n];
+    I_indices = datasample(all_indices,parameters.n_I,'Replace',false); %indices of inhibitory neurons
+    E_indices = find(~ismember(all_indices,I_indices)); %indices of excitatory neurons
+    clear all_indices
+    network = struct;
+    network(1).cluster_mat = cluster_mat;
+    network(1).conns = conns;
+    network(1).I_indices = I_indices;
+    network(1).E_indices = E_indices;
+    clear cluster_mat conns I_indices E_indices
+    mat = zeros(num_inits,3);
+    parfor j = 1:num_inits, mat(j,:) = parallelize_network_tests_2(parameters,network,j); end
+    avg_mat = mean(mat,1);
 end

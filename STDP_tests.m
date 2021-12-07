@@ -11,15 +11,15 @@
 %% Initialization
 
 %Select folder of good network structure and parameters to use in tests
-% load_path = uigetdir('/Users/hannahgermaine/Documents/PhD/','Select network.m Load Folder'); %Have user input where they'd like network structure to be loaded from
-% 
+load_path = uigetdir('/Users/hannahgermaine/Documents/PhD/','Select network.m Load Folder'); %Have user input where they'd like network structure to be loaded from
+
 % %_________________________________
 % %___Load Independent Parameters___
 % %_________________________________
-% load(strcat(load_path,'/network.mat'))
-% slashes = find(load_path == '/');
-% param_path = load_path(1:slashes(end));
-% load(strcat(param_path,'/parameters.mat'))
+load(strcat(load_path,'/network.mat'))
+slashes = find(load_path == '/');
+param_path = load_path(1:slashes(end));
+load(strcat(param_path,'/parameters.mat'))
 
 %____________________________________
 %___Calculate Dependent Parameters___
@@ -54,10 +54,11 @@ x_in = [0:parameters.dt:parameters.t_max];
 % I_Hz = 1; %frequency of input - 1 Hz or 60 bpm, 4-8 Hz for theta rhythm
 % I_in = I_coeff*(0.5 + 0.5*sin(I_Hz*2*pi*x_in)); %Approximately theta wave input current
 %Noisy input: (uncomment if desired)
-I_in = parameters.I_coeff*randn(parameters.n,parameters.t_steps+1)*parameters.I_scale; %Generally use -0.5-0.5 nA stimulus
+G_in = parameters.G_coeff*randn(parameters.n,parameters.t_steps+1)*parameters.G_scale;
+
 %save for easy calculations
 parameters.('x_in') = x_in;
-parameters.('I_in') = I_in;
+parameters.('G_in') = G_in;
 
 %Calculate connection probabilites
 npairs = parameters.n*(parameters.n-1); %total number of possible neuron connections
@@ -78,10 +79,10 @@ parameters.('n_I') = n_I;
 %Here you can modify the STDP rules previously saved
 parameters.type = 'neuron'; %Each sequence initialization will be through setting neurons to threshold
 parameters.tau_stdp = 1*10^(-3); %STDP time constant (s)
-parameters.connectivity_gain = 0.002; %amount to increase or decrease connectivity by with each STDP rule (more at the range of 0.002-0.005)
+parameters.connectivity_gain = 0.005; %amount to increase or decrease connectivity by with each STDP rule (more at the range of 0.002-0.005)
 %Here you set the simulation rules
 num_repeat_tests = 10; %how many repeat values to test
-max_repeats = 10; %maximum number of repeats to test
+max_repeats = 50; %maximum number of repeats to test
 num_repeats = 0:max_repeats/num_repeat_tests:max_repeats+1;  %vector of repeats to test
 num_repeats(1) = []; %update first value to be 1 repeat rather than 0
 
@@ -99,12 +100,9 @@ save_path = uigetdir('/Users/hannahgermaine/Documents/PhD/','Select Save Folder'
 STDP_sequences = struct;
 STDP_V_m = struct;
 
-for i = 1:num_repeat_tests
-%     rng(2) %to ensure the same initialization is selected each time
-%     init_seed = datasample(1:parameters.test_val_max,parameters.test_val_max,'Replace',false);
-    
-    init_seed = [2,4,1,8,9,6,10,3,5,7];
+init_seed = [2,4,1,8,9,6,10,3,5,7];
 
+for i = 1:num_repeat_tests
     %Create a network copy to modify
     network_copy = network;
     
@@ -194,6 +192,8 @@ disp('STDP Tests Done')
 % param_path = load_path(1:slashes(end));
 % load(strcat(param_path,'/parameters.mat'))
 
+% load_path = save_path;
+
 %_____________
 % Visualize how the sequence changes over the course of STDP learning
 %_____________
@@ -233,16 +233,16 @@ for i = 1:num_to_visualize
     xt = get(gca,'XTick');
     xtlbl = round(linspace(0,last_spike_time_s,numel(xt)),2);
     set(gca, 'XTick',xt, 'XTickLabel',xtlbl)
-    xlabel('Time (ms)')%,'FontSize',16)
-    ylabel('Reordered Neuron Number')%,'FontSize',16)
+%     xlabel('Time (ms)')%,'FontSize',16)
+%     ylabel('Reordered Neuron Number')%,'FontSize',16)
     title(strcat('Repeats = ',string(num_repeats(i))))
     axes = [axes, ax]; %#ok<AGROW>
 end
 linkaxes(axes)
+set(gcf, 'Position', get(0, 'Screensize'));
 sgtitle('Sequence as a Function of Learning')
 savefig(f,strcat(load_path,'/sequences_after_learning.fig'))
 saveas(f,strcat(load_path,'/sequences_after_learning.jpg'))
-    
 
 %_____________
 % Calculate the sequence correlations for different amounts of learning
@@ -295,10 +295,10 @@ xt = get(gca,'XTick');
 yt = get(gca,'YTick');
 set(gca, 'XTick',xt, 'XTickLabel',num_repeats)
 set(gca, 'YTick',yt, 'YTickLabel',num_repeats)
+set(gcf, 'Position', get(0, 'Screensize'));
 title('Visualization of Rank Correlation Pairs')
 savefig(f1,strcat(load_path,'/sequences_after_learning_correlation.fig'))
 saveas(f1,strcat(load_path,'/sequences_after_learning_correlation.jpg'))
-
 
 % Visualize histograms of correlation values for different learning amounts
 
@@ -379,6 +379,8 @@ axes = [];
 %To order all sequences by a particular firing sequence, uncomment the
 %following and select which sequence to order by by changing the y-index
 % STDP_order = same_sequences(:,1);
+subplot_x = floor(sqrt(num_to_visualize));
+subplot_y = ceil(sqrt(num_to_visualize));
 for i = 1:num_to_visualize
     ax = subplot(subplot_x,subplot_y,i);
     histogram(ranks_win_vec(i).ranks)
@@ -390,6 +392,7 @@ for i = 1:num_to_visualize
     axes = [axes, ax]; %#ok<AGROW>
 end
 linkaxes(axes)
+set(gcf, 'Position', get(0, 'Screensize'));
 sgtitle('Across-Initialization Correlation as a Function of Learning')
 savefig(f2,strcat(load_path,'/seq_corr_hist_after_learning.fig'))
 saveas(f2,strcat(load_path,'/seq_corr_hist_after_learning.jpg'))
@@ -400,6 +403,8 @@ f3 = figure;
 axes = [];
 %To order all sequences by a particular firing sequence, uncomment the
 %following and select which sequence to order by by changing the y-index
+subplot_x = floor(sqrt(num_to_visualize));
+subplot_y = ceil(sqrt(num_to_visualize));
 for i = 1:num_to_visualize
     ax = subplot(subplot_x,subplot_y,i);
     imagesc(squeeze(ranks_win(i,:,:)))
@@ -410,6 +415,7 @@ for i = 1:num_to_visualize
     axes = [axes, ax]; %#ok<AGROW>
 end
 linkaxes(axes)
+set(gcf, 'Position', get(0, 'Screensize'));
 sgtitle('Across-Initialization Correlation as a Function of Learning')
 savefig(f3,strcat(load_path,'/seq_corr_im_after_learning.fig'))
 saveas(f3,strcat(load_path,'/seq_corr_im_after_learning.jpg'))
@@ -453,10 +459,10 @@ clear i j diff_sequences diff_sequences_nonspiking X_i X_nonspike k Y_i ...
     Y_nonspike nonspiking new_n d l ix_i iy_i
 
 ranks_across_vec = struct;
-for i = 1:num_inits
+for i = 1:num_to_visualize
     vec = [];
-    for j = 1:num_to_visualize-1
-        for k = j+1:num_to_visualize
+    for j = 1:num_inits-1
+        for k = j+1:num_inits
             vec(end+1) = ranks_win(i,j,k); %#ok<SAGROW>
         end
     end
@@ -465,22 +471,30 @@ for i = 1:num_inits
 end
 clear i vec j k
 
-
 % Visualize images of across trial correlations
 f4 = figure;
 axes = [];
 %To order all sequences by a particular firing sequence, uncomment the
 %following and select which sequence to order by by changing the y-index
+subplot_x = floor(sqrt(num_inits));
+subplot_y = ceil(sqrt(num_inits));
 for i = 1:num_inits
     ax = subplot(subplot_x,subplot_y,i);
     imagesc(squeeze(ranks_across(i,:,:)))
     colorbar()
+    xticks(1:num_to_visualize)
+    yticks(1:num_to_visualize)
+    xt = get(gca,'XTick');
+    yt = get(gca,'YTick');
+    set(gca, 'XTick',xt, 'XTickLabel',num_repeats)
+    set(gca, 'YTick',yt, 'YTickLabel',num_repeats)
     xlabel('Number of Repeats')%,'FontSize',16)
     ylabel('Number of Repeats')%,'FontSize',16)
     title([strcat('Initialization = ',string(i));strcat('Sequence length =',string(sequences_across_length(i,1)))])
     axes = [axes, ax]; %#ok<AGROW>
 end
 linkaxes(axes)
+set(gcf, 'Position', get(0, 'Screensize'));
 sgtitle('Same Initialization Correlation as a Function of Learning')
 savefig(f4,strcat(load_path,'/same_seq_corr_after_learning.fig'))
 saveas(f4,strcat(load_path,'/same_seq_corr_after_learning.jpg'))
@@ -489,15 +503,70 @@ clear i ax axes
 % Sequence length as a function of learning
 f5 = figure;
 axes = [];
+subplot_x = floor(sqrt(num_inits));
+subplot_y = ceil(sqrt(num_inits));
 for i = 1:num_inits
     ax = subplot(subplot_x,subplot_y,i);
     plot(sequences_across_length(i,:))
+    xticks(1:num_to_visualize)
+    yticks(1:num_to_visualize)
+    xt = get(gca,'XTick');
+    yt = get(gca,'YTick');
+    set(gca, 'XTick',xt, 'XTickLabel',num_repeats)
+    set(gca, 'YTick',yt, 'YTickLabel',num_repeats)
     xlabel('Number of Repeats')
     ylabel('Sequence Length')
     title(strcat('Initialization = ',string(i)))
     axes = [axes, ax]; %#ok<AGROW>
 end
+set(gcf, 'Position', get(0, 'Screensize'));
 sgtitle('Same Initialization Length as a Function of Learning')
 savefig(f5,strcat(load_path,'/same_seq_len_after_learning.fig'))
 saveas(f5,strcat(load_path,'/same_seq_len_after_learning.jpg'))
 clear i ax axes
+
+%%
+to_visualize = 2;
+str_vis = strcat('V_m_',string(to_visualize));
+num_repeats = [STDP_sequences.num_repeats];
+num_to_visualize = length(num_repeats);
+same_sequences = zeros(parameters.n,num_to_visualize);
+same_non_spiking = zeros(parameters.n,num_to_visualize);
+for i = 1:num_to_visualize
+    same_sequences(:,i) = STDP_sequences(i).spike_order(:,to_visualize);
+    same_non_spiking(:,i) = STDP_sequences(i).nonspiking(:,to_visualize);
+end
+%Set up plot
+subplot_x = floor(sqrt(num_to_visualize));
+subplot_y = ceil(sqrt(num_to_visualize));
+f = figure;
+axes = [];
+%To order all sequences by a particular firing sequence, uncomment the
+%following and select which sequence to order by by changing the y-index
+% STDP_order = same_sequences(:,1);
+for i = 1:num_to_visualize
+    ax = subplot(subplot_x,subplot_y,i);
+    V_m_spikes = STDP_V_m(i).(str_vis) >= parameters.V_th;
+    STDP_order = same_sequences(:,i); %Comment out if ordering by line 217
+    V_m_spikes_reordered = V_m_spikes(STDP_order,:);
+    spike_times = find(sum(V_m_spikes_reordered,1));
+    large_spike_intervals = find((spike_times(2:end) - spike_times(1:end-1))>500);
+    if isempty(large_spike_intervals)
+        last_spike_time = spike_times(end);
+    else
+        last_spike_time = spike_times(large_spike_intervals(1))+100;
+    end
+    last_spike_time_s = last_spike_time * parameters.dt * 10^3; %convert to ms
+    imagesc(V_m_spikes_reordered(:,1:last_spike_time))
+    colormap(flip(gray))
+    xticks(round(linspace(1,last_spike_time,5))) %20 ticks will be displayed
+    xt = get(gca,'XTick');
+    xtlbl = round(linspace(0,last_spike_time_s,numel(xt)),2);
+    set(gca, 'XTick',xt, 'XTickLabel',xtlbl)
+%     xlabel('Time (ms)')%,'FontSize',16)
+%     ylabel('Reordered Neuron Number')%,'FontSize',16)
+    title(strcat('Repeats = ',string(num_repeats(i))))
+    axes = [axes, ax]; %#ok<AGROW>
+end
+linkaxes(axes)
+sgtitle('Sequence as a Function of Learning')

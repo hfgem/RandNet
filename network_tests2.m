@@ -3,18 +3,14 @@
 %______ABOUT______:
 %This code uses a previously successful set of network parameters by
 %loading them (lif_network_postrotation.m must have been run to generate
-%parameter files) and then grid searches the parameter space of 4
-%parameters:
-%   1. tau_sra
-%   2. del_G_sra
-%   3. del_G_syn_E (through del_G_syn_E_E = del_G_syn_E_I
-%   4. del_G_syn_I (through del_G_syn_I_I = del_G_syn_I_E
+%parameter files) and then grid searches the parameter space of defined
+%parameters.
 %
-%Each parameter set will be tested for 10 networ initializations and 10
-%randomized neuron initializations per network for a total of 100 tests of
-%each set. The results of each initialization will be compared against
-%criteria of a successful output and a score out of 100 will be calculated.
-%This score will be stored in a 4D matrix of the parameter space.
+%Each parameter set will be tested for num_nets network initializations and
+%num_inits randomized neuron initializations per network. The results of 
+%each initialization will be compared against criteria of a successful
+%output and a fractional score will be calculated. This score will be 
+%stored in a 4D matrix of the parameter space.
 %
 %The results of the grid search will be visualized and characterized for a
 %parameter set description of best results. Depending on the results,
@@ -60,6 +56,8 @@ end
 parameters.('test_val_max') = test_val_max;
 
 %Adding an input conductance to all cells (one of the options must be uncommented)
+%TRY PINK NOISE - HAVE A DECAY AND TIME CONSTANT THAT KEEPS CONDUCTANCE
+%SOMEWHAT 'SMOOTH'
 x_in = [0:parameters.dt:parameters.t_max];
 G_in = parameters.G_coeff*randn(parameters.n,parameters.t_steps+1)*parameters.G_scale;
 parameters.('x_in') = x_in;
@@ -80,42 +78,40 @@ parameters.('n_I') = n_I;
 
 %% Set Up Grid Search Parameters
 %Number of parameter values to test
-test_n = 5;
+test_n = 21;
 
-%Define parameter vectors
-tau_sra_vec = linspace(10*10^(-3),60*10^(-3),test_n);
-del_G_sra_vec = linspace(1*10^(-9),200*10^(-9),test_n);
-del_G_syn_E_vec = linspace(2*10^(-9),15*10^(-9),test_n);
-del_G_syn_I_vec = linspace(2*10^(-9),15*10^(-9),test_n);
+%Define parameter vectors - and which parameters to test. Do not forget to
+%modify parallelize_parameter_tests.m
+del_G_sra_vec = linspace(200*10^(-9),400*10^(-9),test_n);
+G_coeff_vec = linspace(-100,0,test_n);
 
-parameter_vec = [tau_sra_vec; del_G_sra_vec; del_G_syn_E_vec; del_G_syn_I_vec];
-clear tau_sra_vec del_G_sra_vec del_G_syn_E_vec del_G_syn_I_vec
+parameter_vec = [del_G_sra_vec; G_coeff_vec];
+clear del_G_sra_vec G_i_vec
 
 %Save parameter values
 save(strcat(save_path,'/parameter_vec.mat'),'parameter_vec','-v7.3')
 
 %Set up storage matrix
-success = zeros(test_n,test_n,test_n,test_n);
-%dim 1 = tau_sra
-%dim 2 = del_G_sra
-%dim 3 = del_G_syn_E
-%dim 4 = del_G_syn_I
+[num_params, ~] = size(parameter_vec);
+success = zeros(test_n*ones(1,num_params));
+%dim 1 = del_G_sra
+%dim 2 = G_i
 
 %Test parameters
 num_nets = 5; %number of network structure initializations
 num_inits = 5; %number of firing initializations
 
-%% Run Grid Search
+%% Run Grid Search With Only Success Parameters
 %Start parallel pool for parallelizing the grid search
 % parpool(4)
 
 %Loop through all parameter sets
 parfevalOnAll(gcp(), @warning, 0, 'off', 'MATLAB:singularMatrix');
-parfor ind = 1:test_n^4, success(ind) = parallelize_parameter_tests(parameters,num_nets,...
+parfor ind = 1:test_n^2, success(ind) = parallelize_parameter_tests(parameters,num_nets,...
     num_inits, parameter_vec, test_n, ind); end
 save(strcat(save_path,'/success.mat'),'success','-v7.3')
 
-%% Visualize Grid Search Results
+%% Visualize Success Grid Search Results
 %Recall dimensions:
 %dim 1 = tau_sra
 %dim 2 = del_G_sra
@@ -159,7 +155,7 @@ colorbar()
 xticks(1:test_n)
 xticklabels(parameter_vec(2,:))
 yticks(1:test_n)
-yticklabels(fliplr(parameter_vec(1,:)))
+yticklabels(parameter_vec(1,:))
 xlabel('\delta G_{SRA}')
 ylabel('\tau_{SRA}')
 title('Avg SRA Success')
@@ -172,7 +168,120 @@ colorbar()
 xticks(1:test_n)
 xticklabels(parameter_vec(4,:))
 yticks(1:test_n)
-yticklabels(fliplr(parameter_vec(3,:)))
+yticklabels(parameter_vec(3,:))
 xlabel('\delta G_{syn_I}')
 ylabel('\delta G_{syn_E}')
 title('Avg Synaptic Step Success')
+
+%% Custom 3D Visualizations Based on Success Grid Search Data
+%Recall dimensions:
+%dim 1 = tau_sra
+%dim 2 = del_G_sra
+%dim 3 = del_G_syn_E
+%dim 4 = del_G_syn_I
+
+%3D visual of success when del_G_syn_E is set
+cmap = jet(100);
+colormap(cmap)
+x_inds = reshape(repmat([1:test_n]'.*ones(test_n,test_n),1,1,test_n),[],1);
+y_inds = reshape(repmat([1:test_n].*ones(test_n,test_n),1,1,test_n),[],1);
+z_inds = reshape(permute(repmat([1:test_n]'.*ones(test_n,test_n),1,1,test_n),[3,2,1]),[],1);    
+for i = 1:test_n
+    figure;
+    success_set_syn_E = squeeze(success(:,:,i,:));
+    color_mappings = reshape(round(success_set_syn_E*100),[],1);
+    color_mappings(color_mappings == 0) = 1;
+    cmap_vals = cmap(color_mappings,:);
+    scatter3(x_inds,y_inds,z_inds,[],cmap_vals,'filled')
+    xticks(test_n)
+    xticklabels(parameter_vec(1,:))
+    xlabel('\tau_{SRA}')
+    yticks(test_n)
+    yticklabels(parameter_vec(2,:))
+    ylabel('\delta G_{SRA}')
+    zticks(test_n)
+    zticklabels(parameter_vec(3,:))
+    zlabel('\delta G_{syn_I}')
+    colormap(cmap)
+    colorbar()
+end
+clear i success_set_syn_E color_mappings cmap_vals x_inds y_inds z_inds
+
+%2D visual of success when del_G_syn_E is set
+figure;
+sub_sqrt = ceil(sqrt(test_n));
+axes = [];
+colormap(jet)
+for i = 1:test_n
+    del_E_syn_val = parameter_vec(3,i);
+    del_I_syn_exp = del_E_syn_val*1.4;
+    [~, del_I_syn_ind] = min(abs(parameter_vec(4,:) - del_I_syn_exp));
+    ax = subplot(sub_sqrt,sub_sqrt,i);
+    success_mat = squeeze(success(:,:,i,del_I_syn_ind));
+    imagesc(success_mat)
+    colorbar()
+    xticks(1:test_n)
+    xticklabels(parameter_vec(1,:))
+    yticks(1:test_n)
+    yticklabels(parameter_vec(2,:))
+    xlabel('\tau_{SRA}')
+    ylabel('\Delta_{G_SRA}')
+    title(strcat('\Delta_{G_{syn_E}} = ',string(del_E_syn_val)))
+    axes = [axes, ax];
+end
+linkaxes(axes)
+
+%% Plotting the Relationship for 2 Parameter Test in Success Grid Search
+[test_n,~] = size(success); 
+
+%Finding the maximum values and indices
+[max_val, max_ind] = max(success,[],1);
+all_max_ind = zeros(test_n, test_n);
+for i = 1:test_n
+all_max_ind(:,i) = [success(:,i) == max_val(i)]';
+end
+[x_ind, y_ind] = find(all_max_ind);
+y_val = parameter_vec(1,x_ind);
+x_val = parameter_vec(2,y_ind);
+figure;
+scatter(x_val, y_val, 'filled')
+xlabel('\Delta G_{SRA}')
+ylabel('\tau_{SRA}')
+
+%Fit a curve - chose exponential due to apparent plateau and quadratic due
+%to curvature.
+fit_curve_exp = fit(x_val', y_val', 'exp1');
+fit_curve_poly = fit(x_val', y_val', 'poly1');
+hold on
+plot(unique(x_val), fit_curve_exp(unique(x_val)), 'DisplayName', 'Exponential Fit')
+plot(unique(x_val), fit_curve_poly(unique(x_val)), 'DisplayName', 'Polynomial Fit')
+legend()
+
+%% Run Value Grid Search
+
+results = zeros(test_n^2,3);
+
+%Loop through all parameter sets
+parfevalOnAll(gcp(), @warning, 0, 'off', 'MATLAB:singularMatrix');
+parfor ind = 1:test_n^2, results(ind,:) = parallelize_parameter_tests_2(parameters,num_nets,...
+    num_inits, parameter_vec, test_n, ind); end
+% parfor ind = 1:test_n^2, [num_spikers(ind), avg_fr(ind), avg_event_length(ind)] = parallelize_parameter_tests_2(parameters,num_nets,...
+%      num_inits, parameter_vec, test_n, ind); end
+save(strcat(save_path,'/results.mat'),'results','-v7.3')
+
+num_spikers = reshape(squeeze(results(:,1)),test_n,test_n);
+avg_fr = reshape(squeeze(results(:,2)),test_n,test_n);
+avg_event_length = reshape(squeeze(results(:,3)),test_n,test_n);
+
+%% Visualize Value Grid Search Results
+
+figure;
+subplot(1,3,1)
+imagesc(num_spikers)
+colorbar()
+subplot(1,3,2)
+imagesc(avg_fr)
+colorbar()
+subplot(1,3,3)
+imagesc(avg_event_length)
+colorbar()

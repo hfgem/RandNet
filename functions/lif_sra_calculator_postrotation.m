@@ -183,11 +183,14 @@ function [V_m, G_sra, G_syn_I, G_syn_E, I_syn, conns] = lif_sra_calculator_postr
         G_syn_I(:,t+1) = G_syn_I(:,t).*exp(-parameters.dt/parameters.tau_syn_I); %inhibitory conductance update
         %______________________________________
         %Update connection strengths via STDP
-        pre_syn_n = conns(:,spikers); %pre-synaptic neurons
+        pre_syn_n = sum(conns(:,spikers),2) > 0; %pre-synaptic neurons
+        post_syn_n = sum(conns(spikers,:),1) > 0; %post-synaptic neurons
         pre_syn_t = t_spike.*pre_syn_n; %spike times of pre-synaptic neurons
-        t_diff = t - pre_syn_t; %time diff between pre-synaptic and current
-        sign_diff = sign(t_diff);
-        del_conn = sign_diff.*(parameters.connectivity_gain*exp(-t_diff/t_stdp));
-        conns(:,spikers) = conns(:,spikers) + del_conn; %enhance connections of those neurons that just fired
+        post_syn_t = t_spike.*post_syn_n'; %spike times of post-synaptic neurons
+        t_diff_pre = t - pre_syn_t; %time diff between pre-synaptic and current
+        t_diff_post = t - post_syn_t; %time diff between post-synaptic and current
+        del_conn_pre = parameters.connectivity_gain*exp(-t_diff_pre/t_stdp);
+        del_conn_post = parameters.connectivity_gain*exp(-t_diff_post/t_stdp);
+        conns(:,spikers) = conns(:,spikers) + del_conn_pre - del_conn_post; %enhance connections of those neurons that just fired
     end
 end

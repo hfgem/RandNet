@@ -19,7 +19,6 @@ t_max = 2; %maximum amount of time (s)
 dt = 0.1*10^(-3); %timestep (s)
 tau_syn_E = 10*10^(-3); %AMPA/NMDA synaptic decay time constant (s)
 tau_syn_I = 5*10^(-3); %GABA synaptic decay time constant (s)
-tau_sra = 15*10^(-3); %spike rate adaptation time constant (s)
 tau_stdp = 5*10^(-3); %STDP time constant (s)
 E_K = -80*10^(-3); %potassium reversal potential (V) %-75 or -80 mV
 E_L = -70*10^(-3); %leak reversal potential (V) %-60 - -70 mV range
@@ -39,10 +38,11 @@ del_G_syn_E_I = 9.5*10^(-9); %synaptic conductance step following spike (S)
 del_G_syn_I_E = 1.4*del_G_syn_E_E; %synaptic conductance step following spike (S)
 
 %___________________________
-del_G_sra = 354e-09; %spike rate adaptation conductance step following spike %ranges from 1-200 *10^(-9) (S)
+del_G_sra = 330e-09; %spike rate adaptation conductance step following spike %ranges from 1-200 *10^(-9) (S)
+tau_sra = (-2.4*10^5)*del_G_sra + 0.11; %spike rate adaptation time constant (s)
 %If want to have STDP, change connectivity_gain to > 0.
 connectivity_gain = 0; %0.005; %amount to increase or decrease connectivity by with each spike (more at the range of 0.002-0.005)
-IEI = 1; %inter-event-interval (s) the elapsed time between spikes to count separate events
+IEI = 0.1; %inter-event-interval (s) the elapsed time between spikes to count separate events
 
 %How spikes are initiated:
 %'cluster' sets a cluster to threshold;
@@ -58,7 +58,7 @@ type = 'current'; %'neuron'; %'cluster';
 % I_coeff = 2.7; %2.7; %set to 0 for no input current
 % I_scale = 1*10^(-9); %sets the scale of the current input
 % Input conductance
-G_coeff = 0;
+G_coeff = -40;
 G_scale = 1*10^(-9);
 
 %Calculate connection probabilites

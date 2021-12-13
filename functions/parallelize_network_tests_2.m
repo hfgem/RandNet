@@ -1,4 +1,4 @@
-function vec = parallelize_network_tests_2(parameters,network,j)
+function vec = parallelize_network_tests_2(parameters,network,j, save_path)
     %_________
     %ABOUT: This function runs through a series of commands to test the
     %outputs of a particular parameter set in comparison to a strict set of
@@ -129,9 +129,40 @@ function vec = parallelize_network_tests_2(parameters,network,j)
                 event_lengths = [event_lengths, (last_time - last_start)*parameters.dt]; %#ok<*SAGROW>
             end
             avg_event_length = mean(event_lengths);
+            
+            [num_events,~] = size(events);
+            
+            %Select results to visualize and save
+            if avg_event_length > 0
+                if length(spiking_neurons) >= parameters.event_cutoff*parameters.n
+                    if and(avg_fr>= 0.02, avg_fr <= 1.5)
+                        if and(avg_event_length >= 0.02, avg_event_length <= 0.15)
+                            to_vis = rand;
+                            if to_vis <= 0.01
+                                f = figure;
+                                for e_i = 1:num_events
+                                    subplot(1,num_events,e_i)
+                                    imagesc(spikes_V_m(spiking_neurons,events(e_i,1):events(e_i,2)))
+                                    xt = xticks;
+                                    xticklabels(linspace(events(e_i,1),events(e_i,2),length(xt))*parameters.dt)
+                                    xlabel('Seconds')
+                                    title(strcat('Event #',string(e_i)))
+                                end
+                                del_G_str = string(parameters.del_G_sra);
+                                G_str = string(parameters.G_coeff);
+                                title_str = strcat("G_{coeff} =",G_str,"; \Delta_{G_{SRA}} =",del_G_str);
+                                sgtitle(title_str)
+%                                 savefig(f,strcat(save_path,'sequence_G_',G_str,'_del_',extractBefore(del_G_str,5),'.fig'))
+                                saveas(f,strcat(save_path,'/figures/sequence_G_',G_str,'_del_',extractBefore(del_G_str,5),'.jpg'))
+                                close(f)
+                            end
+                        end
+                    end
+                end
+            end
 
             %Third value: Average event length
             vec(3) = avg_event_length;
         end
-    end
+    end    
 end

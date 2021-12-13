@@ -29,6 +29,9 @@ param_names = fieldnames(parameters);
 msgbox('Select folder to save results.')
 save_path = uigetdir('/Users/hannahgermaine/Documents/PhD/');
 
+%Create figures folder
+mkdir(strcat(save_path,'figures/'))
+
 %___________________________________
 %____Define dependent parameters____
 %___________________________________
@@ -82,8 +85,8 @@ test_n = 21;
 
 %Define parameter vectors - and which parameters to test. Do not forget to
 %modify parallelize_parameter_tests.m
-del_G_sra_vec = linspace(200*10^(-9),400*10^(-9),test_n);
-G_coeff_vec = linspace(-100,0,test_n);
+del_G_sra_vec = linspace(250*10^(-9),350*10^(-9),test_n);
+G_coeff_vec = linspace(-40,-35,test_n);
 
 parameter_vec = [del_G_sra_vec; G_coeff_vec];
 clear del_G_sra_vec G_i_vec
@@ -112,7 +115,7 @@ parfor ind = 1:test_n^2, success(ind) = parallelize_parameter_tests(parameters,n
 save(strcat(save_path,'/success.mat'),'success','-v7.3')
 
 %% Visualize Success Grid Search Results
-%Recall dimensions:
+%Dimensions:
 %dim 1 = tau_sra
 %dim 2 = del_G_sra
 %dim 3 = del_G_syn_E
@@ -264,7 +267,7 @@ results = zeros(test_n^2,3);
 %Loop through all parameter sets
 parfevalOnAll(gcp(), @warning, 0, 'off', 'MATLAB:singularMatrix');
 parfor ind = 1:test_n^2, results(ind,:) = parallelize_parameter_tests_2(parameters,num_nets,...
-    num_inits, parameter_vec, test_n, ind); end
+    num_inits, parameter_vec, test_n, ind, save_path); end
 % parfor ind = 1:test_n^2, [num_spikers(ind), avg_fr(ind), avg_event_length(ind)] = parallelize_parameter_tests_2(parameters,num_nets,...
 %      num_inits, parameter_vec, test_n, ind); end
 save(strcat(save_path,'/results.mat'),'results','-v7.3')
@@ -278,10 +281,36 @@ avg_event_length = reshape(squeeze(results(:,3)),test_n,test_n);
 figure;
 subplot(1,3,1)
 imagesc(num_spikers)
-colorbar()
+c1 = colorbar();
+c1.Label.String = 'Number of Neurons';
+title('Number of Spiking Neurons')
+xticks(1:test_n)
+xticklabels(parameter_vec(2,:))
+yticks(1:test_n)
+yticklabels(parameter_vec(1,:))
+xlabel('G_{coeff}')
+ylabel('\delta G_{SRA}')
 subplot(1,3,2)
 imagesc(avg_fr)
-colorbar()
+c2 = colorbar();
+c2.Label.String = "Hz";
+title('Average Firing Rate')
+xticks(1:test_n)
+xticklabels(parameter_vec(2,:))
+yticks(1:test_n)
+yticklabels(parameter_vec(1,:))
+xlabel('G_{coeff}')
+ylabel('\delta G_{SRA}')
 subplot(1,3,3)
 imagesc(avg_event_length)
-colorbar()
+c3 = colorbar();
+c3.Label.String = "Seconds";
+title('Average Event Length')
+xticks(1:test_n)
+xticklabels(parameter_vec(2,:))
+yticks(1:test_n)
+yticklabels(parameter_vec(1,:))
+xlabel('G_{coeff}')
+ylabel('\delta G_{SRA}')
+
+clear c1 c2 c3

@@ -1,5 +1,5 @@
 function avg_mat = parallelize_parameter_tests_2(parameters,num_nets,...
-    num_inits, parameter_vec, test_n, ind)
+    num_inits, parameter_vec, test_n, ind, save_path)
     %_________
     %ABOUT: This function runs through a series of commands to test the
     %outputs of a particular parameter set in comparison to a strict set of
@@ -82,7 +82,8 @@ function avg_mat = parallelize_parameter_tests_2(parameters,num_nets,...
     parameters.G_in = G_in;
     %Run network initialization code
     resp_mat = zeros(num_nets, 3);
-    parfor i = 1:num_nets, resp_mat(i,:) = parallelize_networks_2(parameters,i, num_inits); end
-    avg_mat = mean(resp_mat,1);
+    parfor i = 1:num_nets, resp_mat(i,:) = parallelize_networks_2(parameters,i, num_inits, save_path); end
+    resp_mat(isnan(resp_mat)) = 0;
+    avg_mat = sum(resp_mat,1)./sum(resp_mat > 0,1); %Only averaging those that had results
     disp(strcat('Index #',string(ind),'= complete'))
 end

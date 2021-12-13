@@ -48,7 +48,7 @@ IEI = 0.1; %inter-event-interval (s) the elapsed time between spikes to count se
 %'cluster' sets a cluster to threshold;
 %'current' means spikes depend on an input current of I_in; 
 %'neuron' sets a random selection of 2% of neurons to threshold
-type = 'current'; %'neuron'; %'cluster';
+type = 'neuron'; %'current'; %'cluster';
 
 % %Rhythmic current input: (uncomment if desired)
 % I_coeff = 0; %5.1*10^(-10); %set to 0 for no input current
@@ -58,7 +58,7 @@ type = 'current'; %'neuron'; %'cluster';
 % I_coeff = 2.7; %2.7; %set to 0 for no input current
 % I_scale = 1*10^(-9); %sets the scale of the current input
 % Input conductance
-G_coeff = -40;
+G_coeff = 0; %-40;
 G_scale = 1*10^(-9);
 
 %Calculate connection probabilites
@@ -137,6 +137,8 @@ parameters.('nclusterpairs') = nclusterpairs;
 parameters.('cluster_prob') = cluster_prob;
 parameters.('p_I') = p_I;
 parameters.('n_I') = n_I;
+
+save(strcat(save_path,'/parameters.mat'),'parameters')
 
 %____________________________________________
 %___Run Simulations for Different Networks___
@@ -356,8 +358,8 @@ inits = parameters.test_val_max;
 viable_inits = [];
 for i = 1:inits
     try
-        isempty(network_spike_sequences(i).events);
-        if ~isempty(network_spike_sequences(i).events)
+        isempty(network_spike_sequences(i).spike_order);
+        if ~isempty(network_spike_sequences(i).spike_order)
             viable_inits(end+1) = i; %#ok<SAGROW>
         end
     end
@@ -537,10 +539,12 @@ end
 legend(leg_items,leg_names)
 title('Network Diagram','FontSize',16)
 set(gca,'xtick',[],'ytick',[])
-
+savefig(f,strcat(net_save_path,'/','network.fig'))
+saveas(f,strcat(net_save_path,'/','network.jpg'))
+saveas(f,strcat(net_save_path,'/','network.svg'))
 
 %Plot individual cluster connections
-f = figure;
+f2 = figure;
 hold on
 for i = 1:clusters
     within_cluster_connections = [];
@@ -565,6 +569,7 @@ for i = 1:clusters
 end 
 title('Intra-Cluster Connectivity','FontSize',16)
 set(gca,'xtick',[],'ytick',[])
+savefig(f2,strcat(net_save_path,'/','network_clusters.fig'))
 
 %% Creat Plots of Network Properties
 %Select data to visualize
@@ -590,6 +595,7 @@ title('Cluster Participation')
 f.Position = [440,720,866,85];
 savefig(f,strcat(net_save_path,'/','cluster_participation_visual.fig'))
 saveas(f,strcat(net_save_path,'/','cluster_participation_visual.jpg'))
+saveas(f,strcat(net_save_path,'/','cluster_participation_visual.svg'))
 %close(f)
 
 %Plot Histogram of number of clusters each neuron participates in
@@ -604,6 +610,7 @@ xlabel('Number of Clusters')
 title('Most Neurons Participate in Multiple Clusters')
 savefig(f2,strcat(net_save_path,'/','cluster_participation_histogram.fig'))
 saveas(f2,strcat(net_save_path,'/','cluster_participation_histogram.jpg'))
+saveas(f2,strcat(net_save_path,'/','cluster_participation_histogram.svg'))
 %close(f2)
 
 %Plot Histogram of number of neurons that participate in a cluster overlap
@@ -622,6 +629,7 @@ xlabel('Number of Neurons')
 title('Number of Neurons in Cluster Overlap')
 savefig(f3,strcat(net_save_path,'/','cluster_overlap_histogram.fig'))
 saveas(f3,strcat(net_save_path,'/','cluster_overlap_histogram.jpg'))
+saveas(f3,strcat(net_save_path,'/','cluster_overlap_histogram.svg'))
 %close(f3)
 
 clear f f2
@@ -639,7 +647,7 @@ clusters = parameters.clusters;
 cluster_n = parameters.cluster_n;
 n = parameters.n;
 conns = network.conns;
-clust_ind = randperm(clusters,2);
+clust_ind = randperm(clusters,2); %Randomly pick 2 clusters for visualization
 neur_ind = find(sum(cluster_mat(clust_ind,:),1) == 2); %neurons in both clusters
 colors = [[0,0.5000,0.7500];[1.0000,0.7812,0.4975];[0,0.5000,0.4000]];
 
@@ -694,6 +702,8 @@ for i = 1:2
 end
 scatter(plot_ind(:,1),plot_ind(:,2),50,scatter_col,'filled')
 set(gca,'xtick',[],'ytick',[])
-
+savefig(f,strcat(net_save_path,'/','cluster_overlap_vis.fig'))
+saveas(f,strcat(net_save_path,'/','cluster_overlap_vis.jpg'))
+saveas(f,strcat(net_save_path,'/','cluster_overlap_vis.svg'))
 
 

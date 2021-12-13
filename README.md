@@ -2,7 +2,7 @@
  This repository contains a collection of code written in MATLAB. The goal of this code is to simulate spike trains using a Leaky Integrate-and-Fire model of firing with a clustered network structure of neurons, with each cluster having randomized sparse connectivity.
  
  ## lif_network_postrotation.m
- This program contains code to initialize parameters, run network creation using create_clusters.m, run a LIF model using lif_sra_calculator_postrotation.m, and perform a number of post-run analyses.
+ This program contains code to initialize parameters, run network creation using create_clusters.m, run a LIF model using lif_sra_calculator_postrotation.m, and perform a number of post-run analyses. The outputs of successful networks are limited by a set of 'success' criteria based on hippocampal research.
  
  ## viualize_cluster_sequences.m
  This program visualizes a sequences of clusters a spike sequences progresses through, based on outputs from lif_network_postrotation.m
@@ -48,5 +48,13 @@
  ### paralellize_network_tests.m
  This function initializes firing and then compares the results to a strict set of parameters based on biological literature from Hippocampus studies. It returns a binary 'pass' value of whether or not this initialization passed the response criteria.
  
+ ### parallelize_parameter_tests_2.m
+ The same as parallelize_parameter_tests.m except it outputs 3 parameters rather than a 'success' value: (1) average number of neurons in a sequence, (2) average firing rate, (3) average event length.
+ 
+ ### parallelize_networks_2.m
+ The same as parallelize_networks.m except it outputs 3 parameters rather than a 'success' value: (1) average number of neurons in a sequence, (2) average firing rate, (3) average event length.
+ 
+ ### paralellize_network_tests_2.m
+ The same as paralellize_network_tests.m except it outputs 3 parameters rather than a 'success' value: (1) average number of neurons in a sequence, (2) average firing rate, (3) average event length. It also includes a block to generate figures of sequences for successful trials.
  
  

@@ -706,4 +706,4 @@ savefig(f,strcat(net_save_path,'/','cluster_overlap_vis.fig'))
 saveas(f,strcat(net_save_path,'/','cluster_overlap_vis.jpg'))
 saveas(f,strcat(net_save_path,'/','cluster_overlap_vis.svg'))
 
-
+close(f)

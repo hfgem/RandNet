@@ -58,8 +58,9 @@ function [shuffled_spike_sequences] = generate_shuffled_trajectories(n,...
         shuffled_spike_sequences(i).spike_order.sequence_1 = shuffle_seq;
         %store ranks for each neuron
         ranks_vec = zeros(1,n);
+        sorted_ranks = sort(shuffle_seq,'descend');
         for j = 1:length(shuffle_seq)
-            n_ind = shuffle_seq(j);
+            n_ind = shuffle_seq(j) == sorted_ranks;
             ranks_vec(1,n_ind) = j;
         end
         shuffled_spike_sequences(i).spike_ranks.sequence_1 = ranks_vec;

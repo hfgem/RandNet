@@ -1,5 +1,5 @@
-function [V_m, G_sra, G_syn_I, G_syn_E, I_syn, conns] = lif_sra_calculator_postrotation(...
-    parameters, seed, network, I_syn, G_syn_I, G_syn_E, V_m, G_sra)
+function [V_m, G_sra, G_syn_I, G_syn_E, conns] = lif_sra_calculator_postrotation(...
+    parameters, seed, network, G_syn_I, G_syn_E, V_m, G_sra)
     %_________
     %ABOUT: This function uses the leaky integrate-and-fire model of 
     %neuronal firing to calculate the trajectory of membrane potentials,
@@ -70,8 +70,6 @@ function [V_m, G_sra, G_syn_I, G_syn_E, I_syn, conns] = lif_sra_calculator_postr
     %               connectivity
     %       I_indices = Vector of indices of inhibitory neurons
     %       E_indices = Vector of indices of excitatory neurons
-    %   I_syn = An [n x t_steps+1] matrix of synaptic current emitted by 
-    %               each neuron at each timestep (A)
     %   G_syn_I = An [n x t_steps+1] matrix of conductance for presynaptic 
     %               inhibitory (S)
     %   G_syn_E = An [n x t_steps+1] matrix of conductance for presynaptic 
@@ -90,8 +88,6 @@ function [V_m, G_sra, G_syn_I, G_syn_E, I_syn, conns] = lif_sra_calculator_postr
     %               inhibitory (S)
     %   G_syn_E = An [n x t_steps+1] matrix of conductance for presynaptic 
     %               excitatory (S)
-    %   I_syn = An [n x t_steps+1] matrix of synaptic current emitted by 
-    %               each neuron at each timestep (A)
     %   conns = The updated conns matrix (if connectivity_gain != 1)
     %
     %ASSUMPTIONS:

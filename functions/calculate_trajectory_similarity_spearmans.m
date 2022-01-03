@@ -43,6 +43,7 @@ function [ranks, ranks_mod] = calculate_trajectory_similarity_spearmans(n, ...
             [num_seq,~] = size(sequence_names);
             for j = 1:num_seq
                 rank_vals = network_spike_sequences(i).spike_ranks.(sequence_names{j});
+                %NOTE TO SELF: Make next line's percent value a variable that can be passed into the function
                 if length(find(rank_vals == 0)) < 0.75*length(rank_vals) %at least 1/4 of the neurons participate in the sequence
                     all_ranks = [all_ranks; rank_vals]; %#ok<AGROW>
                 end
@@ -51,7 +52,7 @@ function [ranks, ranks_mod] = calculate_trajectory_similarity_spearmans(n, ...
     end
     clear i sequences sequence_names num_seq j rank_vals
     [num_seq, ~] = size(all_ranks);
-    all_ranks = all_ranks'; %rotate for corr function
+    all_ranks = all_ranks'; %rotate to be [n, num_seq]
     
     %======NEURON RANKS - INCLUDING NONSPIKING======
 
@@ -73,12 +74,7 @@ function [ranks, ranks_mod] = calculate_trajectory_similarity_spearmans(n, ...
         X_i = neuron_ranks(:,i);
         for j = 1:num_seq
             Y_i = neuron_ranks(:,j);
-            d = zeros(1,n);
-            for k = 1:n
-                ix_i = find(X_i == k);
-                iy_i = find(Y_i == k);
-                d(1,k) = ix_i - iy_i;
-            end
+            d = X_i - Y_i;
             ranks(i,j) = 1 - (6*sum(d.^2))/(n*(n^2 - 1));
             if i == j
                 ranks(i,j) = 1;
@@ -88,32 +84,27 @@ function [ranks, ranks_mod] = calculate_trajectory_similarity_spearmans(n, ...
     clear i X_i Y_i d j ix_i iy_i k
     
     %======NEURON RANKS - NOT INCLUDING NONSPIKING======
-
     %Rank calculation modified to exclude neurons that are nonspiking in
     %both datasets, but still including nonspiking neurons that are in one
     %ordered at the end of the dataset
+    %r_s = 1 - (6*sum(d_i^2))/(n*(n^2 - 1))
+    %d_i = rg(X_i) - rg(Y_i)
     ranks_mod = zeros(num_seq,num_seq);
     for i = 1:num_seq
-        X_i = neuron_ranks(:,i);
+        X_i = all_ranks(:,i);
         X_nonspike = find(all_ranks(:,i) == 0);
         for j = 1:num_seq
-            Y_i = neuron_ranks(:,j);
+            Y_i = all_ranks(:,j);
             Y_nonspike = find(all_ranks(:,j) == 0);
             nonspiking = unique([X_nonspike',Y_nonspike']);
+            spiking = setdiff(1:n,nonspiking,'stable');
             %To ensure we are only comparing neurons that fire in both
-            %simulations, we have to remove nonspiking neurons from both 
-            %sets.
-            X_i = setdiff(X_i, nonspiking','stable');
-            Y_i = setdiff(Y_i, nonspiking','stable');
-            new_n = (length(X_i)+length(Y_i))/2;
-            d = zeros(1,n);
-            for k = 1:n
-                ix_i = find(X_i == k);
-                iy_i = find(Y_i == k);
-                if ~isempty(ix_i) && ~isempty(iy_i)
-                    d(1,k) = ix_i - iy_i;
-                end
-            end
+            %simulations, we have to remove overlapping nonspiking neurons
+            %from both sets.
+            X_i_cut = X_i(spiking);
+            Y_i_cut = Y_i(spiking);
+            new_n = (length(X_i_cut)+length(Y_i_cut))/2;
+            d = X_i_cut - Y_i_cut;
             ranks_mod(i,j) = 1 - (6*sum(d.^2))/(new_n*(new_n^2 - 1));
             ranks_mod(j,i) = ranks_mod(i,j);
             if i == j
@@ -122,5 +113,4 @@ function [ranks, ranks_mod] = calculate_trajectory_similarity_spearmans(n, ...
         end
     end
     clear i X_i Y_i d j new_n k ix_i iy_i X_nonspike Y_nonspike
-
 end

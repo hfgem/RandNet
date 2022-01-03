@@ -2,6 +2,7 @@
 
 %% Save Path
 
+clear all
 save_path = uigetdir('/Users/hannahgermaine/Documents/PhD/','Select Save Folder'); %Have user input where they'd like the output stored
 
 %% Initialization
@@ -48,7 +49,7 @@ IEI = 0.1; %inter-event-interval (s) the elapsed time between spikes to count se
 %'cluster' sets a cluster to threshold;
 %'current' means spikes depend on an input current of I_in; 
 %'neuron' sets a random selection of 2% of neurons to threshold
-type = 'neuron'; %'current'; %'cluster';
+type = 'current'; %'cluster'; %'neuron';
 
 % %Rhythmic current input: (uncomment if desired)
 % I_coeff = 0; %5.1*10^(-10); %set to 0 for no input current
@@ -58,7 +59,7 @@ type = 'neuron'; %'current'; %'cluster';
 % I_coeff = 2.7; %2.7; %set to 0 for no input current
 % I_scale = 1*10^(-9); %sets the scale of the current input
 % Input conductance
-G_coeff = 0; %-40;
+G_coeff = -38; %-40;
 G_scale = 1*10^(-9);
 
 %Calculate connection probabilites
@@ -66,7 +67,7 @@ conn_prob = 0.08; %set a total desired connection probability
 p_E = 0.75; %probability of an excitatory neuron
 
 %Event Statistics
-event_cutoff = 0.25; %fraction of neurons that have to be involved to constitute a successful event
+event_cutoff = 0.05; %0.25; %fraction of neurons that have to be involved to constitute a successful event
 
 %Save parameters to a structure and to computer
 w = whos;
@@ -83,7 +84,7 @@ save(strcat(save_path,'/parameters.mat'),'parameters')
 %sequence data to a folder
 
 %If uploading a parameter file, uncomment the next line
-load(strcat(save_path,'/parameters.mat'))
+%load(strcat(save_path,'/parameters.mat'))
 
 %____________________________________
 %___Calculate Dependent Parameters___
@@ -111,18 +112,13 @@ end
 %save for easy calculations
 parameters.('test_val_max') = test_val_max;
 
-%Adding an input current to all cells (one of the options must be uncommented)
+%Adding an input conductance to all cells (one of the options must be uncommented)
 x_in = [0:parameters.dt:parameters.t_max];
 % %Rhythmic current input: (uncomment if desired)
-% I_coeff = 0; %5.1*10^(-10); %set to 0 for no input current
-% I_Hz = 1; %frequency of input - 1 Hz or 60 bpm, 4-8 Hz for theta rhythm
-% I_in = I_coeff*(0.5 + 0.5*sin(I_Hz*2*pi*x_in)); %Approximately theta wave input current
-%Noisy input: (uncomment if desired)
-%I_in = parameters.I_coeff*randn(parameters.n,parameters.t_steps+1)*parameters.I_scale; %Generally use -0.5-0.5 nA stimulus
+%Noisy input conductance: (uncomment if desired)
 G_in = parameters.G_coeff*randn(parameters.n,parameters.t_steps+1)*parameters.G_scale;
 %save for easy calculations
 parameters.('x_in') = x_in;
-%parameters.('I_in') = I_in;
 parameters.('G_in') = G_in;
 
 %Calculate connection probabilites
@@ -144,7 +140,7 @@ save(strcat(save_path,'/parameters.mat'),'parameters')
 %___Run Simulations for Different Networks___
 %____________________________________________
 
-for i = 1:10 %how many different network structures to test
+for i = 1:1%10 %how many different network structures to test
     rng(i) %set random number generator for network structure
     
     %CREATE NETWORK SAVE PATH
@@ -418,58 +414,60 @@ if length(viable_inits) ~= 1
     saveas(f,strcat(net_save_path,'/','spearmans_rank_percentiles.jpg'))
     saveas(f,strcat(net_save_path,'/','spearmans_rank_percentiles.svg'))
     close(f)
-
-    %=====MATCHING INDICES=====
-
-    %_____Real Data MIs_____
-    %ranks = Spearman's rank correlation including nonspiking
-    %ranks_mod = Spearman's rank correlation excluding nonspiking
-    [matching_index, matching_index_mod] = calculate_trajectory_similarity_mi(n, ...
-        viable_inits, network_spike_sequences);
-    %   Remove NaN Values
-    matching_index_mod(isnan(matching_index_mod)) = 0;
-    %   Turn Rank Matrices Into Vectors of Unique Ranks
-    matching_index_vec = nonzeros(triu(matching_index,1)); %all above diagonal
-    matching_index_mod_vec = nonzeros(triu(matching_index_mod,1)); %all above diagonal
-
-    %_____Shuffled Data MIs_____
-    %   Get shuffled ranks
-    [shuffled_matching_index, shuffled_matching_index_mod] = calculate_trajectory_similarity_spearmans(n, ...
-        shuffled_viable_inits, shuffled_spike_sequences);
-    shuffled_matching_index_vec = nonzeros(triu(shuffled_matching_index,1)); %all above diagonal
-    shuffled_matching_index_mod_vec = nonzeros(triu(shuffled_matching_index_mod,1)); %all above diagonal
-
-    %_____Calculate Percentiles_____
-    matching_index_percentile = comp_percentile(shuffled_matching_index_vec,mean(matching_index_vec));
-    matching_index_mod_percentile = comp_percentile(shuffled_matching_index_mod_vec,mean(matching_index_mod_vec));
-
-    %_____Plot Histograms with Percentiles_____
-    f = figure;
-    ax1 = subplot(1,2,1);
-    histogram(shuffled_matching_index_vec,'DisplayName','Shuffled Values')
-    hold on
-    xline(mean(matching_index_vec),'-',strcat('Percentile = ',string(matching_index_percentile)),'Color','r','DisplayName','Percentile of Average \newline Real Data Value')
-    histogram(matching_index_vec,'DisplayName','Real Data Values')
-    legend()
-    title('Matching Indices with Nonspiking Neurons at End')
-    ax2 = subplot(1,2,2);
-    histogram(shuffled_matching_index_mod_vec,'DisplayName','Shuffled Values')
-    hold on
-    try %#ok<TRYNC>
-        xline(mean(matching_index_mod_vec),'-',strcat('Percentile = ',string(matching_index_mod_percentile)),'Color','r','DisplayName','Percentile of Average \newline Real Data Value')
-        histogram(matching_index_mod_vec,'DisplayName','Real Data Values')
-    end
-    legend()
-    title('Matching Indices Excluding Nonspiking Neurons')
-    f.Position = [187,387,1112,410];
-    savefig(f,strcat(net_save_path,'/','MI_percentiles.fig'))
-    saveas(f,strcat(net_save_path,'/','MI_percentiles.jpg'))
-    saveas(f,strcat(net_save_path,'/','MI_percentiles.svg'))
-    close(f)
-
-else
-    disp('Only 1 Sequence')
 end
+
+% 
+%     %=====MATCHING INDICES=====
+% 
+%     %_____Real Data MIs_____
+%     %ranks = Spearman's rank correlation including nonspiking
+%     %ranks_mod = Spearman's rank correlation excluding nonspiking
+%     [matching_index, matching_index_mod] = calculate_trajectory_similarity_mi(n, ...
+%         viable_inits, network_spike_sequences);
+%     %   Remove NaN Values
+%     matching_index_mod(isnan(matching_index_mod)) = 0;
+%     %   Turn Rank Matrices Into Vectors of Unique Ranks
+%     matching_index_vec = nonzeros(triu(matching_index,1)); %all above diagonal
+%     matching_index_mod_vec = nonzeros(triu(matching_index_mod,1)); %all above diagonal
+% 
+%     %_____Shuffled Data MIs_____
+%     %   Get shuffled ranks
+%     [shuffled_matching_index, shuffled_matching_index_mod] = calculate_trajectory_similarity_spearmans(n, ...
+%         shuffled_viable_inits, shuffled_spike_sequences);
+%     shuffled_matching_index_vec = nonzeros(triu(shuffled_matching_index,1)); %all above diagonal
+%     shuffled_matching_index_mod_vec = nonzeros(triu(shuffled_matching_index_mod,1)); %all above diagonal
+% 
+%     %_____Calculate Percentiles_____
+%     matching_index_percentile = comp_percentile(shuffled_matching_index_vec,mean(matching_index_vec));
+%     matching_index_mod_percentile = comp_percentile(shuffled_matching_index_mod_vec,mean(matching_index_mod_vec));
+% 
+%     %_____Plot Histograms with Percentiles_____
+%     f = figure;
+%     ax1 = subplot(1,2,1);
+%     histogram(shuffled_matching_index_vec,'DisplayName','Shuffled Values')
+%     hold on
+%     xline(mean(matching_index_vec),'-',strcat('Percentile = ',string(matching_index_percentile)),'Color','r','DisplayName','Percentile of Average \newline Real Data Value')
+%     histogram(matching_index_vec,'DisplayName','Real Data Values')
+%     legend()
+%     title('Matching Indices with Nonspiking Neurons at End')
+%     ax2 = subplot(1,2,2);
+%     histogram(shuffled_matching_index_mod_vec,'DisplayName','Shuffled Values')
+%     hold on
+%     try %#ok<TRYNC>
+%         xline(mean(matching_index_mod_vec),'-',strcat('Percentile = ',string(matching_index_mod_percentile)),'Color','r','DisplayName','Percentile of Average \newline Real Data Value')
+%         histogram(matching_index_mod_vec,'DisplayName','Real Data Values')
+%     end
+%     legend()
+%     title('Matching Indices Excluding Nonspiking Neurons')
+%     f.Position = [187,387,1112,410];
+%     savefig(f,strcat(net_save_path,'/','MI_percentiles.fig'))
+%     saveas(f,strcat(net_save_path,'/','MI_percentiles.jpg'))
+%     saveas(f,strcat(net_save_path,'/','MI_percentiles.svg'))
+%     close(f)
+% 
+% else
+%     disp('Only 1 Sequence')
+% end
 
 %% Visualize network structure
 %Select data to visualize
@@ -706,4 +704,4 @@ savefig(f,strcat(net_save_path,'/','cluster_overlap_vis.fig'))
 saveas(f,strcat(net_save_path,'/','cluster_overlap_vis.jpg'))
 saveas(f,strcat(net_save_path,'/','cluster_overlap_vis.svg'))
 
-
+close(f)

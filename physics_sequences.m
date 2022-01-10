@@ -106,13 +106,14 @@ save(strcat(data_path,'/spike_struct.mat'),'spike_struct')
 %% Analyze New Sequences
 
 %Load data if not in Workspace
-msgbox('Select folder where the network results are stored.')
-data_path = uigetdir('/Users/hannahgermaine/Documents/PhD/');
-load(strcat(data_path,'/spike_struct.mat'))
+% msgbox('Select folder where the network results are stored.')
+% data_path = uigetdir('/Users/hannahgermaine/Documents/PhD/');
+% load(strcat(data_path,'/spike_struct.mat'))
 
 %Store ranks as matrices
 short_ranks = [];
 full_ranks = [];
+sequence_lengths = [];
 for i = 1:length(spike_struct)
     [num_events,~] = size(spike_struct(i).events);
     [n,~] = size(spike_struct(i).spikes_V_m);
@@ -128,6 +129,7 @@ for i = 1:length(spike_struct)
             full_ranks = [full_ranks, new_full_rank]; %#ok<AGROW>
             short_rank_w_0 = spike_struct(i).short_spike_ranks.(name);
             ns = length(find(short_rank_w_0));
+            sequence_lengths = [sequence_lengths, ns]; %#ok<AGROW>
             new_rank = ns + 0.5*(n - ns);
             new_short_rank = short_rank_w_0;
             new_short_rank(new_short_rank == 0) = new_rank;
@@ -138,7 +140,15 @@ for i = 1:length(spike_struct)
         clear j num_events
     end
 end
-clear i     
+clear i   
+
+%Remove outliers
+avg_short_length = mean(sequence_lengths);
+sd_short_length = std(sequence_lengths);
+%Remove values > 2 sd from mean, < 2 sd from mean, and < 0.05*n
+outlier_ind = [find(sequence_lengths > avg_short_length + 2*sd_short_length),find(sequence_lengths < avg_short_length - 2*sd_short_length),find(sequence_lengths < 0.05*n)]; %> 2 sd away from mean
+full_ranks(:,outlier_ind) = [];
+short_ranks(:,outlier_ind) = [];
 
 %Calculate distances
 full_dist = calculate_vector_distances(full_ranks);
@@ -150,6 +160,11 @@ short_dist_vec = nonzeros(triu(short_dist,1));
 shuffle_n = 100;
 full_shuffle = generate_shuffled_trajectories2(full_ranks, shuffle_n);
 short_shuffle = generate_shuffled_trajectories2(short_ranks, shuffle_n);
+short_shuffle_lengths = [];
+for i = 1:shuffle_n
+    [mode_i, mode_i_freq] = mode(short_shuffle(:,i));
+    short_shuffle_lengths = [short_shuffle_lengths,n - mode_i_freq];
+end    
 
 %Calculate shuffled distances
 full_shuffle_dist = calculate_vector_distances(full_shuffle);
@@ -178,7 +193,7 @@ legend()
 
 
 %% Investigating interesting results
-%Current sequences exhibited a bimodal distance distribution -
+%Full Rank current sequences exhibited a bimodal distance distribution -
 %investigating the differences in the peaks by splitting at a distance of
 %500.
 

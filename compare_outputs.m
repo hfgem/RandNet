@@ -12,7 +12,9 @@ current_init_path = uigetdir('/Users/hannahgermaine/Documents/PhD/');
 neuron_network_list = {dir(strcat(neuron_init_path,'/network*')).name};
 current_network_list = {dir(strcat(current_init_path,'/network*')).name};
 
-%% Pull Data
+%% Pull Data - Spike Sequences
+%Here we pull all of the sequences generated into easy-to-work-with
+%variables
 
 %Create storage variables
 neuron_event_lengths = [];
@@ -118,7 +120,7 @@ savefig(f,strcat(save_path,'/','comparing_neuron_current_best_nets.fig'))
 saveas(f,strcat(save_path,'/','comparing_neuron_current_best_nets.jpg'))
 saveas(f,strcat(save_path,'/','comparing_neuron_current_best_nets.svg'))
 
-%% Generate Shuffled Data for Comparison
+%% Generate Shuffled Spike Sequences for Comparison
 
 %Load datasets if not already in workspace
 load(strcat(neuron_init_path,'/neuron_spike_sequences.mat'))
@@ -145,7 +147,7 @@ current_viable_inits = 1:length(current_spike_sequences);
 save(strcat(neuron_init_path,'/neuron_shuffled_spike_sequences.mat'),'neuron_shuffled_spike_sequences','-v7.3')
 save(strcat(current_init_path,'/current_shuffled_spike_sequences.mat'),'current_shuffled_spike_sequences','-v7.3')
 
-%% Calculate Sequence Correlations
+%% Calculate Spike Sequence Correlations
 
 %Calculate trajectory similarity within the neuron results and within the
 %current results and store

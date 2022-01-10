@@ -106,25 +106,39 @@ save(strcat(data_path,'/spike_struct.mat'),'spike_struct')
 %% Analyze New Sequences
 
 %Load data if not in Workspace
-% msgbox('Select folder where the network results are stored.')
-% data_path = uigetdir('/Users/hannahgermaine/Documents/PhD/');
-% load(strcat(data_path,'/spike_struct.mat'))
+msgbox('Select folder where the network results are stored.')
+data_path = uigetdir('/Users/hannahgermaine/Documents/PhD/');
+load(strcat(data_path,'/spike_struct.mat'))
 
 %Store ranks as matrices
 short_ranks = [];
 full_ranks = [];
 for i = 1:length(spike_struct)
     [num_events,~] = size(spike_struct(i).events);
+    [n,~] = size(spike_struct(i).spikes_V_m);
     if num_events ~= 0
         for j = 1:num_events
             name = strcat('sequences_',string(j));
-            full_ranks = [full_ranks, spike_struct(i).ranks.(name)]; %#ok<AGROW>
-            short_ranks = [short_ranks, spike_struct(i).short_spike_ranks.(name)]; %#ok<AGROW>
+            %Update ranks of nonspiking neurons to be num_spiking + 1/2(n - num_spiking)
+            full_rank_w_0 = spike_struct(i).ranks.(name);
+            ns = length(find(full_rank_w_0));
+            new_rank = ns + 0.5*(n - ns);
+            new_full_rank = full_rank_w_0;
+            new_full_rank(new_full_rank == 0) = new_rank;
+            full_ranks = [full_ranks, new_full_rank]; %#ok<AGROW>
+            short_rank_w_0 = spike_struct(i).short_spike_ranks.(name);
+            ns = length(find(short_rank_w_0));
+            new_rank = ns + 0.5*(n - ns);
+            new_short_rank = short_rank_w_0;
+            new_short_rank(new_short_rank == 0) = new_rank;
+            short_ranks = [short_ranks, new_short_rank]; %#ok<AGROW>
+            clear full_rank_w_0 ns new_rank new_full_rank short_rank_w_0 ...
+                new_short_rank
         end  
         clear j num_events
     end
 end
-clear i    
+clear i     
 
 %Calculate distances
 full_dist = calculate_vector_distances(full_ranks);
@@ -161,3 +175,74 @@ xlabel('Distance')
 ylabel('Number of Distances')
 title('Short Rank Sequence Distances')
 legend()
+
+
+%% Investigating interesting results
+%Current sequences exhibited a bimodal distance distribution -
+%investigating the differences in the peaks by splitting at a distance of
+%500.
+
+[n,~] = size(full_ranks);
+[row, col] = find(full_dist < 500);
+close_pairs = [0,0];
+close_pair_lengths = [0,0];
+for i = 1:length(row)
+    i_ind = row(i);
+    j_ind = col(i);
+    if i_ind ~= j_ind
+        exists_already = find(sum(close_pairs - ones(size(close_pairs)).*[j_ind,i_ind],2) == 0,1);
+        if isempty(exists_already)
+            close_pairs = [close_pairs; i_ind, j_ind];
+            [mode_i, mode_i_freq] = mode(full_ranks(:,i_ind));
+            i_length = n - mode_i_freq;
+            [mode_j, mode_j_freq] = mode(full_ranks(:,j_ind));
+            j_length = n - mode_j_freq;
+            close_pair_lengths = [close_pair_lengths; i_length, j_length];
+        end
+    end
+end    
+close_pairs(1,:) = [];
+close_pair_lengths(1,:) = [];
+close_length_diff = abs(close_pair_lengths(:,2) - close_pair_lengths(:,1));
+close_unique = unique(close_pairs);
+close_unique_lengths = sum(mod(full_ranks(:,close_unique),1) == 0,1);
+avg_close_unique_length = mean(close_unique_lengths);
+
+
+[row, col] = find(full_dist >= 500);
+far_pairs = [0,0];
+far_pair_lengths = [0,0];
+for i = 1:length(row)
+    i_ind = row(i);
+    j_ind = col(i);
+    if i_ind ~= j_ind
+        exists_already = find(sum(far_pairs - ones(size(far_pairs)).*[j_ind,i_ind],2) == 0,1);
+        if isempty(exists_already)
+            far_pairs = [far_pairs; i_ind, j_ind];
+            [mode_i, mode_i_freq] = mode(full_ranks(:,i_ind));
+            i_length = n - mode_i_freq;
+            [mode_j, mode_j_freq] = mode(full_ranks(:,j_ind));
+            j_length = n - mode_j_freq;
+            far_pair_lengths = [far_pair_lengths; i_length, j_length];
+        end
+    end
+end
+far_pairs(1,:) = [];
+far_pair_lengths(1,:) = [];
+far_length_diff = abs(far_pair_lengths(:,2) - far_pair_lengths(:,1));
+far_unique = unique(far_pairs);
+far_unique_lengths = sum(mod(full_ranks(:,far_unique),1) == 0,1);
+avg_far_unique_length = mean(far_unique_lengths);
+
+figure;
+h1 = histogram(close_length_diff);
+hold on
+h2 = histogram(far_length_diff);
+xlabel('Distance Difference')
+ylabel('Number of Sequence Pairs')
+legend('Close Sequence Length Differences', 'Far Sequence Length Differences')
+
+%Length distribution ks test
+[h_len,p_len] = kstest2(close_unique_lengths,far_unique_lengths);
+%Difference in length ks test
+[h_diff,p_diff] = kstest2(close_length_diff,far_length_diff);

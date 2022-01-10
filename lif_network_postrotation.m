@@ -18,7 +18,7 @@ clusters = round(n/20); %number of clusters of neurons (for small n round(n/5), 
 %Interaction constants
 t_max = 2; %maximum amount of time (s)
 dt = 0.1*10^(-3); %timestep (s)
-tau_syn_E = 10*10^(-3); %AMPA/NMDA synaptic decay time constant (s)
+tau_syn_E = 2*10^(-3); %AMPA synaptic decay time constant (s) [Ignoring NMDA as slow and weak]
 tau_syn_I = 5*10^(-3); %GABA synaptic decay time constant (s)
 tau_stdp = 5*10^(-3); %STDP time constant (s)
 E_K = -80*10^(-3); %potassium reversal potential (V) %-75 or -80 mV
@@ -35,7 +35,7 @@ V_syn_I = -70*10^(-3); %synaptic reversal potential (inhibitory) %generally -70 
 % del_G_syn_I = 8*10^(-9); %synaptic conductance step following spike (S)
 del_G_syn_E_E = 9.5*10^(-9); %synaptic conductance step following spike (S)
 del_G_syn_I_I = 1.4*del_G_syn_E_E; %synaptic conductance step following spike (S)
-del_G_syn_E_I = 9.5*10^(-9); %synaptic conductance step following spike (S)
+del_G_syn_E_I = del_G_syn_E_E; %synaptic conductance step following spike (S)
 del_G_syn_I_E = 1.4*del_G_syn_E_E; %synaptic conductance step following spike (S)
 
 %___________________________

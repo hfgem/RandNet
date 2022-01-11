@@ -11,9 +11,6 @@
 % load(strcat(net_save_path,'/network_cluster_sequences.mat'))
 % load(strcat(net_save_path,'/network_var.mat'))
 
-V_m = network_var(1).V_m;
-spikes_V_m = V_m >= -50*10^(-3);
-
 %Grab relevant information
 [~,inits] = size(network_cluster_sequences); %Grab data sizes
 

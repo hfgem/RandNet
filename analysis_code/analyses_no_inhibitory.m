@@ -37,32 +37,16 @@ clear network network_var %to save space
 %% Calculate Distances if Inhibitory Neurons Were Removed
 
 %Load data if not in workspace
-% msgbox('Select folder where the network results are stored.')
-% data_path = uigetdir('/Users/hannahgermaine/Documents/PhD/');
 % load(strcat(data_path,'/network_spike_sequences_no_I.mat'))
 
 %Store full ranks as matrices
-full_ranks = [];
-sequence_lengths = [];
-for i = 1:length(spike_struct)
-    [num_events,~] = size(spike_struct(i).events);
-    [n,~] = size(spike_struct(i).spikes_V_m);
-    if num_events ~= 0
-        for j = 1:num_events
-            name = strcat('sequences_',string(j));
-            %Update ranks of nonspiking neurons to be num_spiking + 1/2(n - num_spiking)
-            full_rank_w_0 = spike_struct(i).ranks.(name);
-            ns = length(find(full_rank_w_0));
-            new_rank = ns + 0.5*(n - ns);
-            new_full_rank = full_rank_w_0;
-            new_full_rank(new_full_rank == 0) = new_rank;
-            full_ranks = [full_ranks, new_full_rank]; %#ok<AGROW>
-            clear full_rank_w_0 ns new_rank new_full_rank
-        end  
-        clear j num_events
-    end
-end
-clear i   
+%Useful Variables
+n = parameters.n;
+
+%First reformat ranks into matrix
+[full_ranks, sequence_lengths, nonfiring_neurons] = create_rank_matrix(network_spike_sequences_no_I);
+num_viable_inits = length(sequence_lengths);
+save(strcat(data_path,'/full_ranks_no_I_matrix.mat'),'full_ranks')  
 
 %Calculate distances
 full_dist = calculate_vector_distances(full_ranks);

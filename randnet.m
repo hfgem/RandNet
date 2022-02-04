@@ -1,4 +1,5 @@
-%LIF Network Rotation Project Expanded
+%RandNet Project - random networks with global inhibition and their ability
+%to produce sequences
 
 %% Save Path
 
@@ -31,8 +32,6 @@ V_reset = -70*10^(-3); %reset membrane potential (V)
 V_syn_E = 0; %synaptic reversal potential (excitatory)
 V_syn_I = -70*10^(-3); %synaptic reversal potential (inhibitory) %generally -70 pr -80 mV
 %______Split del_G_syn______
-% del_G_syn_E = 2*10^(-9); %synaptic conductance step following spike (S)
-% del_G_syn_I = 8*10^(-9); %synaptic conductance step following spike (S)
 del_G_syn_E_E = 9.5*10^(-9); %synaptic conductance step following spike (S)
 del_G_syn_I_I = 1.4*del_G_syn_E_E; %synaptic conductance step following spike (S)
 del_G_syn_E_I = del_G_syn_E_E; %synaptic conductance step following spike (S)
@@ -45,19 +44,6 @@ tau_sra = (-2.4*10^5)*del_G_sra + 0.11; %spike rate adaptation time constant (s)
 connectivity_gain = 0; %0.005; %amount to increase or decrease connectivity by with each spike (more at the range of 0.002-0.005)
 IEI = 0.1; %inter-event-interval (s) the elapsed time between spikes to count separate events
 
-%How spikes are initiated:
-%'cluster' sets a cluster to threshold;
-%'current' means spikes depend on an input current of I_in; 
-%'neuron' sets a random selection of 2% of neurons to threshold
-type = 'current'; %'cluster'; %'neuron';
-
-% %Rhythmic current input: (uncomment if desired)
-% I_coeff = 0; %5.1*10^(-10); %set to 0 for no input current
-% I_Hz = 1; %frequency of input - 1 Hz or 60 bpm, 4-8 Hz for theta rhythm
-% I_in = I_coeff*(0.5 + 0.5*sin(I_Hz*2*pi*x_in)); %Approximately theta wave input current
-%Noisy input: (uncomment if desired)
-% I_coeff = 2.7; %2.7; %set to 0 for no input current
-% I_scale = 1*10^(-9); %sets the scale of the current input
 % Input conductance
 G_coeff = -38; %-40;
 G_scale = 1*10^(-9);
@@ -65,6 +51,15 @@ G_scale = 1*10^(-9);
 %Calculate connection probabilites
 conn_prob = 0.08; %set a total desired connection probability
 p_E = 0.75; %probability of an excitatory neuron
+
+%Global Inhibition
+%This value controls the amount of global inhibition - set to 0 if you want
+%no global inhibition, and scale upward for scaled connectivity.
+I_strength = 1;
+only_global = 0; %Set this flag to 1 if you want global inhibition to override random inhibitory connections given by "create_cluters"
+
+%How many tests of different initializations to run
+test_val_max = 10; %This value can be modified as you see fit
 
 %Event Statistics
 event_cutoff = 0.05; %0.25; %fraction of neurons that have to be involved to constitute a successful event
@@ -78,10 +73,10 @@ end
 clear w a
 save(strcat(save_path,'/parameters.mat'),'parameters')
 
-%% Create networks and test spike progressions
+%% Create Networks and Check Spike Progression
 %Runs through a series of different random number generator seeds to change
 %the network connectivity and setup, and then automatically outputs
-%sequence data to a folder
+%sequence data to a folder in save_path
 
 %If uploading a parameter file, uncomment the next line
 %load(strcat(save_path,'/parameters.mat'))
@@ -94,23 +89,14 @@ parameters.('cluster_n') = cluster_n;
 
 %Interaction constants
 t_steps = parameters.t_max/parameters.dt; %number of timesteps in simulation
-E_syn_E = parameters.V_syn_E*ones(parameters.n,1); %vector of the synaptic reversal potential for excitatory connections
-E_syn_I = parameters.V_syn_I*ones(parameters.n,1); %vector of the synaptic reversal potential for inhibitory connections
+syn_E = parameters.V_syn_E*ones(parameters.n,1); %vector of the synaptic reversal potential for excitatory connections
+syn_I = parameters.V_syn_I*ones(parameters.n,1); %vector of the synaptic reversal potential for inhibitory connections
 IES = ceil(parameters.IEI/parameters.dt); %inter-event-steps = the number of steps to elapse between spikes
 %save for easy calculations
 parameters.('t_steps') = t_steps;
-parameters.('E_syn_E') = E_syn_E;
-parameters.('E_syn_I') = E_syn_I;
+parameters.('syn_E') = E_syn_E;
+parameters.('syn_I') = E_syn_I;
 parameters.('IES') = IES;
-
-%How many tests of different initializations to run
-if strcmp(parameters.type,'cluster')
-    test_val_max = parameters.clusters; %Ensures every cluster is initialized
-else
-    test_val_max = 10; %This value can be modified as you see fit
-end
-%save for easy calculations
-parameters.('test_val_max') = test_val_max;
 
 %Adding an input conductance to all cells (one of the options must be uncommented)
 x_in = [0:parameters.dt:parameters.t_max];
@@ -155,13 +141,21 @@ for i = 1:1%10 %how many different network structures to test
     I_indices = datasample(all_indices,parameters.n_I,'Replace',false); %indices of inhibitory neurons
     E_indices = find(~ismember(all_indices,I_indices)); %indices of excitatory neurons
     [cluster_mat, conns] = create_clusters(parameters, i, 1);
+    %Add in global inhibition, added to individual connections already
+    %given. If global inhibition overrides any pre-set connections with
+    %inhibitory neurons, reset values to global inhibition values.
+    if parameters.only_global
+        conns(I_indices,:) = I_strength*(rand([parameters.n*(1-parameters.p_E), parameters.n]) < parameters.p_I);
+    else
+        conns(I_indices,:) = conns(I_indices,:) + I_strength*(rand([parameters.n*(1-parameters.p_E), parameters.n]) < parameters.p_I);
+    end
     conns_copy = conns; %just a copy of the connections to maintain for reset runs if there's "plasticity"
     n_EE = sum(conns(E_indices,E_indices),'all'); %number of E-E connections
     n_EI = sum(conns(E_indices,I_indices),'all'); %number of E-I connections
     n_II = sum(conns(I_indices,I_indices),'all'); %number of I-I connections
     n_IE = sum(conns(I_indices,E_indices),'all'); %number of I-E connections
     clear all_indices
-    
+ 
     %SAVE NETWORK STRUCTURE
     network = struct;
     network(1).cluster_mat = cluster_mat;
@@ -183,17 +177,13 @@ for i = 1:1%10 %how many different network structures to test
         seed = j;
         
         %Create Storage Variables
-        I_syn = zeros(parameters.n,parameters.t_steps+1); %synaptic current emitted by each neuron at each timestep (A)
-        %synaptic conductances for each neuron at each timestep
-        G_syn_I = zeros(parameters.n,parameters.t_steps+1); %conductance for presynaptic inhibitory (S)
-        G_syn_E = zeros(parameters.n,parameters.t_steps+1); %conductance for presynaptic excitatory (S)
         V_m = zeros(parameters.n,parameters.t_steps+1); %membrane potential for each neuron at each timestep
         V_m(:,1) = parameters.V_reset + randn([parameters.n,1])*(10^(-3)); %set all neurons to baseline reset membrane potential with added noise
         G_sra = zeros(parameters.n,parameters.t_steps+1); %refractory conductance for each neuron at each timestep
         
         %Run model
-        [V_m, G_sra, G_syn_I, G_syn_E, I_syn] = lif_sra_calculator_postrotation(...
-            parameters, seed, network, I_syn, G_syn_I, G_syn_E, V_m, G_sra);
+        [V_m, G_sra, G_syn_I_E, G_syn_E_E, G_syn_I_I, G_syn_E_I, I_syn] = randnet_calculator(...
+            parameters, seed, network, V_m, G_sra);
         network_var(j).V_m = V_m;
         network_var(j).G_sra = G_sra;
         network_var(j).G_syn_I = G_syn_I;
@@ -332,4 +322,6 @@ for i = 1:1%10 %how many different network structures to test
     save(strcat(net_save_path,'/network_var.mat'),'network_var','-v7.3')
     save(strcat(net_save_path,'/network_spike_sequences.mat'),'network_spike_sequences','-v7.3')
     save(strcat(net_save_path,'/network_cluster_sequences.mat'),'network_cluster_sequences','-v7.3')
-end
+
+    
+end %End of network structure loop

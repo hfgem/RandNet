@@ -1,4 +1,4 @@
-function [cluster_mat, conns] = create_clusters(parameters, seed, include_all)
+function [cluster_mat, conns] = create_clusters(parameters, seed, include_all, global_inhib)
     %_________
     %ABOUT: This function generates the network clusters and connections
     %based on the number of neurons, number of clusters, number of neurons
@@ -13,6 +13,8 @@ function [cluster_mat, conns] = create_clusters(parameters, seed, include_all)
     %   seed = random number generator seed
     %   include_all = binary value of whether to include all neurons in
     %       clusters (1) or not (0).
+    %   global_inhib = binary value of whether to include a global
+    %       inhibition to the connectivity matrix.
     %OUTPUTS:
     %   cluster_mat = A binary [clusters x n] matrix of which neurons are in
     %                 which cluster
@@ -62,4 +64,5 @@ function [cluster_mat, conns] = create_clusters(parameters, seed, include_all)
     for i = 1:parameters.n
         conns(i,i) = 0;
     end
+    
 end

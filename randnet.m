@@ -167,11 +167,6 @@ for i = 1:1%10 %how many different network structures to test
     network_cluster_sequences = struct; 
     
     for j = 1:parameters.test_val_max        
-        rng(j,'twister')
-        %Adding an input conductance to all cells
-        G_in = parameters.G_coeff*randn(parameters.n,parameters.t_steps+1)*parameters.G_scale;
-        %save for easy calculations
-        parameters.('G_in') = G_in;
         
         %Create Storage Variables
         V_m = zeros(parameters.n,parameters.t_steps+1); %membrane potential for each neuron at each timestep
@@ -180,7 +175,7 @@ for i = 1:1%10 %how many different network structures to test
         seed = j;
         
         %Run model
-        [V_m, G_sra, G_syn_E_E, G_syn_I_E, G_syn_E_I, G_syn_I_I, conns] = ...
+        [V_m, G_sra, G_syn_E_E, G_syn_I_E, G_syn_E_I, G_syn_I_I, G_in, conns] = ...
                 randnet_calculator(parameters, seed, network, V_m);
         V_m_var(j).V_m = V_m;
         G_var(j).G_in = G_in;

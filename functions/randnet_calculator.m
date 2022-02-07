@@ -1,4 +1,4 @@
-function [V_m, G_sra, G_syn_E_E, G_syn_I_E, G_syn_E_I, G_syn_I_I, conns] = randnet_calculator(...
+function [V_m, G_sra, G_syn_E_E, G_syn_I_E, G_syn_E_I, G_syn_I_I, G_in, conns] = randnet_calculator(...
     parameters, seed, network, V_m)
     %_________
     %ABOUT: This function uses the leaky integrate-and-fire model of 
@@ -49,11 +49,7 @@ function [V_m, G_sra, G_syn_E_E, G_syn_I_E, G_syn_E_I, G_syn_I_I, conns] = randn
     %       syn_E = An [n x 1] vector of the synaptic reversal potential for
     %               excitatory connections (V)
     %       syn_I = An [n x 1] vector of the synaptic reversal potential for
-    %               inhibitory connections (V)
-    %       G_in = input conductance vector 
-    
-    %       
-    %       
+    %               inhibitory connections (V)      
     %   seed = A random number generator seed which:
     %       1. when type = 'cluster' sets which cluster is to be used for
     %           the initialization of spiking
@@ -107,6 +103,10 @@ function [V_m, G_sra, G_syn_E_E, G_syn_I_E, G_syn_E_I, G_syn_I_I, conns] = randn
     
     %Set the random number generator seed
     rng(seed)
+    
+    %Calculate input conductance
+    G_in = parameters.G_coeff*randn(parameters.n,parameters.t_steps+1)*parameters.G_scale;
+    parameters.('G_in') = G_in;
     
     %Create Storage Variables
     G_sra = zeros(parameters.n,parameters.t_steps+1); %refractory conductance for each neuron at each timestep (S)

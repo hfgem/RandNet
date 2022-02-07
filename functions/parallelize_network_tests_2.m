@@ -6,14 +6,24 @@ function vec = parallelize_network_tests_2(parameters,network,j, save_path)
     %network_tests2.m where a parallelized for loop calls this function.
     %
     %INPUTS:
-    %   parameters = struct containing the following
+    %   parameters = a structure that contains the following (only
+    %   relevant listed below):
     %       n = Number of neurons in the network
-    %       V_reset = The reset membrane potential (V)
+    %       clusters = Number of clusters of neurons in network
+    %       t_max = maximum time of simulation (s)
+    %       dt = timestep of simulation (s)
+    %       tau_syn_E = AMPA synaptic decay time constant (s) [Ignoring NMDA as slow and weak]
+    %       tau_syn_I = GABA synaptic decay time constant (s)
+    %       tau_stdp = STDP decay time constant (s)
+    %       E_K = Potassium reversal potential (V)
+    %       E_L = Leak reversal potential (V)
+    %       G_L = Leak conductance (S) - 10-30 nS range
+    %       C_m = Total membrane capacitance (F)
     %       V_m_noise = Magnitude of membrane potential simulation noise (V)
     %       V_th = The threshold membrane potential (V)
-    %       
-    %       del_G_sra = spike rate adaptation conductance step following spike 
-    %               ranges from 1-200 *10^(-9) (S)
+    %       V_reset = The reset membrane potential (V)
+    %       V_syn_E = Excitatory synaptic reversal potential (V)
+    %       V_syn_I = Inhibitory synaptic reversal potential (V)
     %       del_G_syn_E_E = Synaptic conductance step for 
     %               excitatory-excitatory neuron connections following
     %               spike (S)
@@ -26,31 +36,19 @@ function vec = parallelize_network_tests_2(parameters,network,j, save_path)
     %       del_G_syn_I_E = Synaptic conductance step for 
     %               inhibitory-excitatory neuron connections following
     %               spike (S)
-    %       E_syn_E = An [n x 1] vector of the synaptic reversal potential for
-    %               excitatory connections (V)
-    %       E_syn_I = An [n x 1] vector of the synaptic reversal potential for
-    %               inhibitory connections (V)
-    %       E_K = Potassium reversal potential (V)
-    %       E_L = Leak reversal potential (V)
-    %       G_L = Leak conductance (S) - 10-30 nS range
-    %       C_m = Total membrane capacitance (F)
-    %       dt = Timestep (s)
+    %       del_G_sra = spike rate adaptation conductance step following spike 
+    %               ranges from 1-200 *10^(-9) (S)
     %       tau_sra = Spike rate adaptation time constant (s)
-    %       tau_syn_E = AMPA/NMDA synaptic decay time constant (s)
-    %       tau_syn_I = GABA synaptic decay time constant (s)
-    %       tau_stdp = STDP decay time constant (s)
     %       connectivity_gain = Amount to increase or decrease connectivity by 
     %               with each spike (more at the range of 1.002-1.005) -
     %               keep at 1 to ensure no connectivity change
-    %       I_in = An [n x t_steps + 1] matrix with input current values
+    %       G_coeff = input conductance coefficient (setting strength) (S)
+    %       G_scale = input conductance scale (ex. nano = 1*10^(-9)) (S)
     %       t_steps = The number of timesteps in the simulation
-    %       type = Determines how spiking is initiated. Either:
-    %           1. type = 'cluster', which sets a cluster of neurons to
-    %           threshold at step 1
-    %           2. type = 'neuron', which sets a fraction of neurons to
-    %           threshold at step 1, where the fraction is set on line 
-    %           3. type = 'current', which means spiking depends entirely on
-    %           I_in and noise for initialization
+    %       syn_E = An [n x 1] vector of the synaptic reversal potential for
+    %               excitatory connections (V)
+    %       syn_I = An [n x 1] vector of the synaptic reversal potential for
+    %               inhibitory connections (V)     
     %   network = a structure that contains the following:
     %       cluster_mat = A binary [clusters x n] matrix of which neurons are
     %               in which cluster
@@ -70,16 +68,10 @@ function vec = parallelize_network_tests_2(parameters,network,j, save_path)
     vec = zeros(1,3);
     seed = j;
     %Create Storage Variables
-    I_syn = zeros(parameters.n,parameters.t_steps+1); %synaptic current emitted by each neuron at each timestep (A)
-    %synaptic conductances for each neuron at each timestep
-    G_syn_I = zeros(parameters.n,parameters.t_steps+1); %conductance for presynaptic inhibitory (S)
-    G_syn_E = zeros(parameters.n,parameters.t_steps+1); %conductance for presynaptic excitatory (S)
     V_m = zeros(parameters.n,parameters.t_steps+1); %membrane potential for each neuron at each timestep
     V_m(:,1) = parameters.V_reset + randn([parameters.n,1])*parameters.V_m_noise; %set all neurons to baseline reset membrane potential with added noise
-    G_sra = zeros(parameters.n,parameters.t_steps+1); %refractory conductance for each neuron at each timestep
     %Run model
-    [V_m, ~, ~, ~, ~] = lif_sra_calculator_postrotation(...
-        parameters, seed, network, I_syn, G_syn_I, G_syn_E, V_m, G_sra);
+    [V_m, ~, ~, ~, ~] = randnet_calculator(parameters, seed, network, V_m);
     clear I_syn G_syn_I G_syn_E
     
     %Find spike profile
@@ -148,8 +140,8 @@ function vec = parallelize_network_tests_2(parameters,network,j, save_path)
                                     xlabel('Seconds')
                                     title(strcat('Event #',string(e_i)))
                                 end
-                                del_G_str = string(parameters.del_G_sra);
                                 G_str = string(parameters.G_coeff);
+                                del_G_str = string(parameters.I_strength);
                                 title_str = strcat("G_{coeff} =",G_str,"; \Delta_{G_{SRA}} =",del_G_str);
                                 sgtitle(title_str)
 %                                 savefig(f,strcat(save_path,'sequence_G_',G_str,'_del_',extractBefore(del_G_str,5),'.fig'))

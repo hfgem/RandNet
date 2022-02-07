@@ -150,8 +150,10 @@ function [V_m, G_sra, G_syn_I, G_syn_E, conns] = randnet_calculator(...
         G_sra(:,t+1) = G_sra(:,t)*exp(-parameters.dt/parameters.tau_sra); %Spike rate adaptation conductance
         %Synaptic conductance updated for each postsynaptic neuron by
         %incoming connection type
-        G_syn_E(:,t+1) = G_syn_E(:,t).*exp(-parameters.dt/parameters.tau_syn_E); %excitatory conductance update
-        G_syn_I(:,t+1) = G_syn_I(:,t).*exp(-parameters.dt/parameters.tau_syn_I); %inhibitory conductance update
+        G_syn_E_E(:,t+1) = G_syn_E_E(:,t).*exp(-parameters.dt/parameters.tau_syn_E); %excitatory conductance update
+        G_syn_I_E(:,t+1) = G_syn_I_E(:,t).*exp(-parameters.dt/parameters.tau_syn_E); %excitatory conductance update
+        G_syn_I_I(:,t+1) = G_syn_I_I(:,t).*exp(-parameters.dt/parameters.tau_syn_I); %inhibitory conductance update
+        G_syn_E_I(:,t+1) = G_syn_E_I(:,t).*exp(-parameters.dt/parameters.tau_syn_I); %inhibitory conductance update
         %______________________________________
         %Update connection strengths via STDP
         pre_syn_n = sum(conns(:,spikers),2) > 0; %pre-synaptic neurons

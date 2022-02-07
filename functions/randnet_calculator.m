@@ -1,5 +1,5 @@
-function [V_m, G_sra, G_syn_I, G_syn_E, conns] = randnet_calculator(...
-    parameters, seed, network, V_m, G_sra)
+function [V_m, G_sra, G_syn_E_E, G_syn_I_E, G_syn_E_I, G_syn_I_I, conns] = randnet_calculator(...
+    parameters, seed, network, V_m)
     %_________
     %ABOUT: This function uses the leaky integrate-and-fire model of 
     %neuronal firing to calculate the trajectory of membrane potentials,
@@ -7,14 +7,24 @@ function [V_m, G_sra, G_syn_I, G_syn_E, conns] = randnet_calculator(...
     %particular set of parameters and initialization.
     %
     %INPUTS:
-    %   parameters = a structure that contains the following:
+    %   parameters = a structure that contains the following (only
+    %   relevant listed below):
     %       n = Number of neurons in the network
-    %       V_reset = The reset membrane potential (V)
+    %       clusters = Number of clusters of neurons in network
+    %       t_max = maximum time of simulation (s)
+    %       dt = timestep of simulation (s)
+    %       tau_syn_E = AMPA synaptic decay time constant (s) [Ignoring NMDA as slow and weak]
+    %       tau_syn_I = GABA synaptic decay time constant (s)
+    %       tau_stdp = STDP decay time constant (s)
+    %       E_K = Potassium reversal potential (V)
+    %       E_L = Leak reversal potential (V)
+    %       G_L = Leak conductance (S) - 10-30 nS range
+    %       C_m = Total membrane capacitance (F)
     %       V_m_noise = Magnitude of membrane potential simulation noise (V)
     %       V_th = The threshold membrane potential (V)
-    %       
-    %       del_G_sra = spike rate adaptation conductance step following spike 
-    %               ranges from 1-200 *10^(-9) (S)
+    %       V_reset = The reset membrane potential (V)
+    %       V_syn_E = Excitatory synaptic reversal potential (V)
+    %       V_syn_I = Inhibitory synaptic reversal potential (V)
     %       del_G_syn_E_E = Synaptic conductance step for 
     %               excitatory-excitatory neuron connections following
     %               spike (S)
@@ -27,24 +37,23 @@ function [V_m, G_sra, G_syn_I, G_syn_E, conns] = randnet_calculator(...
     %       del_G_syn_I_E = Synaptic conductance step for 
     %               inhibitory-excitatory neuron connections following
     %               spike (S)
-    %       E_syn_E = An [n x 1] vector of the synaptic reversal potential for
-    %               excitatory connections (V)
-    %       E_syn_I = An [n x 1] vector of the synaptic reversal potential for
-    %               inhibitory connections (V)
-    %       E_K = Potassium reversal potential (V)
-    %       E_L = Leak reversal potential (V)
-    %       G_L = Leak conductance (S) - 10-30 nS range
-    %       C_m = Total membrane capacitance (F)
-    %       dt = Timestep (s)
+    %       del_G_sra = spike rate adaptation conductance step following spike 
+    %               ranges from 1-200 *10^(-9) (S)
     %       tau_sra = Spike rate adaptation time constant (s)
-    %       tau_syn_E = AMPA/NMDA synaptic decay time constant (s)
-    %       tau_syn_I = GABA synaptic decay time constant (s)
-    %       tau_stdp = STDP decay time constant (s)
     %       connectivity_gain = Amount to increase or decrease connectivity by 
     %               with each spike (more at the range of 1.002-1.005) -
     %               keep at 1 to ensure no connectivity change
-    %       I_in = An [n x t_steps + 1] matrix with input current values
+    %       G_coeff = input conductance coefficient (setting strength) (S)
+    %       G_scale = input conductance scale (ex. nano = 1*10^(-9)) (S)
     %       t_steps = The number of timesteps in the simulation
+    %       syn_E = An [n x 1] vector of the synaptic reversal potential for
+    %               excitatory connections (V)
+    %       syn_I = An [n x 1] vector of the synaptic reversal potential for
+    %               inhibitory connections (V)
+    %       G_in = input conductance vector 
+    
+    %       
+    %       
     %   seed = A random number generator seed which:
     %       1. when type = 'cluster' sets which cluster is to be used for
     %           the initialization of spiking
@@ -63,24 +72,24 @@ function [V_m, G_sra, G_syn_I, G_syn_E, conns] = randnet_calculator(...
     %               connectivity
     %       I_indices = Vector of indices of inhibitory neurons
     %       E_indices = Vector of indices of excitatory neurons
-    %   G_syn_I = An [n x t_steps+1] matrix of conductance for presynaptic 
-    %               inhibitory (S)
-    %   G_syn_E = An [n x t_steps+1] matrix of conductance for presynaptic 
-    %               excitatory (S)
     %   V_m = An [n x t_steps+1] matrix of membrane potential for each 
     %               neuron at each timestep
-    %   G_sra = An [n x t_steps+1] matrix with refractory conductance for
-    %               each neuron at each timestep (S)
+    %   G_in = An [n x t_steps+1] matrix of input conductance for each
+    %               neuron at each timestep
     %
     %OUTPUTS:
     %   V_m = An [n x t_steps+1] matrix of membrane potential for each 
     %               neuron at each timestep
     %   G_sra = An [n x t_steps+1] matrix with refractory conductance for
     %               each neuron at each timestep (S)
-    %   G_syn_I = An [n x t_steps+1] matrix of conductance for presynaptic 
-    %               inhibitory (S)
-    %   G_syn_E = An [n x t_steps+1] matrix of conductance for presynaptic 
-    %               excitatory (S)
+    %   G_syn_E_E = An [n x t_steps+1] matrix of conductance for presynaptic 
+    %               excitatory to postsynaptic excitatory (S)
+    %   G_syn_I_E = An [n x t_steps+1] matrix of conductance for presynaptic 
+    %               inhibitory to postsynaptic excitatory (S)
+    %   G_syn_E_I = An [n x t_steps+1] matrix of conductance for presynaptic 
+    %               excitatory to postsynaptic inhibitory (S)
+    %   G_syn_I_I = An [n x t_steps+1] matrix of conductance for presynaptic 
+    %               inhibitory to postsynaptic inhibitory (S)
     %   conns = The updated conns matrix (if connectivity_gain != 1)
     %
     %ASSUMPTIONS:
@@ -100,12 +109,11 @@ function [V_m, G_sra, G_syn_I, G_syn_E, conns] = randnet_calculator(...
     rng(seed)
     
     %Create Storage Variables
-    I_syn = zeros(parameters.n,parameters.t_steps+1); %synaptic current emitted by each neuron at each timestep (A)
-    %synaptic conductances for each neuron at each timestep
-    G_syn_I_E = zeros(parameters.n,parameters.t_steps+1); %conductance for presynaptic inhibitory (S)
-    G_syn_E_E = zeros(parameters.n,parameters.t_steps+1); %conductance for presynaptic excitatory (S)
-    G_syn_I_I = zeros(parameters.n,parameters.t_steps+1); %conductance for presynaptic inhibitory (S)
-    G_syn_E_I = zeros(parameters.n,parameters.t_steps+1); %conductance for presynaptic excitatory (S)
+    G_sra = zeros(parameters.n,parameters.t_steps+1); %refractory conductance for each neuron at each timestep (S)
+    G_syn_I_E = zeros(parameters.n,parameters.t_steps+1); %conductance for pre-inhib to post-excit (S)
+    G_syn_E_E = zeros(parameters.n,parameters.t_steps+1); %conductance for pre-excit to post-excit (S)
+    G_syn_I_I = zeros(parameters.n,parameters.t_steps+1); %conductance for pre-inhib to post-inhib (S)
+    G_syn_E_I = zeros(parameters.n,parameters.t_steps+1); %conductance for pre-excit to post-inhib (S)
 
     %Copy connectivity matrix in case of stdp changes
     conns = network.conns; %separately update a connectivity matrix
@@ -141,7 +149,7 @@ function [V_m, G_sra, G_syn_I, G_syn_E, conns] = randnet_calculator(...
         G_syn_E_I(:,t) = G_syn_E_I(:,t) + parameters.del_G_syn_E_I*incoming_conn_E.*I_bin;
         %______________________________________
         %Calculate membrane potential using integration method
-        V_ss = ( parameters.G_in(:,t).*parameters.E_syn_E + G_syn_E_E(:,t).*parameters.syn_E + G_syn_E_I(:,t).*parameters.syn_E + G_syn_I_I(:,t).*parameters.syn_I + G_syn_I_E(:,t).*parameters.syn_I + parameters.G_L*parameters.E_L + G_sra(:,t)*parameters.E_K )./(parameters.G_L + G_sra(:,t) + G_syn_E_E(:,t) + G_syn_E_I(:,t) + G_syn_I_I(:,t) + G_syn_I_E(:,t) + parameters.G_in(:,t));
+        V_ss = ( parameters.G_in(:,t).*parameters.syn_E + G_syn_E_E(:,t).*parameters.syn_E + G_syn_E_I(:,t).*parameters.syn_E + G_syn_I_I(:,t).*parameters.syn_I + G_syn_I_E(:,t).*parameters.syn_I + parameters.G_L*parameters.E_L + G_sra(:,t)*parameters.E_K )./(parameters.G_L + G_sra(:,t) + G_syn_E_E(:,t) + G_syn_E_I(:,t) + G_syn_I_I(:,t) + G_syn_I_E(:,t) + parameters.G_in(:,t));
         taueff = parameters.C_m./(parameters.G_L + G_sra(:,t) + G_syn_E_E(:,t) + G_syn_E_I(:,t) + G_syn_I_I(:,t) + G_syn_I_E(:,t) + parameters.G_in(:,t));
         V_m(:,t+1) = V_ss + (V_m(:,t) - V_ss).*exp(-parameters.dt ./taueff) + randn([parameters.n,1])*parameters.V_m_noise; %the randn portion can be removed if you'd prefer no noise
         V_m(spikers,t+1) = parameters.V_reset; %update those that just spiked to reset

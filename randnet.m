@@ -59,7 +59,7 @@ I_strength = 1;
 only_global = 0; %Set this flag to 1 if you want global inhibition to override random inhibitory connections given by "create_cluters"
 
 %How many tests of different initializations to run
-test_val_max = 10; %This value can be modified as you see fit
+test_val_max = 1; %This value can be modified as you see fit
 
 %Event Statistics
 event_cutoff = 0.05; %0.25; %fraction of neurons that have to be involved to constitute a successful event
@@ -79,7 +79,7 @@ save(strcat(save_path,'/parameters.mat'),'parameters')
 %sequence data to a folder in save_path
 
 %If uploading a parameter file, uncomment the next line
-%load(strcat(save_path,'/parameters.mat'))
+load(strcat(save_path,'/parameters.mat'))
 
 %____________________________________
 %___Calculate Dependent Parameters___
@@ -94,18 +94,9 @@ syn_I = parameters.V_syn_I*ones(parameters.n,1); %vector of the synaptic reversa
 IES = ceil(parameters.IEI/parameters.dt); %inter-event-steps = the number of steps to elapse between spikes
 %save for easy calculations
 parameters.('t_steps') = t_steps;
-parameters.('syn_E') = E_syn_E;
-parameters.('syn_I') = E_syn_I;
+parameters.('syn_E') = syn_E;
+parameters.('syn_I') = syn_I;
 parameters.('IES') = IES;
-
-%Adding an input conductance to all cells (one of the options must be uncommented)
-x_in = [0:parameters.dt:parameters.t_max];
-% %Rhythmic current input: (uncomment if desired)
-%Noisy input conductance: (uncomment if desired)
-G_in = parameters.G_coeff*randn(parameters.n,parameters.t_steps+1)*parameters.G_scale;
-%save for easy calculations
-parameters.('x_in') = x_in;
-parameters.('G_in') = G_in;
 
 %Calculate connection probabilites
 npairs = parameters.n*(parameters.n-1); %total number of possible neuron connections
@@ -127,7 +118,7 @@ save(strcat(save_path,'/parameters.mat'),'parameters')
 %____________________________________________
 
 for i = 1:1%10 %how many different network structures to test
-    rng(i) %set random number generator for network structure
+    rng(i,'twister') %set random number generator for network structure
     
     %CREATE NETWORK SAVE PATH
     net_save_path = strcat(save_path,'/network_',string(i));
@@ -145,9 +136,9 @@ for i = 1:1%10 %how many different network structures to test
     %given. If global inhibition overrides any pre-set connections with
     %inhibitory neurons, reset values to global inhibition values.
     if parameters.only_global
-        conns(I_indices,:) = I_strength*(rand([parameters.n*(1-parameters.p_E), parameters.n]) < parameters.p_I);
+        conns(I_indices,:) = parameters.I_strength*(rand([parameters.n*(1-parameters.p_E), parameters.n]) < parameters.p_I);
     else
-        conns(I_indices,:) = conns(I_indices,:) + I_strength*(rand([parameters.n*(1-parameters.p_E), parameters.n]) < parameters.p_I);
+        conns(I_indices,:) = conns(I_indices,:) + parameters.I_strength*(rand([parameters.n*(1-parameters.p_E), parameters.n]) < parameters.p_I);
     end
     conns_copy = conns; %just a copy of the connections to maintain for reset runs if there's "plasticity"
     n_EE = sum(conns(E_indices,E_indices),'all'); %number of E-E connections
@@ -169,26 +160,35 @@ for i = 1:1%10 %how many different network structures to test
     %RUN MODEL AND CALCULATE
     %Run through every cluster initialization and store relevant data and
     %calculations
-    network_var = struct;
+    V_m_var = struct;
+    G_var = struct;
+    I_var = struct;
     network_spike_sequences = struct;
     network_cluster_sequences = struct; 
     
-    for j = 1:parameters.test_val_max
-        seed = j;
+    for j = 1:parameters.test_val_max        
+        rng(j,'twister')
+        %Adding an input conductance to all cells
+        G_in = parameters.G_coeff*randn(parameters.n,parameters.t_steps+1)*parameters.G_scale;
+        %save for easy calculations
+        parameters.('G_in') = G_in;
         
         %Create Storage Variables
         V_m = zeros(parameters.n,parameters.t_steps+1); %membrane potential for each neuron at each timestep
         V_m(:,1) = parameters.V_reset + randn([parameters.n,1])*(10^(-3)); %set all neurons to baseline reset membrane potential with added noise
-        G_sra = zeros(parameters.n,parameters.t_steps+1); %refractory conductance for each neuron at each timestep
+        
+        seed = j;
         
         %Run model
-        [V_m, G_sra, G_syn_I_E, G_syn_E_E, G_syn_I_I, G_syn_E_I, I_syn] = randnet_calculator(...
-            parameters, seed, network, V_m, G_sra);
-        network_var(j).V_m = V_m;
-        network_var(j).G_sra = G_sra;
-        network_var(j).G_syn_I = G_syn_I;
-        network_var(j).G_syn_E = G_syn_E;
-        network_var(j).I_syn = I_syn;
+        [V_m, G_sra, G_syn_E_E, G_syn_I_E, G_syn_E_I, G_syn_I_I, conns] = ...
+                randnet_calculator(parameters, seed, network, V_m);
+        V_m_var(j).V_m = V_m;
+        G_var(j).G_in = G_in;
+        G_var(j).G_sra = G_sra;
+        G_var(j).G_syn_I_E = G_syn_I_E;
+        G_var(j).G_syn_E_E = G_syn_E_E;
+        G_var(j).G_syn_I_I = G_syn_I_I;
+        G_var(j).G_syn_E_I = G_syn_E_I;
         
         %Find spike profile
         spikes_V_m = V_m >= parameters.V_th;
@@ -303,14 +303,8 @@ for i = 1:1%10 %how many different network structures to test
                     for e_i = 1:num_events
                         cluster_spikes = network.cluster_mat*spikes_V_m(:,events(e_i,1):events(e_i,2));
                         cluster_mov_sum = movsum(cluster_spikes',bin_size)';
-                        normalized_cluster_spikes = cluster_spikes ./ sum(cluster_spikes,1);
-                        normalized_cluster_spikes(isnan(normalized_cluster_spikes)) = 0;
-                        normalized_cluster_mov_sum = cluster_mov_sum ./ sum(cluster_mov_sum,1);
-                        normalized_cluster_mov_sum(isnan(normalized_cluster_mov_sum)) = 0;
                         network_cluster_sequences(j).clusters.(strcat('sequence_',string(e_i))) = cluster_spikes;
                         network_cluster_sequences(j).movsum.(strcat('sequence_',string(e_i))) = cluster_mov_sum;
-                        network_cluster_sequences(j).normalized_clusters.(strcat('sequence_',string(e_i))) = normalized_cluster_spikes;
-                        network_cluster_sequences(j).normalized_cluster_mov_sum.(strcat('sequence_',string(e_i))) = normalized_cluster_mov_sum;
                     end
                     clear bin_width bin_size cluster_spikes cluster_mov_sum e_i
                 end %Sequence length loop
@@ -319,7 +313,9 @@ for i = 1:1%10 %how many different network structures to test
     end
     
     %SAVE NETWORK DATA
-    save(strcat(net_save_path,'/network_var.mat'),'network_var','-v7.3')
+    save(strcat(net_save_path,'/V_m_var.mat'),'V_m_var','-v7.3')
+    save(strcat(net_save_path,'/G_var.mat'),'G_var','-v7.3')
+    save(strcat(net_save_path,'/I_var.mat'),'I_var','-v7.3')
     save(strcat(net_save_path,'/network_spike_sequences.mat'),'network_spike_sequences','-v7.3')
     save(strcat(net_save_path,'/network_cluster_sequences.mat'),'network_cluster_sequences','-v7.3')
 

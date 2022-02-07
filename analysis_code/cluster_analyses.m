@@ -4,12 +4,12 @@
 %% Load Data
 
 %Select and load specific network data to analyze
-% net_save_path = uigetdir('/Users/hannahgermaine/Documents/PhD/','Select Network Save Folder'); %Have user input where they'd like the output stored
-% slashes = find(net_save_path == '/');
-% save_path = net_save_path(1:slashes(end));
-% load(strcat(save_path,'/parameters.mat'))
-% load(strcat(net_save_path,'/network_cluster_sequences.mat'))
-% load(strcat(net_save_path,'/network_var.mat'))
+net_save_path = uigetdir('/Users/hannahgermaine/Documents/PhD/','Select Network Save Folder'); %Have user input where they'd like the output stored
+slashes = find(net_save_path == '/');
+save_path = net_save_path(1:slashes(end));
+load(strcat(save_path,'/parameters.mat'))
+load(strcat(net_save_path,'/network_cluster_sequences.mat'))
+load(strcat(net_save_path,'/network_var.mat'))
 
 %Grab relevant information
 [~,inits] = size(network_cluster_sequences); %Grab data sizes
@@ -209,3 +209,174 @@ savefig(f2,strcat(cluster_save_path,'/','seq_dist.fig'))
 saveas(f2,strcat(cluster_save_path,'/','seq_dist.jpg'))
 saveas(f2,strcat(cluster_save_path,'/','seq_dist.svg'))
 clear ax1 h1 h2 ax2 h3 h4
+
+%% Are Sequential Neurons In The Same Clusters?
+%This block looks at whether successive spikes are primarily from neurons
+%in the same clusters or different as compared to shuffled data
+
+% %Select the folder where outputs are stored
+% msgbox('Select folder where the network results are stored.')
+% data_path = uigetdir('/Users/hannahgermaine/Documents/PhD/');
+% 
+% %Load Spike Data
+% load(strcat(data_path,'/network_spike_sequences_no_I.mat')) %Excluding inhibitory neurons
+% load(strcat(data_path,'/network.mat'))
+
+%Store cluster data
+cluster_mat = network.cluster_mat;
+[n_c,~] = size(cluster_mat); %Number of clusters
+
+%Create Sequence Matrix
+[~, ~, ~, sequence_mat] = create_rank_matrix(network_spike_sequences_no_I);
+[n,n_s] = size(sequence_mat);
+
+%Determine Sequential Similarity
+%This is done by looking at only the neurons which do fire, and their
+%sequence, and pairwise calculating how many clusters both neurons belong
+%to, and what the average overlap is for the full sequence.
+[short_order_sim, short_order] = order_similarity(sequence_mat, cluster_mat);
+
+%Calculate the progression of pair similarity
+%Across Trial Averaging
+avg_overlap_progression = mean(short_order,2); %Calculate the average overlap at each sequence point
+std_overlap_progression = std(short_order,[],2); %Calculate the deviation at each sequence point
+curve1 = avg_overlap_progression + std_overlap_progression;
+curve2 = avg_overlap_progression - std_overlap_progression;
+x = 1:n;
+x2 = [x, fliplr(x)];
+inBetween = [curve1', fliplr(curve2)'];
+%Within Trial Stats
+max_block = zeros(1,n_s); %maximum block of overlapping neurons in sequence
+for i = 1:n_s %check overlap for each sequence
+    zero_s = short_order(:,i) == 0;
+    zero_ind = find(zero_s);
+    diff = zero_ind(2:end) - zero_ind(1:end-1);
+    max_block(1,i) = max(diff);
+end 
+clear i zero_s zero_ind diff
+
+%Calculate chance similarity
+neur_c = sum(cluster_mat,1); %number of clusters each neuron belongs to
+avg_neur_c = sum(neur_c)/n; %average number of clusters each neuron belongs to
+prob_1_overlap = (avg_neur_c/n_c)^2;
+prob_2_overlap = prob_1_overlap*((avg_neur_c - 1)/(n_c-1))^2;
+
+%Null distribution
+shuffle_n = 200;
+shuffle_seq = generate_shuffled_trajectories2(sequence_mat,shuffle_n);
+[short_order_shuffled_sim, short_order_shuffled] = order_similarity(shuffle_seq, cluster_mat);
+%Across Trial Averaging
+avg_overlap_shuffled_progression = mean(short_order_shuffled,2); %Calculate the average overlap at each sequence point
+std_overlap_shuffled_progression = std(short_order_shuffled,[],2); %Calculate the deviation at each sequence point
+curve1_shuff = avg_overlap_progression + std_overlap_progression;
+curve2_shuff = avg_overlap_progression - std_overlap_progression;
+x_shuff = 1:n;
+x2_shuff = [x_shuff, fliplr(x_shuff)];
+inBetween_shuff = [curve1_shuff', fliplr(curve2_shuff)'];
+%Within Trial Stats
+max_block_shuffled = zeros(1,n_s); %maximum block of overlapping neurons in sequence
+for i = 1:n_s %check overlap for each sequence
+    zero_s = short_order_shuffled(:,i) == 0;
+    zero_ind = find(zero_s);
+    diff = zero_ind(2:end) - zero_ind(1:end-1);
+    max_block_shuffled(1,i) = max(diff);
+end 
+clear i zero_s zero_ind diff
+
+%Plot similarity results
+f = figure;
+%Histogram of Average Overlap of Each Sequence
+subplot(3,1,1)
+histogram(short_order_sim,10,'DisplayName','Histogram of Values')
+hold on
+histogram(short_order_shuffled_sim,10,'DisplayName','Histogram of Null Dist. Values')
+xline(prob_1_overlap,'Color','r','LineWidth',1,'DisplayName','Chance Probability of 1 Overlap')
+xline(prob_2_overlap,'Color','m','LineWidth',1,'DisplayName','Chance Probability of 2 Overlaps')
+xlabel('Pair Cluster Similarity Calculation')
+ylabel('Number of Sequences')
+title('Histogram of Average Sequence Pair Similarity Values')
+legend()
+%Histogram of All Overlap Values Across All Sequences
+subplot(3,1,2)
+histogram(short_order,10,'DisplayName','Histogram of Values')
+hold on
+histogram(short_order_shuffled,10,'DisplayName','Histogram of Null Dist. Values')
+xline(prob_1_overlap,'Color','r','LineWidth',1,'DisplayName','Chance Probability of 1 Overlap')
+xline(prob_2_overlap,'Color','m','LineWidth',1,'DisplayName','Chance Probability of 2 Overlaps')
+xlabel('Pair Cluster Similarity Calculation')
+ylabel('Number of Sequences')
+title('Histogram of All Sequence Pair Similarity Values')
+legend()
+%Average Similarity In Sequence Progression 
+subplot(3,1,3)  
+%fill(x2, inBetween, 'b','FaceAlpha',0.25,'DisplayName','St. Dev. of Overlap');
+hold on
+plot(1:n,avg_overlap_progression','LineWidth',1.5,'Color','b','DisplayName','Average Overlap')
+%fill(x2_shuff, inBetween_shuff, 'g','FaceAlpha',0.25,'DisplayName','St. Dev. of Null Overlap')
+plot(1:n,avg_overlap_shuffled_progression,'LineWidth',1.5,'Color','g','DisplayName','Average Null Overlap')
+yline(prob_1_overlap,'Color','r','LineWidth',1,'DisplayName','Chance Probability of 1 Overlap')
+yline(prob_2_overlap,'Color','m','LineWidth',1,'DisplayName','Chance Probability of 2 Overlaps')
+xlabel('Sequence Index')
+ylabel('Cluster Overlap Number')
+title('Overlap In Sequence Progression')
+legend()
+%Save
+savefig(f,strcat(data_path,'/cluster_analysis/','sequence_prog_cluster_sim_no_I.fig'))
+saveas(f,strcat(data_path,'/cluster_analysis/','sequence_prog_cluster_sim_no_I.jpg'))
+saveas(f,strcat(data_path,'/cluster_analysis/','sequence_prog_cluster_sim_no_I.svg'))
+
+%% Percent of Cluster Representation Across Time
+%Here we generate matrices representing the percent of representation of
+%each cluster at each time point in a sequence, to determine if there is a
+%clear progression or trade-off in dominance
+
+% %Select the folder where outputs are stored
+% msgbox('Select folder where the network results are stored.')
+% data_path = uigetdir('/Users/hannahgermaine/Documents/PhD/');
+% 
+% %Load Spike Data
+% load(strcat(data_path,'/network_spike_sequences_no_I.mat'))
+% load(strcat(data_path,'/network.mat'))
+
+%Store Cluster Data
+cluster_mat = network.cluster_mat;
+cluster_mat_e = cluster_mat(:,network.E_indices);
+[n_c,n_e] = size(cluster_mat_e); %Number of clusters
+
+%Calculate percent cluster representation across time
+cluster_percent_prog = struct;
+for i = 1:length(network_spike_sequences_no_I)
+    n_e = network_spike_sequences_no_I(i).num_events;
+    if n_e ~= 0
+        e_times = network_spike_sequences_no_I(i).events;
+        %Cycle through the events
+        for j = 1:n_e
+            spikes_V_m_e = network_spike_sequences_no_I(i).spikes_V_m(:,e_times(j,1):e_times(j,2));
+            clusters_e = cluster_mat_e*spikes_V_m_e;
+            %NEEDS MORE WORK
+        end    
+    end    
+    
+end   
+
+
+%% Look at cluster progression from rank vectors
+
+% %Load Spike Data
+% load(strcat(data_path,'/network_spike_sequences_no_I.mat'))
+% load(strcat(data_path,'/network.mat'))
+
+%Store Cluster Data
+cluster_mat = network.cluster_mat;
+[n_c,~] = size(cluster_mat); %Number of clusters
+
+%Create Rank Matrix
+[full_ranks, sequence_lengths, nonfiring_neurons] = create_rank_matrix(network_spike_sequences);
+[n,n_s] = size(full_ranks);
+
+%Store short ranks
+short_ranks = zeros(size(full_ranks));
+for i = 1:n_s
+    short_rank_vec = full_ranks(~nonfiring_neurons(:,i),i);
+    short_ranks(1:length(short_rank_vec),i) = short_rank_vec;
+end  

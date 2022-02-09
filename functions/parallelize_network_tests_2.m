@@ -126,11 +126,11 @@ function vec = parallelize_network_tests_2(parameters,network,j, save_path)
             
             %Select results to visualize and save
             if avg_event_length > 0
-                if length(spiking_neurons) >= parameters.event_cutoff*parameters.n
-                    if and(avg_fr>= 0.02, avg_fr <= 1.5)
-                        if and(avg_event_length >= 0.02, avg_event_length <= 0.15)
-                            to_vis = rand;
-                            if to_vis <= 0.01
+                %if length(spiking_neurons) >= parameters.event_cutoff*parameters.n
+                    %if and(avg_fr>= 0.02, avg_fr <= 1.5)
+                        %if and(avg_event_length >= 0.02, avg_event_length <= 0.15)
+                            %to_vis = rand;
+                            %if to_vis <= 0.01
                                 f = figure;
                                 for e_i = 1:num_events
                                     subplot(1,num_events,e_i)
@@ -141,16 +141,22 @@ function vec = parallelize_network_tests_2(parameters,network,j, save_path)
                                     title(strcat('Event #',string(e_i)))
                                 end
                                 G_str = string(parameters.G_coeff);
-                                del_G_str = string(parameters.I_strength);
+                                del_G_str = string(parameters.del_G_sra);
+                                I_str = string(parameters.I_strength);
                                 title_str = strcat("G_{coeff} =",G_str,"; \Delta_{G_{SRA}} =",del_G_str);
                                 sgtitle(title_str)
 %                                 savefig(f,strcat(save_path,'sequence_G_',G_str,'_del_',extractBefore(del_G_str,5),'.fig'))
-                                saveas(f,strcat(save_path,'/figures/sequence_G_',G_str,'_del_',extractBefore(del_G_str,5),'.jpg'))
+                                try
+                                    short_del_G_str = extractBefore(del_G_str,5);
+                                catch
+                                    short_del_G_str = del_G_str;
+                                end
+                                saveas(f,strcat(save_path,'/figures/sequence_G_',G_str,'_del_',short_del_G_str,'_I_',I_str,'.jpg'))
                                 close(f)
-                            end
-                        end
-                    end
-                end
+                            %end
+                        %end
+                    %end
+                %end
             end
 
             %Third value: Average event length

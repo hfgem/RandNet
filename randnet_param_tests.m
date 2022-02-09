@@ -30,7 +30,7 @@ msgbox('Select folder to save results.')
 save_path = uigetdir('/Users/hannahgermaine/Documents/PhD/');
 
 %Create figures folder
-mkdir(strcat(save_path,'figures/'))
+mkdir(strcat(save_path,'/figures/'))
 
 %___________________________________
 %____Define dependent parameters____
@@ -67,11 +67,11 @@ save(strcat(save_path,'/parameters.mat'),'parameters')
 %% Set Up Grid Search Parameters
 
 %Test parameters
-num_nets = 5;
-num_inits = 5;
+num_nets = 1;
+num_inits = 1;
 
 %Number of parameters to test (each)
-test_n = 10;
+test_n = 5;
 
 %Parameter 1: coefficient of input conductance
 G_coeff_vec = linspace(-100,100,test_n);
@@ -97,16 +97,144 @@ success = zeros(test_n*ones(1,num_params));
 %Start parallel pool for parallelizing the grid search
 % parpool(4)
 
-results = zeros(test_n^2,3);
+results = zeros(test_n^3,3);
 
 %Loop through all parameter sets
 parfevalOnAll(gcp(), @warning, 0, 'off', 'MATLAB:singularMatrix');
-parfor ind = 1:test_n^2, results(ind,:) = parallelize_parameter_tests_2(parameters,num_nets,...
+parfor ind = 1:test_n^3, results(ind,:) = parallelize_parameter_tests_2(parameters,num_nets,...
     num_inits, parameter_vec, test_n, ind, save_path); end
 save(strcat(save_path,'/results.mat'),'results','-v7.3')
 
-num_spikers = reshape(squeeze(results(:,1)),test_n,test_n);
-avg_fr = reshape(squeeze(results(:,2)),test_n,test_n);
-avg_event_length = reshape(squeeze(results(:,3)),test_n,test_n);
+num_spikers = reshape(squeeze(results(:,1)),test_n,test_n,test_n);
+avg_fr = reshape(squeeze(results(:,2)),test_n,test_n,test_n);
+avg_event_length = reshape(squeeze(results(:,3)),test_n,test_n,test_n);
 
+%% Visualize Value Grid Search Results
 
+%Recall:
+%Parameter 1: coefficient of input conductance (G_coeff)
+%Parameter 2: global inhibition strength (I_strength)
+%Parameter 3: SRA step size (del_G_sra)
+
+%G_coeff vs I_strength
+num_spikers_G_I = squeeze(mean(num_spikers,3));
+avg_fr_G_I = squeeze(mean(avg_fr,3));
+avg_event_length_G_I = squeeze(mean(avg_event_length,3));
+figure;
+subplot(1,3,1)
+imagesc(num_spikers_G_I())
+c1 = colorbar();
+c1.Label.String = 'Number of Neurons';
+title('Number of Spiking Neurons')
+xticks(1:test_n)
+xticklabels(parameter_vec(1,:))
+yticks(1:test_n)
+yticklabels(parameter_vec(2,:))
+xlabel('G_{coeff}')
+ylabel('I_{strength}')
+subplot(1,3,2)
+imagesc(avg_fr_G_I)
+c2 = colorbar();
+c2.Label.String = "Hz";
+title('Average Firing Rate')
+xticks(1:test_n)
+xticklabels(parameter_vec(1,:))
+yticks(1:test_n)
+yticklabels(parameter_vec(2,:))
+xlabel('G_{coeff}')
+ylabel('I_{strength}')
+subplot(1,3,3)
+imagesc(avg_event_length_G_I)
+c3 = colorbar();
+c3.Label.String = "Seconds";
+title('Average Event Length')
+xticks(1:test_n)
+xticklabels(parameter_vec(1,:))
+yticks(1:test_n)
+yticklabels(parameter_vec(2,:))
+xlabel('G_{coeff}')
+ylabel('I_{strength}')
+
+clear c1 c2 c3
+
+%G_coeff vs del_G_sra
+num_spikers_G_S = squeeze(mean(num_spikers,2));
+avg_fr_G_S = squeeze(mean(avg_fr,2));
+avg_event_length_G_S = squeeze(mean(avg_event_length,2));
+figure;
+subplot(1,3,1)
+imagesc(num_spikers_G_S)
+c1 = colorbar();
+c1.Label.String = 'Number of Neurons';
+title('Number of Spiking Neurons')
+xticks(1:test_n)
+xticklabels(parameter_vec(1,:))
+yticks(1:test_n)
+yticklabels(parameter_vec(3,:))
+xlabel('G_{coeff}')
+ylabel('\delta G_{SRA}')
+subplot(1,3,2)
+imagesc(avg_fr_G_S)
+c2 = colorbar();
+c2.Label.String = "Hz";
+title('Average Firing Rate')
+xticks(1:test_n)
+xticklabels(parameter_vec(1,:))
+yticks(1:test_n)
+yticklabels(parameter_vec(3,:))
+xlabel('G_{coeff}')
+ylabel('\delta G_{SRA}')
+subplot(1,3,3)
+imagesc(avg_event_length_G_S)
+c3 = colorbar();
+c3.Label.String = "Seconds";
+title('Average Event Length')
+xticks(1:test_n)
+xticklabels(parameter_vec(1,:))
+yticks(1:test_n)
+yticklabels(parameter_vec(3,:))
+xlabel('G_{coeff}')
+ylabel('\delta G_{SRA}')
+
+clear c1 c2 c3
+
+%I_strength vs del_G_sra
+num_spikers_I_S = squeeze(mean(num_spikers,1));
+avg_fr_I_S = squeeze(mean(avg_fr,1));
+avg_event_length_I_S = squeeze(mean(avg_event_length,1));
+figure;
+subplot(1,3,1)
+imagesc(num_spikers_I_S)
+c1 = colorbar();
+c1.Label.String = 'Number of Neurons';
+title('Number of Spiking Neurons')
+xticks(1:test_n)
+xticklabels(parameter_vec(2,:))
+yticks(1:test_n)
+yticklabels(parameter_vec(3,:))
+xlabel('I_{strength}')
+ylabel('\delta G_{SRA}')
+subplot(1,3,2)
+imagesc(avg_fr_I_S)
+c2 = colorbar();
+c2.Label.String = "Hz";
+title('Average Firing Rate')
+xticks(1:test_n)
+xticklabels(parameter_vec(2,:))
+yticks(1:test_n)
+yticklabels(parameter_vec(3,:))
+xlabel('I_{strength}')
+ylabel('\delta G_{SRA}')
+subplot(1,3,3)
+imagesc(avg_event_length_I_S)
+c3 = colorbar();
+c3.Label.String = "Seconds";
+title('Average Event Length')
+xticks(1:test_n)
+xticklabels(parameter_vec(2,:))
+yticks(1:test_n)
+yticklabels(parameter_vec(3,:))
+xlabel('I_{strength}')
+ylabel('\delta G_{SRA}')
+
+clear c1 c2 c3

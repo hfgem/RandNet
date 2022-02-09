@@ -170,7 +170,7 @@ for i = 1:1%10 %how many different network structures to test
         
         %Create Storage Variables
         V_m = zeros(parameters.n,parameters.t_steps+1); %membrane potential for each neuron at each timestep
-        V_m(:,1) = parameters.V_reset + randn([parameters.n,1])*(10^(-3)); %set all neurons to baseline reset membrane potential with added noise
+        V_m(:,1) = parameters.V_reset + randn([parameters.n,1])*(10^(-3))*sqrt(dt); %set all neurons to baseline reset membrane potential with added noise
         
         seed = j;
         

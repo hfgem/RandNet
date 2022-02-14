@@ -67,20 +67,20 @@ save(strcat(save_path,'/parameters.mat'),'parameters')
 %% Set Up Grid Search Parameters
 
 %Test parameters
-num_nets = 1;
-num_inits = 1;
+num_nets = 5;
+num_inits = 5;
 
 %Number of parameters to test (each)
 test_n = 5;
 
 %Parameter 1: coefficient of input conductance
-G_coeff_vec = linspace(-100,100,test_n);
+G_coeff_vec = linspace(-100,0,test_n);
 
 %Parameter 2: global inhibition strength
 I_strength_vec = linspace(0,1,test_n);
 
 %Parameter 3: SRA step size
-del_G_sra_vec = linspace(1*10^(-9),200*10^(-9),test_n);
+del_G_sra_vec = linspace(50*10^(-9),150*10^(-9),test_n);
 
 %Combined into one parameter vector to pass
 parameter_vec = [G_coeff_vec; I_strength_vec; del_G_sra_vec];

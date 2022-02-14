@@ -126,11 +126,11 @@ function vec = parallelize_network_tests_2(parameters,network,j, save_path)
             
             %Select results to visualize and save
             if avg_event_length > 0
-                %if length(spiking_neurons) >= parameters.event_cutoff*parameters.n
-                    %if and(avg_fr>= 0.02, avg_fr <= 1.5)
-                        %if and(avg_event_length >= 0.02, avg_event_length <= 0.15)
-                            %to_vis = rand;
-                            %if to_vis <= 0.01
+                if length(spiking_neurons) >= parameters.event_cutoff*parameters.n
+                    if and(avg_fr>= 0.02, avg_fr <= 1.5)
+%                         if and(avg_event_length >= 0.02, avg_event_length <= 0.15)
+%                             to_vis = rand;
+%                             if to_vis <= 0.01
                                 f = figure;
                                 for e_i = 1:num_events
                                     subplot(1,num_events,e_i)
@@ -153,10 +153,10 @@ function vec = parallelize_network_tests_2(parameters,network,j, save_path)
                                 end
                                 saveas(f,strcat(save_path,'/figures/sequence_G_',G_str,'_del_',short_del_G_str,'_I_',I_str,'.jpg'))
                                 close(f)
-                            %end
-                        %end
-                    %end
-                %end
+%                             end
+%                         end
+                    end
+                end
             end
 
             %Third value: Average event length

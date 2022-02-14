@@ -42,7 +42,7 @@ del_G_sra = 330e-09; %spike rate adaptation conductance step following spike %ra
 tau_sra = (-2.4*10^5)*del_G_sra + 0.11; %spike rate adaptation time constant (s)
 %If want to have STDP, change connectivity_gain to > 0.
 connectivity_gain = 0; %0.005; %amount to increase or decrease connectivity by with each spike (more at the range of 0.002-0.005)
-IEI = 0.1; %inter-event-interval (s) the elapsed time between spikes to count separate events
+IEI = 0.05; %inter-event-interval (s) the elapsed time between spikes to count separate events
 
 % Input conductance
 G_coeff = -38; %-40;
@@ -62,7 +62,7 @@ only_global = 0; %Set this flag to 1 if you want global inhibition to override r
 test_val_max = 1; %This value can be modified as you see fit
 
 %Event Statistics
-event_cutoff = 0.05; %0.25; %fraction of neurons that have to be involved to constitute a successful event
+event_cutoff = 0.25; %0.25; %fraction of neurons that have to be involved to constitute a successful event
 
 %Save parameters to a structure and to computer
 w = whos;
@@ -167,6 +167,10 @@ for i = 1:1%10 %how many different network structures to test
     network_cluster_sequences = struct; 
     
     for j = 1:parameters.test_val_max        
+        
+        %Create input conductance variable
+        G_in = parameters.G_coeff*randn(parameters.n,parameters.t_steps+1)*parameters.G_scale;
+        parameters.('G_in') = G_in;
         
         %Create Storage Variables
         V_m = zeros(parameters.n,parameters.t_steps+1); %membrane potential for each neuron at each timestep

@@ -2,25 +2,19 @@
 
 %% Load Data
 
+saveFlag = 0; % 1 to save analysis results
+
 %Select the folder where outputs are stored
 msgbox('Select folder where the network results are stored.')
 data_path = uigetdir('/Users/hannahgermaine/Documents/PhD/');
 
 %Load the membrane potential results, spike events, and parameters
-load(strcat(data_path,'/network_var.mat'))
+load(strcat(data_path,'/V_m_var.mat'))
 load(strcat(data_path,'/network_spike_sequences.mat'))
 slashes = find(data_path == '/');
 param_path = data_path(1:slashes(end));
 load(strcat(param_path,'/parameters.mat'))
 
-%Keep just membrane potential
-fields = fieldnames(network_var);
-for i = 1:length(fields)
-    if ~strcmp(fields{i},'V_m')
-        network_var = rmfield(network_var,fields{i});
-    end
-end
-clear i fields
 
 %% Pull Out Data Into New Structure
 
@@ -28,9 +22,9 @@ clear i fields
 spike_struct = struct;
 
 %Pull Spikes
-for i = 1:length(network_var)
+for i = 1:length(V_m_var)
     %Find and store all spike times and neurons
-    V_m = network_var(i).V_m;
+    V_m = V_m_var(i).V_m;
     spikes_V_m = V_m >= parameters.V_th;
     spike_struct(i).spikes_V_m = spikes_V_m;
     [spikes_x,spikes_t] = find(spikes_V_m);
@@ -40,10 +34,7 @@ for i = 1:length(network_var)
     spike_struct(i).spiking_neurons = spiking_neurons;
     spike_struct(i).spike_times = spike_times;
     spike_struct(i).events = network_spike_sequences(i).events;
-    %If it's a neuron initialization, store the starting neurons
-    if strcmp(parameters.type,'neuron')
-        spike_struct(i).init_neur = find(spikes_V_m(:,1));
-    end
+
     %If events are not empty, continue
     if ~isempty(network_spike_sequences(i).events)
         events = network_spike_sequences(i).events;
@@ -100,8 +91,9 @@ for i = 1:length(network_var)
     clear V_m spikes_V_m spikes_x spikes_t spike_times max_time spiking_neurons
 end   
 
-save(strcat(data_path,'/spike_struct.mat'),'spike_struct')
-% clear network_var i
+if saveFlag
+    save(strcat(data_path,'/spike_struct.mat'),'spike_struct')
+end
 
 %% Analyze New Sequences
 

@@ -1,17 +1,25 @@
 %Network Structure Analyses
 
-%% Visualize network structure
-%Select data to visualize
+saveFlag = 0; % 1 to save analysis results
+
+%% Select data to visualize
 net_save_path = uigetdir('/Users/hannahgermaine/Documents/PhD/','Select Network Save Folder'); %Have user input where they'd like the output stored
 load(strcat(net_save_path,'/network.mat'))
 slashes = find(net_save_path == '/');
 save_path = net_save_path(1:slashes(end));
 load(strcat(save_path,'/parameters.mat'))
+scriptFolder = '/netStruct'; % sub-folder so save analysis results to
+
+if saveFlag & ~isfolder([net_save_path, scriptFolder])
+    mkdir([net_save_path, scriptFolder]);
+end
 
 cluster_mat = network.cluster_mat;
 clusters = parameters.clusters;
 n = parameters.n;
 conns = network.conns;
+
+%% Visualize network structure
 
 %First create indices for each neuron in each cluster - staggering
 %locations
@@ -68,9 +76,11 @@ end
 legend(leg_items,leg_names)
 title('Network Diagram','FontSize',16)
 set(gca,'xtick',[],'ytick',[])
-savefig(f,strcat(net_save_path,'/','network.fig'))
-saveas(f,strcat(net_save_path,'/','network.jpg'))
-saveas(f,strcat(net_save_path,'/','network.svg'))
+if saveFlag
+    savefig(f,strcat(net_save_path,scriptFolder,'/','network.fig'))
+    saveas(f,strcat(net_save_path,scriptFolder,'/','network.jpg'))
+    saveas(f,strcat(net_save_path,scriptFolder,'/','network.svg'))
+end
 
 %Plot individual cluster connections
 f2 = figure;
@@ -98,9 +108,12 @@ for i = 1:clusters
 end 
 title('Intra-Cluster Connectivity','FontSize',16)
 set(gca,'xtick',[],'ytick',[])
-savefig(f2,strcat(net_save_path,'/','network_clusters.fig'))
+if saveFlag
+    savefig(f2,strcat(net_save_path,scriptFolder,'/','network_clusters.fig'))
+end
 
 %% Creat Plots of Network Properties
+%{
 %Select data to visualize
 net_save_path = uigetdir('/Users/hannahgermaine/Documents/PhD/','Select Network Save Folder'); %Have user input where they'd like the output stored
 load(strcat(net_save_path,'/network.mat'))
@@ -112,6 +125,7 @@ cluster_mat = network.cluster_mat;
 clusters = parameters.clusters;
 n = parameters.n;
 conns = network.conns;
+%}
 
 %Plot Cluster Participation as Imagesc
 f = figure;
@@ -122,10 +136,12 @@ xlabel('Neuron Index')
 ylabel('Cluster Index')
 title('Cluster Participation')
 f.Position = [440,720,866,85];
-savefig(f,strcat(net_save_path,'/','cluster_participation_visual.fig'))
-saveas(f,strcat(net_save_path,'/','cluster_participation_visual.jpg'))
-saveas(f,strcat(net_save_path,'/','cluster_participation_visual.svg'))
-%close(f)
+if saveFlag
+    savefig(f,strcat(net_save_path,scriptFolder,'/','cluster_participation_visual.fig'))
+    saveas(f,strcat(net_save_path,scriptFolder,'/','cluster_participation_visual.jpg'))
+    saveas(f,strcat(net_save_path,scriptFolder,'/','cluster_participation_visual.svg'))
+    %close(f)   
+end
 
 %Plot Histogram of number of clusters each neuron participates in
 num_clusters = sum(cluster_mat,1);
@@ -137,10 +153,12 @@ xline(mean_clusters,'label',strcat('Mean = ',string(mean_clusters)),...
 ylabel('Number of Neurons')
 xlabel('Number of Clusters')
 title('Most Neurons Participate in Multiple Clusters')
-savefig(f2,strcat(net_save_path,'/','cluster_participation_histogram.fig'))
-saveas(f2,strcat(net_save_path,'/','cluster_participation_histogram.jpg'))
-saveas(f2,strcat(net_save_path,'/','cluster_participation_histogram.svg'))
-%close(f2)
+if saveFlag
+    savefig(f2,strcat(net_save_path,scriptFolder,'/','cluster_participation_histogram.fig'))
+    saveas(f2,strcat(net_save_path,scriptFolder,'/','cluster_participation_histogram.jpg'))
+    saveas(f2,strcat(net_save_path,scriptFolder,'/','cluster_participation_histogram.svg'))
+    %close(f2)
+end
 
 %Plot Histogram of number of neurons that participate in a cluster overlap
 pairs = nchoosek(1:clusters,2);
@@ -156,15 +174,18 @@ xline(mean_overlap,'label',strcat('Mean = ',string(mean_overlap)),...
 ylabel('Number of Cluster Pairs')
 xlabel('Number of Neurons')
 title('Number of Neurons in Cluster Overlap')
-savefig(f3,strcat(net_save_path,'/','cluster_overlap_histogram.fig'))
-saveas(f3,strcat(net_save_path,'/','cluster_overlap_histogram.jpg'))
-saveas(f3,strcat(net_save_path,'/','cluster_overlap_histogram.svg'))
-%close(f3)
+if saveFlag
+    savefig(f3,strcat(net_save_path,scriptFolder,'/','cluster_overlap_histogram.fig'))
+    saveas(f3,strcat(net_save_path,scriptFolder,'/','cluster_overlap_histogram.jpg'))
+    saveas(f3,strcat(net_save_path,scriptFolder,'/','cluster_overlap_histogram.svg'))
+    %close(f3)
+end
 
 clear f f2
 %% Creat plot of overlap in 2 clusters
 
 %Select data to visualize
+%{
 net_save_path = uigetdir('/Users/hannahgermaine/Documents/PhD/','Select Network Save Folder'); %Have user input where they'd like the output stored
 load(strcat(net_save_path,'/network.mat'))
 slashes = find(net_save_path == '/');
@@ -176,6 +197,8 @@ clusters = parameters.clusters;
 cluster_n = parameters.cluster_n;
 n = parameters.n;
 conns = network.conns;
+%}
+
 clust_ind = randperm(clusters,2); %Randomly pick 2 clusters for visualization
 neur_ind = find(sum(cluster_mat(clust_ind,:),1) == 2); %neurons in both clusters
 colors = [[0,0.5000,0.7500];[1.0000,0.7812,0.4975];[0,0.5000,0.4000]];
@@ -231,8 +254,9 @@ for i = 1:2
 end
 scatter(plot_ind(:,1),plot_ind(:,2),50,scatter_col,'filled')
 set(gca,'xtick',[],'ytick',[])
-savefig(f,strcat(net_save_path,'/','cluster_overlap_vis.fig'))
-saveas(f,strcat(net_save_path,'/','cluster_overlap_vis.jpg'))
-saveas(f,strcat(net_save_path,'/','cluster_overlap_vis.svg'))
-
-close(f)
+if saveFlag
+    savefig(f,strcat(net_save_path,scriptFolder,'/','cluster_overlap_vis.fig'))
+    saveas(f,strcat(net_save_path,scriptFolder,'/','cluster_overlap_vis.jpg'))
+    saveas(f,strcat(net_save_path,scriptFolder,'/','cluster_overlap_vis.svg'))
+    close(f)
+end

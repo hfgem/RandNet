@@ -1,4 +1,5 @@
 %Code to compare results from neuron and current initializations
+% Not updated to work with randnet_calculator.m, yet
 
 %% Set up variables
 

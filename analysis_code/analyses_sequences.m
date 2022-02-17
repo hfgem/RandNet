@@ -1,10 +1,12 @@
 %This script contains code to analyze sequences including inhibitory
 %neurons.
 
+saveFlag = 1; % 1 to save analysis results
+
 %% Load Original Data
 
 %Select the folder where outputs are stored
-msgbox('Select folder where the network results are stored.')
+%msgbox('Select folder where the network results are stored.')
 data_path = uigetdir('/Users/hannahgermaine/Documents/PhD/');
 
 %Load data
@@ -18,6 +20,10 @@ clear slashes param_path
 %% Basic Stats
 %Uses full_ranks matrix and network_spike_sequences
 % load(strcat(data_path,'/full_ranks_matrix.mat'))
+
+%First reformat ranks into matrix
+[full_ranks, sequence_lengths, nonfiring_neurons] = create_rank_matrix(network_spike_sequences); 
+num_viable_inits = length(sequence_lengths);
 
 %Average Length Calculation
 avg_length = mean(sequence_lengths);
@@ -100,10 +106,12 @@ if length(viable_inits) ~= 1
     legend()
     title('Spearmans Rank Correlation Rhos Excluding Nonspiking Neurons')
     f.Position = [187,387,1112,410];
-    savefig(f,strcat(data_path,'/','spearmans_rank_percentiles.fig'))
-    saveas(f,strcat(data_path,'/','spearmans_rank_percentiles.jpg'))
-    saveas(f,strcat(data_path,'/','spearmans_rank_percentiles.svg'))
-    close(f)
+    if saveFlag
+        savefig(f,strcat(data_path,'/','spearmans_rank_percentiles.fig'))
+        saveas(f,strcat(data_path,'/','spearmans_rank_percentiles.jpg'))
+        saveas(f,strcat(data_path,'/','spearmans_rank_percentiles.svg'))
+        close(f)
+    end
 else
     disp('Not Enough Sequences')
 end
@@ -144,9 +152,11 @@ xlabel('Distance')
 ylabel('Number of Distances')
 title('Full Rank Sequence Distances')
 legend()
-savefig(f,strcat(data_path,'/','dist_hist.fig'))
-saveas(f,strcat(data_path,'/','dist_hist.jpg'))
-saveas(f,strcat(data_path,'/','dist_hist.svg'))
+if saveFlag
+    savefig(f,strcat(data_path,'/','dist_hist.fig'))
+    saveas(f,strcat(data_path,'/','dist_hist.jpg'))
+    saveas(f,strcat(data_path,'/','dist_hist.svg'))
+end
 
 %% DEPRECATED: Sequence Similarity - Matching Index
 %Uses network_spike_sequences.mat and parameters.mat
@@ -212,10 +222,12 @@ if length(viable_inits) ~= 1
     legend()
     title('Matching Indices Excluding Nonspiking Neurons')
     f.Position = [187,387,1112,410];
-    savefig(f,strcat(net_save_path,'/','MI_percentiles.fig'))
-    saveas(f,strcat(net_save_path,'/','MI_percentiles.jpg'))
-    saveas(f,strcat(net_save_path,'/','MI_percentiles.svg'))
-    close(f)
+    if saveFlag
+        savefig(f,strcat(net_save_path,'/','MI_percentiles.fig'))
+        saveas(f,strcat(net_save_path,'/','MI_percentiles.jpg'))
+        saveas(f,strcat(net_save_path,'/','MI_percentiles.svg'))
+        close(f)
+    end
 else
     disp('Only 1 Sequence')
 end

@@ -1,6 +1,8 @@
 %This file contains code blocks dedicated to analyzing the progression of
 %spike sequences through different clusters.
 
+saveFlag = 0; % 1 to save analysis results
+
 %% Load Data
 
 %Select and load specific network data to analyze
@@ -9,7 +11,10 @@ slashes = find(net_save_path == '/');
 save_path = net_save_path(1:slashes(end));
 load(strcat(save_path,'/parameters.mat'))
 load(strcat(net_save_path,'/network_cluster_sequences.mat'))
-load(strcat(net_save_path,'/network_var.mat'))
+load(strcat(net_save_path,'/network.mat'))
+load(strcat(net_save_path,'/V_m_var.mat'))
+load(strcat(net_save_path,'/network_spike_sequences.mat'))
+scriptFolder = '/cluster_analysis'; % sub-folder so save analysis results to
 
 %Grab relevant information
 [~,inits] = size(network_cluster_sequences); %Grab data sizes
@@ -19,7 +24,7 @@ clust_fields = fieldnames(network_cluster_sequences);
 seq_type = clust_fields(3:end);
 
 %Create result save path
-cluster_save_path = strcat(net_save_path,'/cluster_analysis/');
+cluster_save_path = strcat(net_save_path,scriptFolder,'/');
 if ~isfolder(cluster_save_path)
     mkdir(cluster_save_path);
 end
@@ -106,10 +111,12 @@ seq_struct(1) = [];
 seq_sum_struct(1) = [];
 
 %Save results for future use
-save(strcat(cluster_save_path,'/rank_vec.mat'),'rank_vec','-v7.3')
-save(strcat(cluster_save_path,'/rank_sum_vec.mat'),'rank_sum_vec','-v7.3')
-save(strcat(cluster_save_path,'/seq_struct.mat'),'seq_struct','-v7.3')
-save(strcat(cluster_save_path,'/seq_sum_struct.mat'),'seq_sum_struct','-v7.3')
+if saveFlag
+    save(strcat(cluster_save_path,'/rank_vec.mat'),'rank_vec','-v7.3')
+    save(strcat(cluster_save_path,'/rank_sum_vec.mat'),'rank_sum_vec','-v7.3')
+    save(strcat(cluster_save_path,'/seq_struct.mat'),'seq_struct','-v7.3')
+    save(strcat(cluster_save_path,'/seq_sum_struct.mat'),'seq_sum_struct','-v7.3')
+end
 
 %% Calculate cluster sequence similarities
 
@@ -166,9 +173,11 @@ xlabel('Distance')
 ylabel('Number of Values')
 title('Maximum Moving Sum Rank Distances')
 legend('True Rank Distances','Shuffled Rank Distances')
-savefig(f,strcat(cluster_save_path,'/','rank_dist.fig'))
-saveas(f,strcat(cluster_save_path,'/','rank_dist.jpg'))
-saveas(f,strcat(cluster_save_path,'/','rank_dist.svg'))
+if saveFlag
+    savefig(f,strcat(cluster_save_path,'/','rank_dist.fig'))
+    saveas(f,strcat(cluster_save_path,'/','rank_dist.jpg'))
+    saveas(f,strcat(cluster_save_path,'/','rank_dist.svg'))
+end
 clear ax1 h1 h2 ax2 h3 h4
 
 %____Sequence Analyses____
@@ -205,9 +214,11 @@ xlabel('Distance')
 ylabel('Number of Values')
 title('Average Moving Sum Trajectory Distances')
 legend('True Trajectory Distances','Shuffled Trajectory Distances')
-savefig(f2,strcat(cluster_save_path,'/','seq_dist.fig'))
-saveas(f2,strcat(cluster_save_path,'/','seq_dist.jpg'))
-saveas(f2,strcat(cluster_save_path,'/','seq_dist.svg'))
+if saveFlag
+    savefig(f2,strcat(cluster_save_path,'/','seq_dist.fig'))
+    saveas(f2,strcat(cluster_save_path,'/','seq_dist.jpg'))
+    saveas(f2,strcat(cluster_save_path,'/','seq_dist.svg'))
+end
 clear ax1 h1 h2 ax2 h3 h4
 
 %% Are Sequential Neurons In The Same Clusters?
@@ -225,6 +236,9 @@ clear ax1 h1 h2 ax2 h3 h4
 %Store cluster data
 cluster_mat = network.cluster_mat;
 [n_c,~] = size(cluster_mat); %Number of clusters
+
+[network_spike_sequences_no_I, network_cluster_sequences_no_I] = ...
+    exclude_inhibitory(network, V_m_var, parameters);
 
 %Create Sequence Matrix
 [~, ~, ~, sequence_mat] = create_rank_matrix(network_spike_sequences_no_I);
@@ -321,9 +335,11 @@ ylabel('Cluster Overlap Number')
 title('Overlap In Sequence Progression')
 legend()
 %Save
-savefig(f,strcat(data_path,'/cluster_analysis/','sequence_prog_cluster_sim_no_I.fig'))
-saveas(f,strcat(data_path,'/cluster_analysis/','sequence_prog_cluster_sim_no_I.jpg'))
-saveas(f,strcat(data_path,'/cluster_analysis/','sequence_prog_cluster_sim_no_I.svg'))
+if saveFlag
+    savefig(f,strcat(data_path,'/cluster_analysis/','sequence_prog_cluster_sim_no_I.fig'))
+    saveas(f,strcat(data_path,'/cluster_analysis/','sequence_prog_cluster_sim_no_I.jpg'))
+    saveas(f,strcat(data_path,'/cluster_analysis/','sequence_prog_cluster_sim_no_I.svg'))
+end
 
 %% Percent of Cluster Representation Across Time
 %Here we generate matrices representing the percent of representation of

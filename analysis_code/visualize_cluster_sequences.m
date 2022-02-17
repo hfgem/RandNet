@@ -2,15 +2,18 @@
 %This code visualizes the sequence of clusters a particular spike
 %sequence progresses through.
 
-%Select and load specific network data to analyze
-% net_save_path = uigetdir('/Users/hannahgermaine/Documents/PhD/','Select Network Save Folder'); %Have user input where they'd like the output stored
-% slashes = find(net_save_path == '/');
-% save_path = net_save_path(1:slashes(end));
-% load(strcat(save_path,'/parameters.mat'))
-% load(strcat(net_save_path,'/network_cluster_sequences.mat'))
-% load(strcat(net_save_path,'/network_var.mat'))
+saveFlag = 1; % 1 to save analysis results
 
-V_m = network_var(1).V_m;
+%Select and load specific network data to analyze
+net_save_path = uigetdir('/Users/hannahgermaine/Documents/PhD/','Select Network Save Folder'); %Have user input where they'd like the output stored
+slashes = find(net_save_path == '/');
+save_path = net_save_path(1:slashes(end));
+load(strcat(save_path,'/parameters.mat'))
+load(strcat(net_save_path,'/network_cluster_sequences.mat'))
+load(strcat(net_save_path,'/V_m_var.mat'))
+scriptFolder = '/cluster_plots'; % sub-folder so save analysis results to
+
+V_m = V_m_var(1).V_m;
 spikes_V_m = V_m >= -50*10^(-3);
 
 %Grab relevant information
@@ -20,8 +23,8 @@ spikes_V_m = V_m >= -50*10^(-3);
 seq_type = {'clusters','movsum','normalized_clusters','normalized_cluster_mov_sum'};
 
 %Create image save path
-cluster_save_path = strcat(net_save_path,'/cluster_plots/');
-if ~isfolder(cluster_save_path)
+cluster_save_path = strcat(net_save_path,scriptFolder,'/');
+if saveFlag & ~isfolder(cluster_save_path)
     mkdir(cluster_save_path);
 end
 
@@ -68,9 +71,11 @@ for s = seq_type
                     sgtitle(strcat('Normalized Moving Sum Cluster Sequence for Initialization #',string(k)))
                 end
                 %Save Figure
-                savefig(f,strcat(cluster_save_path,'/init_',string(k),'_',string(s_type),'_cluster_sequence.fig'))
-                saveas(f,strcat(cluster_save_path,'/init_',string(k),'_',string(s_type),'_cluster_sequence.jpg'))
-                close(f)
+                if saveFlag
+                    savefig(f,strcat(cluster_save_path,'/init_',string(k),'_',string(s_type),'_cluster_sequence.fig'))
+                    saveas(f,strcat(cluster_save_path,'/init_',string(k),'_',string(s_type),'_cluster_sequence.jpg'))
+                    close(f)
+                end
             end
         end
     end

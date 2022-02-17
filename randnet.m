@@ -72,18 +72,12 @@ p_I = 0.5; % probability of an I cell connecting to any other cell
 test_val_max = 1; %This value can be modified as you see fit
 
 
-%Save parameters to a structure and to computer
-w = whos;
-parameters = struct;
-for a = 1:length(w) 
-    parameters.(w(a).name) = eval(w(a).name); 
-end
-clear w a
-
 %% Parameters for sequence analysis
 
 % IEI = 0.05; %inter-event-interval (s) the elapsed time between spikes to count separate events
 IEI = 0.02; %inter-event-interval (s) the elapsed time between spikes to count separate events
+
+bin_width = 5*10^(-3); %5 ms bin
 
 %TEST 1: The number of neurons participating in a sequence must pass a threshold:
 event_cutoff = 0.25; %0.25; %fraction of neurons that have to be involved to constitute a successful event
@@ -96,6 +90,14 @@ max_avg_fr = 1.5;
 min_avg_length = 0.02;
 max_avg_length = 0.15;
 
+
+%% Save parameters to a structure and to computer
+w = whos;
+parameters = struct;
+for a = 1:length(w) 
+    parameters.(w(a).name) = eval(w(a).name); 
+end
+clear w a
 
 %% Create Networks and Check Spike Progression
 %Runs through a series of different random number generator seeds to change
@@ -329,7 +331,6 @@ for i = 1:1%10 %how many different network structures to test
                         axes xt xtlbl
 
                     %Find cluster sequence per event by moving bin
-                    bin_width = 5*10^(-3); %5 ms bin
                     bin_size = ceil(bin_width/parameters.dt); %number of timesteps to use in a bin
                     for e_i = 1:num_events
                         cluster_spikes = network.cluster_mat*spikes_V_m(:,events(e_i,1):events(e_i,2));

@@ -4,7 +4,17 @@
 %% Save Path
 
 clear all
-save_path = uigetdir('/Users/hannahgermaine/Documents/PhD/','Select Save Folder'); %Have user input where they'd like the output stored
+
+saveFlag = 0; % 1 to save simulation results
+selectPath = 0; % 1 to select save destination, 0 to save in current dir
+plotResults = 1; % 1 to plot basic simulation results
+
+if selectPath
+    save_path = uigetdir('/Users/hannahgermaine/Documents/PhD/','Select Save Folder'); %Have user input where they'd like the output stored
+else
+    save_path = pwd;
+end
+addpath('functions')
 
 %% Initialization
 
@@ -39,13 +49,12 @@ del_G_syn_I_E = 1.4*del_G_syn_E_E; %synaptic conductance step following spike (S
 
 %___________________________
 del_G_sra = 330e-09; %spike rate adaptation conductance step following spike %ranges from 1-200 *10^(-9) (S)
-tau_sra = (-2.4*10^5)*del_G_sra + 0.11; %spike rate adaptation time constant (s)
+tau_sra = 30*10^(-3); %spike rate adaptation time constant (s)
 %If want to have STDP, change connectivity_gain to > 0.
 connectivity_gain = 0; %0.005; %amount to increase or decrease connectivity by with each spike (more at the range of 0.002-0.005)
-IEI = 0.05; %inter-event-interval (s) the elapsed time between spikes to count separate events
 
 % Input conductance
-G_coeff = -38; %-40;
+G_coeff = -19; % -40;
 G_scale = 1*10^(-9);
 
 %Calculate connection probabilites
@@ -57,12 +66,11 @@ p_E = 0.75; %probability of an excitatory neuron
 %no global inhibition, and scale upward for scaled connectivity.
 I_strength = 1;
 only_global = 0; %Set this flag to 1 if you want global inhibition to override random inhibitory connections given by "create_cluters"
+p_I = 0.5; % probability of an I cell connecting to any other cell
 
 %How many tests of different initializations to run
 test_val_max = 1; %This value can be modified as you see fit
 
-%Event Statistics
-event_cutoff = 0.25; %0.25; %fraction of neurons that have to be involved to constitute a successful event
 
 %Save parameters to a structure and to computer
 w = whos;
@@ -71,7 +79,23 @@ for a = 1:length(w)
     parameters.(w(a).name) = eval(w(a).name); 
 end
 clear w a
-save(strcat(save_path,'/parameters.mat'),'parameters')
+
+%% Parameters for sequence analysis
+
+% IEI = 0.05; %inter-event-interval (s) the elapsed time between spikes to count separate events
+IEI = 0.02; %inter-event-interval (s) the elapsed time between spikes to count separate events
+
+%TEST 1: The number of neurons participating in a sequence must pass a threshold:
+event_cutoff = 0.25; %0.25; %fraction of neurons that have to be involved to constitute a successful event
+
+%TEST 2: The firing rate must fall within a realistic range
+min_avg_fr = 0.02;
+max_avg_fr = 1.5;
+
+% TEST 3: The sequence(s) of firing is(are) within reasonable lengths
+min_avg_length = 0.02;
+max_avg_length = 0.15;
+
 
 %% Create Networks and Check Spike Progression
 %Runs through a series of different random number generator seeds to change
@@ -79,7 +103,7 @@ save(strcat(save_path,'/parameters.mat'),'parameters')
 %sequence data to a folder in save_path
 
 %If uploading a parameter file, uncomment the next line
-load(strcat(save_path,'/parameters.mat'))
+% load(strcat(save_path,'/parameters.mat'))
 
 %____________________________________
 %___Calculate Dependent Parameters___
@@ -91,7 +115,7 @@ parameters.('cluster_n') = cluster_n;
 t_steps = parameters.t_max/parameters.dt; %number of timesteps in simulation
 syn_E = parameters.V_syn_E*ones(parameters.n,1); %vector of the synaptic reversal potential for excitatory connections
 syn_I = parameters.V_syn_I*ones(parameters.n,1); %vector of the synaptic reversal potential for inhibitory connections
-IES = ceil(parameters.IEI/parameters.dt); %inter-event-steps = the number of steps to elapse between spikes
+IES = ceil(IEI/parameters.dt); %inter-event-steps = the number of steps to elapse between spikes
 %save for easy calculations
 parameters.('t_steps') = t_steps;
 parameters.('syn_E') = syn_E;
@@ -102,8 +126,7 @@ parameters.('IES') = IES;
 npairs = parameters.n*(parameters.n-1); %total number of possible neuron connections
 nclusterpairs = parameters.cluster_n*(parameters.cluster_n - 1)*parameters.clusters; %total number of possible intra-cluster connections
 cluster_prob = min(parameters.conn_prob*npairs/nclusterpairs,1); %0.2041; %intra-cluster connection probability
-p_I = 1 - parameters.p_E; %probability of an inhibitory neuron
-n_I = round(p_I*parameters.n); %number of inhibitory neurons
+n_I = round((1-parameters.p_E)*parameters.n); %number of inhibitory neurons
 %save for easy calculations
 parameters.('npairs') = npairs;
 parameters.('nclusterpairs') = nclusterpairs;
@@ -111,7 +134,9 @@ parameters.('cluster_prob') = cluster_prob;
 parameters.('p_I') = p_I;
 parameters.('n_I') = n_I;
 
-save(strcat(save_path,'/parameters.mat'),'parameters')
+if saveFlag
+    save(strcat(save_path,'/parameters.mat'),'parameters'); 
+end
 
 %____________________________________________
 %___Run Simulations for Different Networks___
@@ -153,7 +178,9 @@ for i = 1:1%10 %how many different network structures to test
     network(1).conns = conns;
     network(1).I_indices = I_indices;
     network(1).E_indices = E_indices;
-    save(strcat(net_save_path,'/network.mat'),'network')
+    if saveFlag
+        save(strcat(net_save_path,'/network.mat'),'network');
+    end
     
     clear cluster_mat conns I_indices E_indices
     
@@ -170,6 +197,7 @@ for i = 1:1%10 %how many different network structures to test
         
         %Create input conductance variable
         G_in = parameters.G_coeff*randn(parameters.n,parameters.t_steps+1)*parameters.G_scale;
+        G_in(G_in<0) = 0;
         parameters.('G_in') = G_in;
         
         %Create Storage Variables
@@ -179,7 +207,7 @@ for i = 1:1%10 %how many different network structures to test
         seed = j;
         
         %Run model
-        [V_m, G_sra, G_syn_E_E, G_syn_I_E, G_syn_E_I, G_syn_I_I, G_in, conns] = ...
+        [V_m, G_sra, G_syn_E_E, G_syn_I_E, G_syn_E_I, G_syn_I_I, conns] = ...
                 randnet_calculator(parameters, seed, network, V_m);
         V_m_var(j).V_m = V_m;
         G_var(j).G_in = G_in;
@@ -197,7 +225,7 @@ for i = 1:1%10 %how many different network structures to test
         
         %TEST 1: The number of neurons participating in a sequence must
         %pass a threshold:
-        if length(spiking_neurons) >= parameters.event_cutoff*parameters.n
+        if length(spiking_neurons) >= event_cutoff*parameters.n
         
             %Find maximum firing rate + average maximum firing rates of neurons
             all_fr = sum(spikes_V_m,2)/parameters.t_max;
@@ -206,7 +234,7 @@ for i = 1:1%10 %how many different network structures to test
             display(avg_fr)
 
             %TEST 2: The firing rate must fall within a realistic range
-            if and(avg_fr>= 0.02, avg_fr <= 1.5)
+            if and(avg_fr>= min_avg_fr, avg_fr <= max_avg_fr)
                 %Find event times
                 events = []; 
                 event_lengths = [];
@@ -219,7 +247,7 @@ for i = 1:1%10 %how many different network structures to test
                         last_time = s_i;
                         spike_count = spike_count + 1;
                     else
-                        if (last_start ~= last_time) && (spike_count > parameters.event_cutoff*parameters.n) %weed out events w/ too few spikes
+                        if (last_start ~= last_time) && (spike_count > event_cutoff*parameters.n) %weed out events w/ too few spikes
                             events = [events; [last_start, last_time]]; %#ok<AGROW> %add the last range of spikes to the events vector
                             event_lengths = [event_lengths, (last_time - last_start)*parameters.dt]; %#ok<*AGROW>
                         end
@@ -228,7 +256,7 @@ for i = 1:1%10 %how many different network structures to test
                         spike_count = 1;
                     end
                 end
-                if (last_start ~= last_time) && (spike_count > parameters.event_cutoff*parameters.n) %weed out events w/ too few spikes
+                if (last_start ~= last_time) && (spike_count > event_cutoff*parameters.n) %weed out events w/ too few spikes
                     events = [events; [last_start, last_time]]; %#ok<AGROW> %add the last interval
                     event_lengths = [event_lengths, (last_time - last_start)*parameters.dt]; %#ok<*SAGROW>
                 end
@@ -242,7 +270,7 @@ for i = 1:1%10 %how many different network structures to test
                 
                 %TEST 3: The sequence(s) of firing is(are) within
                 %reasonable lengths.
-                if and(avg_event_length >= 0.02, avg_event_length <= 0.15)
+                if and(avg_event_length >= min_avg_length, avg_event_length <= max_avg_length)
 
                     %Find spike sequences
                     for e_i = 1:num_events
@@ -267,6 +295,7 @@ for i = 1:1%10 %how many different network structures to test
                     %Visualize re-ordered spike sequences
                     f = figure;
                     axes = [];
+                    num_events
                     for e_i = 1:num_events
                         spike_order = network_spike_sequences(j).spike_order.(strcat('sequence_',string(e_i)));
                         sub_spikes_V_m = spikes_V_m(:,events(e_i,1):events(e_i,2));
@@ -284,15 +313,14 @@ for i = 1:1%10 %how many different network structures to test
                         title(strcat('Event #',string(e_i)))
                         set(gca, 'XTick',xt, 'XTickLabel',xtlbl)
                     end
-                    if strcmp(parameters.type,'cluster')
-                        sgtitle(strcat('Spiking Behavior: cluster = ',string(j)),'FontSize',16)
-                    else
-                        sgtitle('Spiking Behavior','FontSize',16)
-                    end
+                    sgtitle('Spiking Behavior','FontSize',16)
+
                     %linkaxes(axes)
-                    savefig(f,strcat(net_save_path,'/',parameters.type,'_',string(j),'firing_sequence.fig'))
-                    saveas(f,strcat(net_save_path,'/',parameters.type,'_',string(j),'firing_sequence.jpg'))
-                    close(f)
+                    if saveFlag
+                        savefig(f,strcat(net_save_path,'/',parameters.type,'_',string(j),'firing_sequence.fig'))
+                        saveas(f,strcat(net_save_path,'/',parameters.type,'_',string(j),'firing_sequence.jpg'))
+                        close(f)
+                    end
                     clear e_i spike_order reordered_spikes event_length s_i ax ...
                         axes xt xtlbl
 
@@ -312,11 +340,20 @@ for i = 1:1%10 %how many different network structures to test
     end
     
     %SAVE NETWORK DATA
-    save(strcat(net_save_path,'/V_m_var.mat'),'V_m_var','-v7.3')
-    save(strcat(net_save_path,'/G_var.mat'),'G_var','-v7.3')
-    save(strcat(net_save_path,'/I_var.mat'),'I_var','-v7.3')
-    save(strcat(net_save_path,'/network_spike_sequences.mat'),'network_spike_sequences','-v7.3')
-    save(strcat(net_save_path,'/network_cluster_sequences.mat'),'network_cluster_sequences','-v7.3')
-
+    if saveFlag
+        save(strcat(net_save_path,'/V_m_var.mat'),'V_m_var','-v7.3')
+        save(strcat(net_save_path,'/G_var.mat'),'G_var','-v7.3')
+        save(strcat(net_save_path,'/I_var.mat'),'I_var','-v7.3')
+        save(strcat(net_save_path,'/network_spike_sequences.mat'),'network_spike_sequences','-v7.3')
+        save(strcat(net_save_path,'/network_cluster_sequences.mat'),'network_cluster_sequences','-v7.3')
+    end
     
 end %End of network structure loop
+
+
+if plotResults
+    t = [0:dt:t_max];
+    figure; plot(t, V_m(1:2,:))
+    figure; plot(t, V_m)
+    figure; plot(t, G_in)
+end

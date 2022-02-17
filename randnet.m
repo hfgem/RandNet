@@ -5,14 +5,14 @@
 
 clear all
 
-saveFlag = 0; % 1 to save simulation results
+saveFlag = 1; % 1 to save simulation results
 selectPath = 0; % 1 to select save destination, 0 to save in current dir
 plotResults = 1; % 1 to plot basic simulation results
 
 if selectPath
     save_path = uigetdir('/Users/hannahgermaine/Documents/PhD/','Select Save Folder'); %Have user input where they'd like the output stored
 else
-    save_path = pwd;
+    save_path = [pwd, '/results'];
 end
 addpath('functions')
 
@@ -134,6 +134,10 @@ parameters.('cluster_prob') = cluster_prob;
 parameters.('p_I') = p_I;
 parameters.('n_I') = n_I;
 
+if saveFlag & ~isfolder(save_path)
+    mkdir(save_path);
+end
+    
 if saveFlag
     save(strcat(save_path,'/parameters.mat'),'parameters'); 
 end
@@ -147,7 +151,7 @@ for i = 1:1%10 %how many different network structures to test
     
     %CREATE NETWORK SAVE PATH
     net_save_path = strcat(save_path,'/network_',string(i));
-    if ~isfolder(net_save_path)
+    if saveFlag & ~isfolder(net_save_path)
         mkdir(net_save_path);
     end
     
@@ -317,8 +321,8 @@ for i = 1:1%10 %how many different network structures to test
 
                     %linkaxes(axes)
                     if saveFlag
-                        savefig(f,strcat(net_save_path,'/',parameters.type,'_',string(j),'firing_sequence.fig'))
-                        saveas(f,strcat(net_save_path,'/',parameters.type,'_',string(j),'firing_sequence.jpg'))
+                        savefig(f,strcat(net_save_path,'/','_',string(j),'firing_sequence.fig'))
+                        saveas(f,strcat(net_save_path,'/', '_',string(j),'firing_sequence.jpg'))
                         close(f)
                     end
                     clear e_i spike_order reordered_spikes event_length s_i ax ...

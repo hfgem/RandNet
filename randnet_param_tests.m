@@ -53,8 +53,10 @@ parameters.('IES') = IES;
 npairs = parameters.n*(parameters.n-1); %total number of possible neuron connections
 nclusterpairs = parameters.cluster_n*(parameters.cluster_n - 1)*parameters.clusters; %total number of possible intra-cluster connections
 cluster_prob = min(parameters.conn_prob*npairs/nclusterpairs,1); %0.2041; %intra-cluster connection probability
-p_I = 1 - parameters.p_E; %probability of an inhibitory neuron
-n_I = round(p_I*parameters.n); %number of inhibitory neurons
+%___MOVE TO INITIAL PARAM SECTION SINCE NOT DEPENDENT
+p_I = 0.5; %probability of an inhibitory making a connection in global inhibition
+%___
+n_I = round((1-parameters.p_E)*parameters.n); %number of inhibitory neurons
 %save for easy calculations
 parameters.('npairs') = npairs;
 parameters.('nclusterpairs') = nclusterpairs;
@@ -74,13 +76,13 @@ num_inits = 5;
 test_n = 5;
 
 %Parameter 1: coefficient of input conductance
-G_coeff_vec = linspace(-100,0,test_n);
+G_coeff_vec = linspace(0,100,test_n);
 
 %Parameter 2: global inhibition strength
 I_strength_vec = linspace(0,1,test_n);
 
 %Parameter 3: SRA step size
-del_G_sra_vec = linspace(50*10^(-9),150*10^(-9),test_n);
+del_G_sra_vec = linspace(0*10^(-9),200*10^(-9),test_n);
 
 %Combined into one parameter vector to pass
 parameter_vec = [G_coeff_vec; I_strength_vec; del_G_sra_vec];

@@ -67,6 +67,12 @@ function vec = parallelize_network_tests_2(parameters,network,j, save_path)
     
     vec = zeros(1,3);
     seed = j;
+    
+    %Create input conductance variable
+    G_in = parameters.G_coeff*randn(parameters.n,parameters.t_steps+1)*parameters.G_scale;
+    G_in(G_in < 0) = 0;
+    parameters.('G_in') = G_in;
+    
     %Create Storage Variables
     V_m = zeros(parameters.n,parameters.t_steps+1); %membrane potential for each neuron at each timestep
     V_m(:,1) = parameters.V_reset + randn([parameters.n,1])*parameters.V_m_noise; %set all neurons to baseline reset membrane potential with added noise

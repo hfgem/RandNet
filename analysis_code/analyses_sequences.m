@@ -17,6 +17,12 @@ param_path = data_path(1:slashes(end));
 load(strcat(param_path,'/parameters.mat'))
 clear slashes param_path
 
+%Save full_ranks matrix
+%First reformat ranks into matrix
+[full_ranks, sequence_lengths, nonfiring_neurons] = create_rank_matrix(network_spike_sequences);
+num_viable_inits = length(sequence_lengths);
+save(strcat(data_path,'/full_ranks_matrix.mat'),'full_ranks')  
+
 %% Basic Stats
 %Uses full_ranks matrix and network_spike_sequences
 % load(strcat(data_path,'/full_ranks_matrix.mat'))
@@ -134,14 +140,19 @@ num_viable_inits = length(sequence_lengths);
 %Calculate distances
 full_dist = calculate_vector_distances(full_ranks);
 full_dist_vec = nonzeros(triu(full_dist,1));
+% full_dist_no_outliers = calculate_vector_distances(full_ranks_no_outliers);
+% full_dist_vec_no_outliers = nonzeros(triu(full_dist_no_outliers,1));
 
 %Generate shuffled ranks
 shuffle_n = 100;
 full_shuffle = generate_shuffled_trajectories2(full_ranks, shuffle_n);
+% full_shuffle_no_outliers = generate_shuffled_trajectories2(full_ranks_no_outliers, shuffle_n);
 
 %Calculate shuffled distances
 full_shuffle_dist = calculate_vector_distances(full_shuffle);
 full_shuffle_dist_vec = nonzeros(triu(full_shuffle_dist,1));
+% full_shuffle_dist_no_outliers = calculate_vector_distances(full_shuffle_no_outliers);
+% full_shuffle_dist_vec_no_outliers = nonzeros(triu(full_shuffle_dist_no_outliers,1));
 
 %Plot resulting distance histograms
 f = figure;
@@ -157,6 +168,18 @@ if saveFlag
     saveas(f,strcat(data_path,'/','dist_hist.jpg'))
     saveas(f,strcat(data_path,'/','dist_hist.svg'))
 end
+
+% f2 = figure;
+% histogram(full_dist_vec_no_outliers,'DisplayName','Full Vector Distances')
+% hold on
+% histogram(full_shuffle_dist_vec_no_outliers,'DisplayName','Shuffled Full Vector Distances')
+% xlabel('Distance')
+% ylabel('Number of Distances')
+% title({'Full Rank Sequence Distances','No Outliers'})
+% legend()
+% savefig(f2,strcat(data_path,'/','dist_hist_no_outliers.fig'))
+% saveas(f2,strcat(data_path,'/','dist_hist_no_outliers.jpg'))
+% saveas(f2,strcat(data_path,'/','dist_hist_no_outliers.svg'))
 
 %% DEPRECATED: Sequence Similarity - Matching Index
 %Uses network_spike_sequences.mat and parameters.mat

@@ -117,7 +117,9 @@ function [V_m, G_sra, G_syn_I, G_syn_E, conns] = lif_sra_calculator_postrotation
     elseif strcmp(parameters.type,'current')
         rng(seed)
     end
-%     I_theta = parameters.I_in;
+    
+    G_in = parameters.G_coeff*randn(parameters.n,parameters.t_steps+1)*parameters.G_scale;
+    parameters.('G_in') = G_in; %save for easy calculations
     
     conns = network.conns; %separately update a connectivity matrix
     

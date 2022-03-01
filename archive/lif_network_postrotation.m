@@ -107,7 +107,7 @@ parameters.('IES') = IES;
 if strcmp(parameters.type,'cluster')
     test_val_max = parameters.clusters; %Ensures every cluster is initialized
 else
-    test_val_max = 10; %This value can be modified as you see fit
+    test_val_max = 100; %This value can be modified as you see fit
 end
 %save for easy calculations
 parameters.('test_val_max') = test_val_max;
@@ -116,10 +116,10 @@ parameters.('test_val_max') = test_val_max;
 x_in = [0:parameters.dt:parameters.t_max];
 % %Rhythmic current input: (uncomment if desired)
 %Noisy input conductance: (uncomment if desired)
-G_in = parameters.G_coeff*randn(parameters.n,parameters.t_steps+1)*parameters.G_scale;
-%save for easy calculations
-parameters.('x_in') = x_in;
-parameters.('G_in') = G_in;
+% G_in = parameters.G_coeff*randn(parameters.n,parameters.t_steps+1)*parameters.G_scale;
+% %save for easy calculations
+% parameters.('x_in') = x_in;
+% parameters.('G_in') = G_in;
 
 %Calculate connection probabilites
 npairs = parameters.n*(parameters.n-1); %total number of possible neuron connections
@@ -140,7 +140,7 @@ save(strcat(save_path,'/parameters.mat'),'parameters')
 %___Run Simulations for Different Networks___
 %____________________________________________
 
-for i = 1:1%10 %how many different network structures to test
+for i = 1:1 %how many different network structures to test
     rng(i) %set random number generator for network structure
     
     %CREATE NETWORK SAVE PATH
@@ -183,7 +183,6 @@ for i = 1:1%10 %how many different network structures to test
         seed = j;
         
         %Create Storage Variables
-        I_syn = zeros(parameters.n,parameters.t_steps+1); %synaptic current emitted by each neuron at each timestep (A)
         %synaptic conductances for each neuron at each timestep
         G_syn_I = zeros(parameters.n,parameters.t_steps+1); %conductance for presynaptic inhibitory (S)
         G_syn_E = zeros(parameters.n,parameters.t_steps+1); %conductance for presynaptic excitatory (S)
@@ -192,13 +191,12 @@ for i = 1:1%10 %how many different network structures to test
         G_sra = zeros(parameters.n,parameters.t_steps+1); %refractory conductance for each neuron at each timestep
         
         %Run model
-        [V_m, G_sra, G_syn_I, G_syn_E, I_syn] = lif_sra_calculator_postrotation(...
-            parameters, seed, network, I_syn, G_syn_I, G_syn_E, V_m, G_sra);
+        [V_m, G_sra, G_syn_I, G_syn_E, conns] = lif_sra_calculator_postrotation(...
+            parameters, seed, network, G_syn_I, G_syn_E, V_m, G_sra);
         network_var(j).V_m = V_m;
         network_var(j).G_sra = G_sra;
         network_var(j).G_syn_I = G_syn_I;
         network_var(j).G_syn_E = G_syn_E;
-        network_var(j).I_syn = I_syn;
         
         %Find spike profile
         spikes_V_m = V_m >= parameters.V_th;

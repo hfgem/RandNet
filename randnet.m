@@ -5,7 +5,7 @@
 
 clear all
 
-saveFlag = 1; % 1 to save simulation results
+saveFlag = 0; % 1 to save simulation results
 selectPath = 0; % 1 to select save destination, 0 to save in current dir
 plotResults = 1; % 1 to plot basic simulation results
 
@@ -361,4 +361,10 @@ if plotResults
     figure; plot(t, V_m(1:2,:))
     figure; plot(t, V_m)
     figure; plot(t, G_in)
+    
+    figure; plotSpikeRaster( spikes_V_m, 'TimePerBin', parameters.dt, 'PlotType', 'scatter'); 
+    ylabel('Cell'); xlabel('Time (s)'); 
+
+    figure; plot(t, movmean(mean(spikes_V_m, 1)/parameters.dt, (1/parameters.dt) * 0.05))
+
 end

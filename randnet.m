@@ -54,8 +54,15 @@ tau_sra = 30*10^(-3); %spike rate adaptation time constant (s)
 connectivity_gain = 0; %0.005; %amount to increase or decrease connectivity by with each spike (more at the range of 0.002-0.005)
 
 % Input conductance
-G_coeff = -19; % -40;
-G_scale = 1*10^(-9);
+G_std = -19*10^-9; % STD of the input conductance G_in, if using randn()
+G_mean = 0* 10^-12; % mean of the input conductance G_in, if using randn()
+
+% Poisson input parameters
+usePoisson = 0; % 1 to use poisson spike inputs, 0 for randn() input
+% rG = 1000; Wgin = 3.25e-9
+rG = 500; % input spiking rate, if using poisson inputs
+W_gin = 5.4*10^-9; % increase in conductance, if using poisson inputs
+
 
 %Calculate connection probabilites
 conn_prob = 0.08; %set a total desired connection probability
@@ -117,7 +124,7 @@ parameters.('cluster_n') = cluster_n;
 t_steps = parameters.t_max/parameters.dt; %number of timesteps in simulation
 syn_E = parameters.V_syn_E*ones(parameters.n,1); %vector of the synaptic reversal potential for excitatory connections
 syn_I = parameters.V_syn_I*ones(parameters.n,1); %vector of the synaptic reversal potential for inhibitory connections
-IES = ceil(IEI/parameters.dt); %inter-event-steps = the number of steps to elapse between spikes
+IES = ceil(parameters.IEI/parameters.dt); %inter-event-steps = the number of steps to elapse between spikes
 %save for easy calculations
 parameters.('t_steps') = t_steps;
 parameters.('syn_E') = syn_E;
@@ -202,10 +209,18 @@ for i = 1:1%10 %how many different network structures to test
     for j = 1:parameters.test_val_max        
         
         %Create input conductance variable
-        G_in = parameters.G_coeff*randn(parameters.n,parameters.t_steps+1)*parameters.G_scale;
-        G_in(G_in<0) = 0;
+        if usePoisson
+            G_in = zeros(parameters.n, parameters.t_steps+1);
+            for k = 2:(parameters.t_steps+1)
+                G_in(:,k) = G_in(:,k-1)*exp(-parameters.dt/parameters.tau_syn_E);
+                G_in(:,k) = G_in(:,k) + parameters.W_gin * [rand(parameters.n, 1) < (parameters.dt*parameters.rG)];
+            end
+        else
+            G_in = (parameters.G_std*randn(parameters.n,parameters.t_steps+1))+parameters.G_mean;
+            G_in(G_in<0) = 0;
+        end
         parameters.('G_in') = G_in;
-        
+
         %Create Storage Variables
         V_m = zeros(parameters.n,parameters.t_steps+1); %membrane potential for each neuron at each timestep
         V_m(:,1) = parameters.V_reset + randn([parameters.n,1])*(10^(-3))*sqrt(dt); %set all neurons to baseline reset membrane potential with added noise
@@ -231,7 +246,7 @@ for i = 1:1%10 %how many different network structures to test
         
         %TEST 1: The number of neurons participating in a sequence must
         %pass a threshold:
-        if length(spiking_neurons) >= event_cutoff*parameters.n
+        if length(spiking_neurons) >= parameters.event_cutoff*parameters.n
         
             %Find maximum firing rate + average maximum firing rates of neurons
             all_fr = sum(spikes_V_m,2)/parameters.t_max;
@@ -240,7 +255,7 @@ for i = 1:1%10 %how many different network structures to test
             display(avg_fr)
 
             %TEST 2: The firing rate must fall within a realistic range
-            if and(avg_fr>= min_avg_fr, avg_fr <= max_avg_fr)
+            if and(avg_fr>= parameters.min_avg_fr, avg_fr <= parameters.max_avg_fr)
                 %Find event times
                 events = []; 
                 event_lengths = [];
@@ -253,7 +268,7 @@ for i = 1:1%10 %how many different network structures to test
                         last_time = s_i;
                         spike_count = spike_count + 1;
                     else
-                        if (last_start ~= last_time) && (spike_count > event_cutoff*parameters.n) %weed out events w/ too few spikes
+                        if (last_start ~= last_time) && (spike_count > parameters.event_cutoff*parameters.n) %weed out events w/ too few spikes
                             events = [events; [last_start, last_time]]; %#ok<AGROW> %add the last range of spikes to the events vector
                             event_lengths = [event_lengths, (last_time - last_start)*parameters.dt]; %#ok<*AGROW>
                         end
@@ -262,7 +277,7 @@ for i = 1:1%10 %how many different network structures to test
                         spike_count = 1;
                     end
                 end
-                if (last_start ~= last_time) && (spike_count > event_cutoff*parameters.n) %weed out events w/ too few spikes
+                if (last_start ~= last_time) && (spike_count > parameters.event_cutoff*parameters.n) %weed out events w/ too few spikes
                     events = [events; [last_start, last_time]]; %#ok<AGROW> %add the last interval
                     event_lengths = [event_lengths, (last_time - last_start)*parameters.dt]; %#ok<*SAGROW>
                 end
@@ -276,7 +291,7 @@ for i = 1:1%10 %how many different network structures to test
                 
                 %TEST 3: The sequence(s) of firing is(are) within
                 %reasonable lengths.
-                if and(avg_event_length >= min_avg_length, avg_event_length <= max_avg_length)
+                if and(avg_event_length >= parameters.min_avg_length, avg_event_length <= parameters.max_avg_length)
 
                     %Find spike sequences
                     for e_i = 1:num_events
@@ -331,7 +346,7 @@ for i = 1:1%10 %how many different network structures to test
                         axes xt xtlbl
 
                     %Find cluster sequence per event by moving bin
-                    bin_size = ceil(bin_width/parameters.dt); %number of timesteps to use in a bin
+                    bin_size = ceil(parameters.bin_width/parameters.dt); %number of timesteps to use in a bin
                     for e_i = 1:num_events
                         cluster_spikes = network.cluster_mat*spikes_V_m(:,events(e_i,1):events(e_i,2));
                         cluster_mov_sum = movsum(cluster_spikes',bin_size)';
@@ -358,13 +373,32 @@ end %End of network structure loop
 
 if plotResults
     t = [0:dt:t_max];
-    figure; plot(t, V_m(1:2,:))
-    figure; plot(t, V_m)
-    figure; plot(t, G_in)
-    
-    figure; plotSpikeRaster( spikes_V_m, 'TimePerBin', parameters.dt, 'PlotType', 'scatter'); 
+    figure; plot(t, V_m(1:2,:)); ylabel('Vm (V)'); xlabel('Time (s)'); 
+    % figure; plot(t, V_m); ylabel('Vm (V)'); xlabel('Time (s)'); 
+    figure; plot(t, G_in(1:2,:)); ylabel('G in (S)'); xlabel('Time (s)'); 
+    % figure; plot(t, G_in(1:2,:)); ylabel('G in (S)'); xlabel('Time (s)'); 
+
+    figure; hold on
+    if exist('events')==1 
+        for i = 1:size(events, 1)
+            fill([t(events(i,:)), fliplr(t(events(i,:)))], [0, 0, size(spikes_V_m, 1), size(spikes_V_m, 1)], 'k', 'FaceAlpha', 0.2, 'EdgeColor', 'none')
+        end
+    end
+    plotSpikeRaster( spikes_V_m, 'TimePerBin', parameters.dt, 'PlotType', 'scatter'); 
     ylabel('Cell'); xlabel('Time (s)'); 
 
-    figure; plot(t, movmean(mean(spikes_V_m, 1)/parameters.dt, (1/parameters.dt) * 0.05))
+    movmeanWindow = (1/parameters.dt) * 0.05;
+    meanPopRate = movmean(mean(spikes_V_m, 1)/parameters.dt, movmeanWindow);
+    figure; hold on
+    if exist('events')==1 
+        for i = 1:size(events, 1)
+            fill([t(events(i,:)), fliplr(t(events(i,:)))], [0, 0, ceil(max(meanPopRate)), ceil(max(meanPopRate))], 'k', 'FaceAlpha', 0.2, 'EdgeColor', 'none')
+        end
+    end
+    plot(t, meanPopRate)
+    ylabel('Population mean rate (Hz)'); xlabel('Time (s)'); 
+    yline(mean(meanPopRate), 'g')
+    yline(mean(meanPopRate)+ std(meanPopRate))
+    yline(mean(meanPopRate)+ 2*std(meanPopRate))
 
 end

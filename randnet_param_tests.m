@@ -17,6 +17,13 @@
 %another grid search can be performed narrowing ranges of parameters
 %manually to determine the best parameter space for solutions.
 %__________________
+%
+% New parallelized parameter grid code, based on simulation function randnet_calculator:
+% randnet_param_tests.m 
+%   ->parallelize_parameter_tests_2 
+%       ->parallelize_networks_2
+%           ->parallelize_network_tests_2
+%               ->randnet_calculator
 
 %% Save Path + Load Parameters
 %Load parameters

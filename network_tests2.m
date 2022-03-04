@@ -1,5 +1,5 @@
 %Testing different network properties for sequence generation
-
+%
 %______ABOUT______:
 %This code uses a previously successful set of network parameters by
 %loading them (lif_network_postrotation.m must have been run to generate
@@ -17,6 +17,13 @@
 %another grid search can be performed narrowing ranges of parameters
 %manually to determine the best parameter space for solutions.
 %__________________
+%
+% Old parallelized parameter grid code, based on simulation function lif_sra_calculator_postrotation:
+% network_tests2.m 
+%   ->parallelize_parameter_tests 
+%       ->parallelize_networks
+%           ->parallelize_network_tests
+%               ->lif_sra_calculator_postrotation
 
 %% Save Path + Load Parameters
 %Load parameters

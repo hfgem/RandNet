@@ -250,7 +250,7 @@ for i = 1:1%10 %how many different network structures to test
             spiking_neurons = unique(spikes_x, 'stable');
 
             %Visualize re-ordered spike sequences
-            if exist('events')==1 
+            if any(strcmp('spike_order',fieldnames(network_spike_sequences)))
                 f = figure;
                 axes = [];
                 num_events = size(events, 1)
@@ -333,8 +333,7 @@ end %End of network structure loop
 
 %%
 
-function [network_spike_sequences, network_cluster_sequences] = detect_events(parameters, network, V_m , j, network_spike_sequences, network_cluster_sequences)
-    events = [];
+function [network_spike_sequences, network_cluster_sequences] = detect_events(parameters, network, V_m , ithTest, network_spike_sequences, network_cluster_sequences)
     
     %Find spike profile
     spikes_V_m = V_m >= parameters.V_th;
@@ -382,10 +381,10 @@ function [network_spike_sequences, network_cluster_sequences] = detect_events(pa
             avg_event_length = mean(event_lengths);
             [num_events,~] = size(events);
             %save to both structures
-            network_spike_sequences(j).events = events;
-            network_spike_sequences(j).event_lengths = event_lengths;
-            network_cluster_sequences(j).events = events;
-            network_cluster_sequences(j).event_lengths = event_lengths;
+            network_spike_sequences(ithTest).events = events;
+            network_spike_sequences(ithTest).event_lengths = event_lengths;
+            network_cluster_sequences(ithTest).events = events;
+            network_cluster_sequences(ithTest).event_lengths = event_lengths;
 
             %TEST 3: The sequence(s) of firing is(are) within
             %reasonable lengths.
@@ -397,17 +396,17 @@ function [network_spike_sequences, network_cluster_sequences] = detect_events(pa
                     event_spikes = spikes_V_m(:,events(e_i,1):events(e_i,2));
                     [e_spikes_x, ~] = find(event_spikes);
                     spike_order = unique(e_spikes_x,'stable');
-                    network_spike_sequences(j).spike_order.(strcat('sequence_',string(e_i))) = spike_order;
+                    network_spike_sequences(ithTest).spike_order.(strcat('sequence_',string(e_i))) = spike_order;
                     %store ranks for each neuron
                     ranks_vec = zeros(1,parameters.n);
                     for k = 1:length(spike_order)
                         n_ind = spike_order(k);
                         ranks_vec(1,n_ind) = k;
                     end
-                    network_spike_sequences(j).spike_ranks.(strcat('sequence_',string(e_i))) = ranks_vec;
+                    network_spike_sequences(ithTest).spike_ranks.(strcat('sequence_',string(e_i))) = ranks_vec;
                     %store nonspiking neurons
                     nonspiking_neurons = isnan(ranks_vec./ranks_vec);
-                    network_spike_sequences(j).nonspiking_neurons.(strcat('sequence_',string(e_i))) = nonspiking_neurons;
+                    network_spike_sequences(ithTest).nonspiking_neurons.(strcat('sequence_',string(e_i))) = nonspiking_neurons;
                 end
                 clear e_i event_spikes e_spikes_x spike_order ranks_vec k n_ind nonspiking_neurons
 
@@ -417,8 +416,8 @@ function [network_spike_sequences, network_cluster_sequences] = detect_events(pa
                 for e_i = 1:num_events
                     cluster_spikes = network.cluster_mat*spikes_V_m(:,events(e_i,1):events(e_i,2));
                     cluster_mov_sum = movsum(cluster_spikes',bin_size)';
-                    network_cluster_sequences(j).clusters.(strcat('sequence_',string(e_i))) = cluster_spikes;
-                    network_cluster_sequences(j).movsum.(strcat('sequence_',string(e_i))) = cluster_mov_sum;
+                    network_cluster_sequences(ithTest).clusters.(strcat('sequence_',string(e_i))) = cluster_spikes;
+                    network_cluster_sequences(ithTest).movsum.(strcat('sequence_',string(e_i))) = cluster_mov_sum;
                 end
                 clear bin_width bin_size cluster_spikes cluster_mov_sum e_i
             end %Sequence length loop

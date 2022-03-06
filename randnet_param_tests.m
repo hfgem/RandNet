@@ -26,19 +26,38 @@
 %               ->randnet_calculator
 
 %% Save Path + Load Parameters
+addpath('functions')
+
+saveFlag = 0; % 1 to save simulation results
+selectSavePath = 0; % 1 to select save destination, 0 to save in results dir
+selectLoadPath = 0; % 1 to select load source, 0 to load from results dir
+plotResults = 1; % 1 to plot basic simulation results
+scriptFolder = '/param_tests_figures'; % sub-folder so save analysis results to
+
+% Save path
+if selectSavePath
+    save_path = uigetdir('/Users/hannahgermaine/Documents/PhD/'); %Have user input where they'd like the output stored
+else
+    save_path = [pwd, '/results'];
+end
+
+if saveFlag & ~isfolder(save_path)
+    mkdir(save_path, scriptFolder);
+end
+
 %Load parameters
-msgbox('Select folder where parameters are stored.')
-load_path = uigetdir('/Users/hannahgermaine/Documents/PhD/');
+% Save path
+if selectLoadPath
+    load_path = uigetdir('/Users/hannahgermaine/Documents/PhD/');
+else
+    load_path = [pwd, '/results'];
+end
+
 load(strcat(load_path,'/parameters.mat'))
 param_names = fieldnames(parameters);
 
-%Create save path
-msgbox('Select folder to save results.')
-save_path = uigetdir('/Users/hannahgermaine/Documents/PhD/');
 
-%Create figures folder
-mkdir(strcat(save_path,'/figures/'))
-
+%%
 %___________________________________
 %____Define dependent parameters____
 %___________________________________
@@ -71,7 +90,9 @@ parameters.('cluster_prob') = cluster_prob;
 parameters.('p_I') = p_I;
 parameters.('n_I') = n_I;
 
-save(strcat(save_path,'/parameters.mat'),'parameters')
+if saveFlag
+    save(strcat(save_path,'/parameters.mat'),'parameters')
+end
 
 %% Set Up Grid Search Parameters
 
@@ -96,7 +117,9 @@ parameter_vec = [G_coeff_vec; I_strength_vec; del_G_sra_vec];
 clear G_coeff_vec I_strength_vec
 
 %Save parameter values
-save(strcat(save_path,'/parameter_vec.mat'),'parameter_vec','-v7.3')
+if saveFlag
+    save(strcat(save_path,'/parameter_vec.mat'),'parameter_vec','-v7.3')
+end
 
 %Set up storage matrix
 [num_params, ~] = size(parameter_vec);
@@ -109,10 +132,18 @@ success = zeros(test_n*ones(1,num_params));
 results = zeros(test_n^3,3);
 
 %Loop through all parameter sets
-parfevalOnAll(gcp(), @warning, 0, 'off', 'MATLAB:singularMatrix');
-parfor ind = 1:test_n^3, results(ind,:) = parallelize_parameter_tests_2(parameters,num_nets,...
-    num_inits, parameter_vec, test_n, ind, save_path); end
-save(strcat(save_path,'/results.mat'),'results','-v7.3')
+% parfevalOnAll(gcp(), @warning, 0, 'off', 'MATLAB:singularMatrix');
+
+tic
+parfor ind = 1:test_n^3
+    results(ind,:) = parallelize_parameter_tests_2(parameters,num_nets,...
+                        num_inits, parameter_vec, test_n, ind, save_path);
+end
+runTime = toc
+
+if saveFlag
+    save(strcat(save_path,'/results.mat'),'results','-v7.3')
+end
 
 num_spikers = reshape(squeeze(results(:,1)),test_n,test_n,test_n);
 avg_fr = reshape(squeeze(results(:,2)),test_n,test_n,test_n);
@@ -125,125 +156,127 @@ avg_event_length = reshape(squeeze(results(:,3)),test_n,test_n,test_n);
 %Parameter 2: global inhibition strength (I_strength)
 %Parameter 3: SRA step size (del_G_sra)
 
-%G_coeff vs I_strength
-num_spikers_G_I = squeeze(mean(num_spikers,3));
-avg_fr_G_I = squeeze(mean(avg_fr,3));
-avg_event_length_G_I = squeeze(mean(avg_event_length,3));
-figure;
-subplot(1,3,1)
-imagesc(num_spikers_G_I())
-c1 = colorbar();
-c1.Label.String = 'Number of Neurons';
-title('Number of Spiking Neurons')
-xticks(1:test_n)
-xticklabels(parameter_vec(1,:))
-yticks(1:test_n)
-yticklabels(parameter_vec(2,:))
-xlabel('G_{coeff}')
-ylabel('I_{strength}')
-subplot(1,3,2)
-imagesc(avg_fr_G_I)
-c2 = colorbar();
-c2.Label.String = "Hz";
-title('Average Firing Rate')
-xticks(1:test_n)
-xticklabels(parameter_vec(1,:))
-yticks(1:test_n)
-yticklabels(parameter_vec(2,:))
-xlabel('G_{coeff}')
-ylabel('I_{strength}')
-subplot(1,3,3)
-imagesc(avg_event_length_G_I)
-c3 = colorbar();
-c3.Label.String = "Seconds";
-title('Average Event Length')
-xticks(1:test_n)
-xticklabels(parameter_vec(1,:))
-yticks(1:test_n)
-yticklabels(parameter_vec(2,:))
-xlabel('G_{coeff}')
-ylabel('I_{strength}')
+if plotResults
+    %G_coeff vs I_strength
+    num_spikers_G_I = squeeze(mean(num_spikers,3));
+    avg_fr_G_I = squeeze(mean(avg_fr,3));
+    avg_event_length_G_I = squeeze(mean(avg_event_length,3));
+    figure;
+    subplot(1,3,1)
+    imagesc(num_spikers_G_I())
+    c1 = colorbar();
+    c1.Label.String = 'Number of Neurons';
+    title('Number of Spiking Neurons')
+    xticks(1:test_n)
+    xticklabels(parameter_vec(1,:))
+    yticks(1:test_n)
+    yticklabels(parameter_vec(2,:))
+    xlabel('G_{coeff}')
+    ylabel('I_{strength}')
+    subplot(1,3,2)
+    imagesc(avg_fr_G_I)
+    c2 = colorbar();
+    c2.Label.String = "Hz";
+    title('Average Firing Rate')
+    xticks(1:test_n)
+    xticklabels(parameter_vec(1,:))
+    yticks(1:test_n)
+    yticklabels(parameter_vec(2,:))
+    xlabel('G_{coeff}')
+    ylabel('I_{strength}')
+    subplot(1,3,3)
+    imagesc(avg_event_length_G_I)
+    c3 = colorbar();
+    c3.Label.String = "Seconds";
+    title('Average Event Length')
+    xticks(1:test_n)
+    xticklabels(parameter_vec(1,:))
+    yticks(1:test_n)
+    yticklabels(parameter_vec(2,:))
+    xlabel('G_{coeff}')
+    ylabel('I_{strength}')
 
-clear c1 c2 c3
+    clear c1 c2 c3
 
-%G_coeff vs del_G_sra
-num_spikers_G_S = squeeze(mean(num_spikers,2));
-avg_fr_G_S = squeeze(mean(avg_fr,2));
-avg_event_length_G_S = squeeze(mean(avg_event_length,2));
-figure;
-subplot(1,3,1)
-imagesc(num_spikers_G_S)
-c1 = colorbar();
-c1.Label.String = 'Number of Neurons';
-title('Number of Spiking Neurons')
-xticks(1:test_n)
-xticklabels(parameter_vec(1,:))
-yticks(1:test_n)
-yticklabels(parameter_vec(3,:))
-xlabel('G_{coeff}')
-ylabel('\delta G_{SRA}')
-subplot(1,3,2)
-imagesc(avg_fr_G_S)
-c2 = colorbar();
-c2.Label.String = "Hz";
-title('Average Firing Rate')
-xticks(1:test_n)
-xticklabels(parameter_vec(1,:))
-yticks(1:test_n)
-yticklabels(parameter_vec(3,:))
-xlabel('G_{coeff}')
-ylabel('\delta G_{SRA}')
-subplot(1,3,3)
-imagesc(avg_event_length_G_S)
-c3 = colorbar();
-c3.Label.String = "Seconds";
-title('Average Event Length')
-xticks(1:test_n)
-xticklabels(parameter_vec(1,:))
-yticks(1:test_n)
-yticklabels(parameter_vec(3,:))
-xlabel('G_{coeff}')
-ylabel('\delta G_{SRA}')
+    %G_coeff vs del_G_sra
+    num_spikers_G_S = squeeze(mean(num_spikers,2));
+    avg_fr_G_S = squeeze(mean(avg_fr,2));
+    avg_event_length_G_S = squeeze(mean(avg_event_length,2));
+    figure;
+    subplot(1,3,1)
+    imagesc(num_spikers_G_S)
+    c1 = colorbar();
+    c1.Label.String = 'Number of Neurons';
+    title('Number of Spiking Neurons')
+    xticks(1:test_n)
+    xticklabels(parameter_vec(1,:))
+    yticks(1:test_n)
+    yticklabels(parameter_vec(3,:))
+    xlabel('G_{coeff}')
+    ylabel('\delta G_{SRA}')
+    subplot(1,3,2)
+    imagesc(avg_fr_G_S)
+    c2 = colorbar();
+    c2.Label.String = "Hz";
+    title('Average Firing Rate')
+    xticks(1:test_n)
+    xticklabels(parameter_vec(1,:))
+    yticks(1:test_n)
+    yticklabels(parameter_vec(3,:))
+    xlabel('G_{coeff}')
+    ylabel('\delta G_{SRA}')
+    subplot(1,3,3)
+    imagesc(avg_event_length_G_S)
+    c3 = colorbar();
+    c3.Label.String = "Seconds";
+    title('Average Event Length')
+    xticks(1:test_n)
+    xticklabels(parameter_vec(1,:))
+    yticks(1:test_n)
+    yticklabels(parameter_vec(3,:))
+    xlabel('G_{coeff}')
+    ylabel('\delta G_{SRA}')
 
-clear c1 c2 c3
+    clear c1 c2 c3
 
-%I_strength vs del_G_sra
-num_spikers_I_S = squeeze(mean(num_spikers,1));
-avg_fr_I_S = squeeze(mean(avg_fr,1));
-avg_event_length_I_S = squeeze(mean(avg_event_length,1));
-figure;
-subplot(1,3,1)
-imagesc(num_spikers_I_S)
-c1 = colorbar();
-c1.Label.String = 'Number of Neurons';
-title('Number of Spiking Neurons')
-xticks(1:test_n)
-xticklabels(parameter_vec(2,:))
-yticks(1:test_n)
-yticklabels(parameter_vec(3,:))
-xlabel('I_{strength}')
-ylabel('\delta G_{SRA}')
-subplot(1,3,2)
-imagesc(avg_fr_I_S)
-c2 = colorbar();
-c2.Label.String = "Hz";
-title('Average Firing Rate')
-xticks(1:test_n)
-xticklabels(parameter_vec(2,:))
-yticks(1:test_n)
-yticklabels(parameter_vec(3,:))
-xlabel('I_{strength}')
-ylabel('\delta G_{SRA}')
-subplot(1,3,3)
-imagesc(avg_event_length_I_S)
-c3 = colorbar();
-c3.Label.String = "Seconds";
-title('Average Event Length')
-xticks(1:test_n)
-xticklabels(parameter_vec(2,:))
-yticks(1:test_n)
-yticklabels(parameter_vec(3,:))
-xlabel('I_{strength}')
-ylabel('\delta G_{SRA}')
+    %I_strength vs del_G_sra
+    num_spikers_I_S = squeeze(mean(num_spikers,1));
+    avg_fr_I_S = squeeze(mean(avg_fr,1));
+    avg_event_length_I_S = squeeze(mean(avg_event_length,1));
+    figure;
+    subplot(1,3,1)
+    imagesc(num_spikers_I_S)
+    c1 = colorbar();
+    c1.Label.String = 'Number of Neurons';
+    title('Number of Spiking Neurons')
+    xticks(1:test_n)
+    xticklabels(parameter_vec(2,:))
+    yticks(1:test_n)
+    yticklabels(parameter_vec(3,:))
+    xlabel('I_{strength}')
+    ylabel('\delta G_{SRA}')
+    subplot(1,3,2)
+    imagesc(avg_fr_I_S)
+    c2 = colorbar();
+    c2.Label.String = "Hz";
+    title('Average Firing Rate')
+    xticks(1:test_n)
+    xticklabels(parameter_vec(2,:))
+    yticks(1:test_n)
+    yticklabels(parameter_vec(3,:))
+    xlabel('I_{strength}')
+    ylabel('\delta G_{SRA}')
+    subplot(1,3,3)
+    imagesc(avg_event_length_I_S)
+    c3 = colorbar();
+    c3.Label.String = "Seconds";
+    title('Average Event Length')
+    xticks(1:test_n)
+    xticklabels(parameter_vec(2,:))
+    yticks(1:test_n)
+    yticklabels(parameter_vec(3,:))
+    xlabel('I_{strength}')
+    ylabel('\delta G_{SRA}')
 
-clear c1 c2 c3
+    clear c1 c2 c3
+end

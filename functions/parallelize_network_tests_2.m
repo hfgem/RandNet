@@ -1,4 +1,4 @@
-function vec = parallelize_network_tests_2(parameters,network,j, save_path)
+function outputVec = parallelize_network_tests_2(parameters,network,j, save_path)
     %_________
     %ABOUT: This function runs through a series of commands to test the
     %outputs of a particular parameter set in comparison to a strict set of
@@ -65,7 +65,7 @@ function vec = parallelize_network_tests_2(parameters,network,j, save_path)
     %       3. average event length
     %_________
     
-    vec = zeros(1,3);
+    outputVec = zeros(1,3);
     seed = j;
     
     %Create input conductance variable
@@ -86,9 +86,9 @@ function vec = parallelize_network_tests_2(parameters,network,j, save_path)
     spiking_neurons = unique(spikes_x, 'stable');
     
     %First value: the number of spiking neurons
-    vec(1) = length(spiking_neurons);
+    outputVec(1) = length(spiking_neurons);
     
-    if vec(1) > 0
+    if length(spiking_neurons) > 0
         %Find maximum firing rate + average maximum firing rates of neurons
         all_fr = sum(spikes_V_m(spiking_neurons,:),2)/parameters.t_max; %only look at neurons that fired at least 1x
         avg_fr = mean(all_fr);
@@ -97,9 +97,9 @@ function vec = parallelize_network_tests_2(parameters,network,j, save_path)
         %around 1 Hz on average and have a max around 1.5 Hz
 
         %Second value: the average firing rate
-        vec(2) = avg_fr;
+        outputVec(2) = avg_fr;
         
-        if vec(2) > 0
+        if avg_fr > 0
             %Find firing event times
             events = [];
             event_lengths = [];
@@ -165,8 +165,7 @@ function vec = parallelize_network_tests_2(parameters,network,j, save_path)
                 end
             end
 
-            %Third value: Average event length
-            vec(3) = avg_event_length;
+            outputVec(3) = avg_event_length; %Average event length
         end
     end    
 end

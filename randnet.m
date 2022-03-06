@@ -209,7 +209,7 @@ for i = 1:1%10 %how many different network structures to test
     for j = 1:parameters.test_val_max        
         
         %Create input conductance variable
-        if usePoisson
+        if parameters.usePoisson
             G_in = zeros(parameters.n, parameters.t_steps+1);
             for k = 2:(parameters.t_steps+1)
                 G_in(:,k) = G_in(:,k-1)*exp(-parameters.dt/parameters.tau_syn_E);
@@ -238,126 +238,83 @@ for i = 1:1%10 %how many different network structures to test
         G_var(j).G_syn_I_I = G_syn_I_I;
         G_var(j).G_syn_E_I = G_syn_E_I;
         
-        %Find spike profile
-        spikes_V_m = V_m >= parameters.V_th;
-        [spikes_x,spikes_t] = find(spikes_V_m);
-        max_time = max(spikes_t);
-        spiking_neurons = unique(spikes_x, 'stable');
-        
-        %TEST 1: The number of neurons participating in a sequence must
-        %pass a threshold:
-        if length(spiking_neurons) >= parameters.event_cutoff*parameters.n
-        
-            %Find maximum firing rate + average maximum firing rates of neurons
-            all_fr = sum(spikes_V_m,2)/parameters.t_max;
-            max_fr = max(all_fr);
-            avg_fr = mean(all_fr);
-            display(avg_fr)
+        [network_spike_sequences, network_cluster_sequences] = detect_events(parameters, network, V_m , j, network_spike_sequences, network_cluster_sequences);
+    
+        if plotResults
+            events = network_spike_sequences(j).events;
 
-            %TEST 2: The firing rate must fall within a realistic range
-            if and(avg_fr>= parameters.min_avg_fr, avg_fr <= parameters.max_avg_fr)
-                %Find event times
-                events = []; 
-                event_lengths = [];
-                last_start = spikes_t(1);
-                last_time = spikes_t(1);
-                spike_count = 1;
-                for t_i = 2:length(spikes_t)
-                    s_i = spikes_t(t_i);
-                    if s_i - last_time <= parameters.IES
-                        last_time = s_i;
-                        spike_count = spike_count + 1;
-                    else
-                        if (last_start ~= last_time) && (spike_count > parameters.event_cutoff*parameters.n) %weed out events w/ too few spikes
-                            events = [events; [last_start, last_time]]; %#ok<AGROW> %add the last range of spikes to the events vector
-                            event_lengths = [event_lengths, (last_time - last_start)*parameters.dt]; %#ok<*AGROW>
-                        end
-                        last_start = s_i;
-                        last_time = s_i;
-                        spike_count = 1;
-                    end
+            %Find spike profile
+            spikes_V_m = V_m >= parameters.V_th;
+            [spikes_x,spikes_t] = find(spikes_V_m);
+            max_time = max(spikes_t);
+            spiking_neurons = unique(spikes_x, 'stable');
+
+            %Visualize re-ordered spike sequences
+            if exist('events')==1 
+                f = figure;
+                axes = [];
+                num_events = size(events, 1)
+                for e_i = 1:num_events
+                    spike_order = network_spike_sequences(j).spike_order.(strcat('sequence_',string(e_i)));
+                    sub_spikes_V_m = spikes_V_m(:,events(e_i,1):events(e_i,2));
+                    reordered_spikes = sub_spikes_V_m(spike_order,:);
+                    [~,event_length] = size(reordered_spikes); 
+                    ax = subplot(1,num_events,e_i);
+                    axes = [axes, ax];
+                    imagesc(reordered_spikes)
+                    xticks(round(linspace(1,event_length,20))) %20 ticks will be displayed
+                    xt = get(gca,'XTick');
+                    xtlbl = round(linspace(events(e_i,1)*parameters.dt,events(e_i,2)*parameters.dt,numel(xt)),2);
+                    colormap(flip(gray))
+                    xlabel('Time (s)','FontSize',16)
+                    ylabel('Reordered Neuron Number','FontSize',16)
+                    title(strcat('Event #',string(e_i)))
+                    set(gca, 'XTick',xt, 'XTickLabel',xtlbl)
                 end
-                if (last_start ~= last_time) && (spike_count > parameters.event_cutoff*parameters.n) %weed out events w/ too few spikes
-                    events = [events; [last_start, last_time]]; %#ok<AGROW> %add the last interval
-                    event_lengths = [event_lengths, (last_time - last_start)*parameters.dt]; %#ok<*SAGROW>
+                sgtitle('Spiking Behavior','FontSize',16)
+
+                %linkaxes(axes)
+                if saveFlag
+                    savefig(f,strcat(net_save_path,'/','_',string(j),'firing_sequence.fig'))
+                    saveas(f,strcat(net_save_path,'/', '_',string(j),'firing_sequence.jpg'))
+                    close(f)
                 end
-                avg_event_length = mean(event_lengths);
-                [num_events,~] = size(events);
-                %save to both structures
-                network_spike_sequences(j).events = events;
-                network_spike_sequences(j).event_lengths = event_lengths;
-                network_cluster_sequences(j).events = events;
-                network_cluster_sequences(j).event_lengths = event_lengths;
-                
-                %TEST 3: The sequence(s) of firing is(are) within
-                %reasonable lengths.
-                if and(avg_event_length >= parameters.min_avg_length, avg_event_length <= parameters.max_avg_length)
+                clear e_i spike_order reordered_spikes event_length s_i ax ...
+                    axes xt xtlbl
+            end      
 
-                    %Find spike sequences
-                    for e_i = 1:num_events
-                        %store spike orders for each event
-                        event_spikes = spikes_V_m(:,events(e_i,1):events(e_i,2));
-                        [e_spikes_x, ~] = find(event_spikes);
-                        spike_order = unique(e_spikes_x,'stable');
-                        network_spike_sequences(j).spike_order.(strcat('sequence_',string(e_i))) = spike_order;
-                        %store ranks for each neuron
-                        ranks_vec = zeros(1,parameters.n);
-                        for k = 1:length(spike_order)
-                            n_ind = spike_order(k);
-                            ranks_vec(1,n_ind) = k;
-                        end
-                        network_spike_sequences(j).spike_ranks.(strcat('sequence_',string(e_i))) = ranks_vec;
-                        %store nonspiking neurons
-                        nonspiking_neurons = isnan(ranks_vec./ranks_vec);
-                        network_spike_sequences(j).nonspiking_neurons.(strcat('sequence_',string(e_i))) = nonspiking_neurons;
-                    end
-                    clear e_i event_spikes e_spikes_x spike_order ranks_vec k n_ind nonspiking_neurons
+            t = [0:dt:t_max];
+            figure; plot(t, V_m(1:2,:)); ylabel('Vm (V)'); xlabel('Time (s)'); 
+            % figure; plot(t, V_m); ylabel('Vm (V)'); xlabel('Time (s)'); 
+            figure; plot(t, G_in(1:2,:)); ylabel('G in (S)'); xlabel('Time (s)'); 
+            % figure; plot(t, G_in(1:2,:)); ylabel('G in (S)'); xlabel('Time (s)'); 
 
-                    %Visualize re-ordered spike sequences
-                    f = figure;
-                    axes = [];
-                    num_events
-                    for e_i = 1:num_events
-                        spike_order = network_spike_sequences(j).spike_order.(strcat('sequence_',string(e_i)));
-                        sub_spikes_V_m = spikes_V_m(:,events(e_i,1):events(e_i,2));
-                        reordered_spikes = sub_spikes_V_m(spike_order,:);
-                        [~,event_length] = size(reordered_spikes); 
-                        ax = subplot(1,num_events,e_i);
-                        axes = [axes, ax];
-                        imagesc(reordered_spikes)
-                        xticks(round(linspace(1,event_length,20))) %20 ticks will be displayed
-                        xt = get(gca,'XTick');
-                        xtlbl = round(linspace(events(e_i,1)*parameters.dt,events(e_i,2)*parameters.dt,numel(xt)),2);
-                        colormap(flip(gray))
-                        xlabel('Time (s)','FontSize',16)
-                        ylabel('Reordered Neuron Number','FontSize',16)
-                        title(strcat('Event #',string(e_i)))
-                        set(gca, 'XTick',xt, 'XTickLabel',xtlbl)
-                    end
-                    sgtitle('Spiking Behavior','FontSize',16)
+            figure; hold on
+            if exist('events')==1 
+                for i = 1:size(events, 1)
+                    fill([t(events(i,:)), fliplr(t(events(i,:)))], [0, 0, size(spikes_V_m, 1), size(spikes_V_m, 1)], 'k', 'FaceAlpha', 0.2, 'EdgeColor', 'none')
+                end
+            end
+            plotSpikeRaster( spikes_V_m, 'TimePerBin', parameters.dt, 'PlotType', 'scatter'); 
+            ylabel('Cell'); xlabel('Time (s)'); 
 
-                    %linkaxes(axes)
-                    if saveFlag
-                        savefig(f,strcat(net_save_path,'/','_',string(j),'firing_sequence.fig'))
-                        saveas(f,strcat(net_save_path,'/', '_',string(j),'firing_sequence.jpg'))
-                        close(f)
-                    end
-                    clear e_i spike_order reordered_spikes event_length s_i ax ...
-                        axes xt xtlbl
-
-                    %Find cluster sequence per event by moving bin
-                    bin_size = ceil(parameters.bin_width/parameters.dt); %number of timesteps to use in a bin
-                    for e_i = 1:num_events
-                        cluster_spikes = network.cluster_mat*spikes_V_m(:,events(e_i,1):events(e_i,2));
-                        cluster_mov_sum = movsum(cluster_spikes',bin_size)';
-                        network_cluster_sequences(j).clusters.(strcat('sequence_',string(e_i))) = cluster_spikes;
-                        network_cluster_sequences(j).movsum.(strcat('sequence_',string(e_i))) = cluster_mov_sum;
-                    end
-                    clear bin_width bin_size cluster_spikes cluster_mov_sum e_i
-                end %Sequence length loop
-            end %Firing rate loop
-        end %Number of neurons in sequence loop
+            movmeanWindow = (1/parameters.dt) * 0.05;
+            meanPopRate = movmean(mean(spikes_V_m, 1)/parameters.dt, movmeanWindow);
+            figure; hold on
+            if exist('events')==1 
+                for i = 1:size(events, 1)
+                    fill([t(events(i,:)), fliplr(t(events(i,:)))], [0, 0, ceil(max(meanPopRate)), ceil(max(meanPopRate))], 'k', 'FaceAlpha', 0.2, 'EdgeColor', 'none')
+                end
+            end
+            plot(t, meanPopRate)
+            ylabel('Population mean rate (Hz)'); xlabel('Time (s)'); 
+            yline(mean(meanPopRate), 'g')
+            yline(mean(meanPopRate)+ std(meanPopRate))
+            yline(mean(meanPopRate)+ 2*std(meanPopRate))
+        end
+        
     end
+    
     
     %SAVE NETWORK DATA
     if saveFlag
@@ -371,34 +328,102 @@ for i = 1:1%10 %how many different network structures to test
 end %End of network structure loop
 
 
-if plotResults
-    t = [0:dt:t_max];
-    figure; plot(t, V_m(1:2,:)); ylabel('Vm (V)'); xlabel('Time (s)'); 
-    % figure; plot(t, V_m); ylabel('Vm (V)'); xlabel('Time (s)'); 
-    figure; plot(t, G_in(1:2,:)); ylabel('G in (S)'); xlabel('Time (s)'); 
-    % figure; plot(t, G_in(1:2,:)); ylabel('G in (S)'); xlabel('Time (s)'); 
 
-    figure; hold on
-    if exist('events')==1 
-        for i = 1:size(events, 1)
-            fill([t(events(i,:)), fliplr(t(events(i,:)))], [0, 0, size(spikes_V_m, 1), size(spikes_V_m, 1)], 'k', 'FaceAlpha', 0.2, 'EdgeColor', 'none')
-        end
-    end
-    plotSpikeRaster( spikes_V_m, 'TimePerBin', parameters.dt, 'PlotType', 'scatter'); 
-    ylabel('Cell'); xlabel('Time (s)'); 
 
-    movmeanWindow = (1/parameters.dt) * 0.05;
-    meanPopRate = movmean(mean(spikes_V_m, 1)/parameters.dt, movmeanWindow);
-    figure; hold on
-    if exist('events')==1 
-        for i = 1:size(events, 1)
-            fill([t(events(i,:)), fliplr(t(events(i,:)))], [0, 0, ceil(max(meanPopRate)), ceil(max(meanPopRate))], 'k', 'FaceAlpha', 0.2, 'EdgeColor', 'none')
-        end
-    end
-    plot(t, meanPopRate)
-    ylabel('Population mean rate (Hz)'); xlabel('Time (s)'); 
-    yline(mean(meanPopRate), 'g')
-    yline(mean(meanPopRate)+ std(meanPopRate))
-    yline(mean(meanPopRate)+ 2*std(meanPopRate))
 
+%%
+
+function [network_spike_sequences, network_cluster_sequences] = detect_events(parameters, network, V_m , j, network_spike_sequences, network_cluster_sequences)
+    events = [];
+    
+    %Find spike profile
+    spikes_V_m = V_m >= parameters.V_th;
+    [spikes_x,spikes_t] = find(spikes_V_m);
+    max_time = max(spikes_t);
+    spiking_neurons = unique(spikes_x, 'stable');
+    
+    %TEST 1: The number of neurons participating in a sequence must
+    %pass a threshold:
+    if length(spiking_neurons) >= parameters.event_cutoff*parameters.n
+
+        %Find maximum firing rate + average maximum firing rates of neurons
+        all_fr = sum(spikes_V_m,2)/parameters.t_max;
+        max_fr = max(all_fr);
+        avg_fr = mean(all_fr);
+        display(avg_fr)
+
+        %TEST 2: The firing rate must fall within a realistic range
+        if and(avg_fr>= parameters.min_avg_fr, avg_fr <= parameters.max_avg_fr)
+            %Find event times
+            events = []; 
+            event_lengths = [];
+            last_start = spikes_t(1);
+            last_time = spikes_t(1);
+            spike_count = 1;
+            for t_i = 2:length(spikes_t)
+                s_i = spikes_t(t_i);
+                if s_i - last_time <= parameters.IES
+                    last_time = s_i;
+                    spike_count = spike_count + 1;
+                else
+                    if (last_start ~= last_time) && (spike_count > parameters.event_cutoff*parameters.n) %weed out events w/ too few spikes
+                        events = [events; [last_start, last_time]]; %#ok<AGROW> %add the last range of spikes to the events vector
+                        event_lengths = [event_lengths, (last_time - last_start)*parameters.dt]; %#ok<*AGROW>
+                    end
+                    last_start = s_i;
+                    last_time = s_i;
+                    spike_count = 1;
+                end
+            end
+            if (last_start ~= last_time) && (spike_count > parameters.event_cutoff*parameters.n) %weed out events w/ too few spikes
+                events = [events; [last_start, last_time]]; %#ok<AGROW> %add the last interval
+                event_lengths = [event_lengths, (last_time - last_start)*parameters.dt]; %#ok<*SAGROW>
+            end
+            avg_event_length = mean(event_lengths);
+            [num_events,~] = size(events);
+            %save to both structures
+            network_spike_sequences(j).events = events;
+            network_spike_sequences(j).event_lengths = event_lengths;
+            network_cluster_sequences(j).events = events;
+            network_cluster_sequences(j).event_lengths = event_lengths;
+
+            %TEST 3: The sequence(s) of firing is(are) within
+            %reasonable lengths.
+            if and(avg_event_length >= parameters.min_avg_length, avg_event_length <= parameters.max_avg_length)
+
+                %Find spike sequences
+                for e_i = 1:num_events
+                    %store spike orders for each event
+                    event_spikes = spikes_V_m(:,events(e_i,1):events(e_i,2));
+                    [e_spikes_x, ~] = find(event_spikes);
+                    spike_order = unique(e_spikes_x,'stable');
+                    network_spike_sequences(j).spike_order.(strcat('sequence_',string(e_i))) = spike_order;
+                    %store ranks for each neuron
+                    ranks_vec = zeros(1,parameters.n);
+                    for k = 1:length(spike_order)
+                        n_ind = spike_order(k);
+                        ranks_vec(1,n_ind) = k;
+                    end
+                    network_spike_sequences(j).spike_ranks.(strcat('sequence_',string(e_i))) = ranks_vec;
+                    %store nonspiking neurons
+                    nonspiking_neurons = isnan(ranks_vec./ranks_vec);
+                    network_spike_sequences(j).nonspiking_neurons.(strcat('sequence_',string(e_i))) = nonspiking_neurons;
+                end
+                clear e_i event_spikes e_spikes_x spike_order ranks_vec k n_ind nonspiking_neurons
+
+
+                %Find cluster sequence per event by moving bin
+                bin_size = ceil(parameters.bin_width/parameters.dt); %number of timesteps to use in a bin
+                for e_i = 1:num_events
+                    cluster_spikes = network.cluster_mat*spikes_V_m(:,events(e_i,1):events(e_i,2));
+                    cluster_mov_sum = movsum(cluster_spikes',bin_size)';
+                    network_cluster_sequences(j).clusters.(strcat('sequence_',string(e_i))) = cluster_spikes;
+                    network_cluster_sequences(j).movsum.(strcat('sequence_',string(e_i))) = cluster_mov_sum;
+                end
+                clear bin_width bin_size cluster_spikes cluster_mov_sum e_i
+            end %Sequence length loop
+        end %Firing rate loop
+    end %Number of neurons in sequence loop
 end
+
+

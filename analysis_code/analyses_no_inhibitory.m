@@ -33,7 +33,7 @@ clear network network_var %to save space
 %% Calculate Distances if Inhibitory Neurons Were Removed
 
 %Load data if not in workspace
-% load(strcat(data_path,'/network_spike_sequences_no_I.mat'))
+load(strcat(data_path,'/network_spike_sequences_no_I.mat'))
 
 %Store full ranks as matrices
 %Useful Variables
@@ -57,9 +57,9 @@ full_shuffle_dist = calculate_vector_distances(full_shuffle);
 full_shuffle_dist_vec = nonzeros(triu(full_shuffle_dist,1));
 %Plot resulting histograms
 f = figure;
-histogram(full_dist_vec,'DisplayName','Full Vector Distances')
-hold on
 histogram(full_shuffle_dist_vec,'DisplayName','Shuffled Full Vector Distances')
+hold on
+histogram(full_dist_vec,'DisplayName','Full Vector Distances')
 xlabel('Distance')
 ylabel('Number of Distances')
 title('Full Rank Sequence Distances, Excluding Inhibitory Neurons')

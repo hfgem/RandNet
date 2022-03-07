@@ -156,9 +156,9 @@ full_shuffle_dist_vec = nonzeros(triu(full_shuffle_dist,1));
 
 %Plot resulting distance histograms
 f = figure;
-histogram(full_dist_vec,'DisplayName','Full Vector Distances')
-hold on
 histogram(full_shuffle_dist_vec,'DisplayName','Shuffled Full Vector Distances')
+hold on
+histogram(full_dist_vec,'DisplayName','Full Vector Distances')
 xlabel('Distance')
 ylabel('Number of Distances')
 title('Full Rank Sequence Distances')

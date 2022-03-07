@@ -95,16 +95,18 @@ if saveFlag
     save(strcat(data_path,'/spike_struct.mat'),'spike_struct')
 end
 
-%% Analyze New Sequences
+%% Analyze Distances in New Sequences
 
 %Load data if not in Workspace
-% msgbox('Select folder where the network results are stored.')
-% data_path = uigetdir('/Users/hannahgermaine/Documents/PhD/');
-% load(strcat(data_path,'/spike_struct.mat'))
+msgbox('Select folder where the network results are stored.')
+data_path = uigetdir('/Users/hannahgermaine/Documents/PhD/');
+load(strcat(data_path,'/spike_struct.mat'))
 
 %Store ranks as matrices
 short_ranks = [];
+short_ranks_nonspiking = [];
 full_ranks = [];
+full_ranks_nonspiking = [];
 sequence_lengths = [];
 for i = 1:length(spike_struct)
     [num_events,~] = size(spike_struct(i).events);
@@ -114,12 +116,14 @@ for i = 1:length(spike_struct)
             name = strcat('sequences_',string(j));
             %Update ranks of nonspiking neurons to be num_spiking + 1/2(n - num_spiking)
             full_rank_w_0 = spike_struct(i).ranks.(name);
+            full_ranks_nonspiking = [full_ranks_nonspiking, full_rank_w_0 == 0]; %#ok<AGROW>
             ns = length(find(full_rank_w_0));
             new_rank = ns + 0.5*(n - ns);
             new_full_rank = full_rank_w_0;
             new_full_rank(new_full_rank == 0) = new_rank;
             full_ranks = [full_ranks, new_full_rank]; %#ok<AGROW>
             short_rank_w_0 = spike_struct(i).short_spike_ranks.(name);
+            short_ranks_nonspiking = [short_ranks_nonspiking, short_rank_w_0 == 0]; %#ok<AGROW>
             ns = length(find(short_rank_w_0));
             sequence_lengths = [sequence_lengths, ns]; %#ok<AGROW>
             new_rank = ns + 0.5*(n - ns);
@@ -132,6 +136,11 @@ for i = 1:length(spike_struct)
         clear j num_events
     end
 end
+save(strcat(data_path,'/short_ranks.mat'),'short_ranks')
+save(strcat(data_path,'/short_ranks_nonspiking.mat'),'short_ranks_nonspiking')
+save(strcat(data_path,'/full_ranks.mat'),'full_ranks')
+save(strcat(data_path,'/full_ranks_nonspiking.mat'),'full_ranks_nonspiking')
+save(strcat(data_path,'/sequence_lengths.mat'),'sequence_lengths')
 clear i   
 
 %Remove outliers
@@ -150,6 +159,7 @@ short_dist_vec = nonzeros(triu(short_dist,1));
 
 %Generate shuffled ranks
 shuffle_n = 100;
+[n,num_seq] = size(full_ranks);
 full_shuffle = generate_shuffled_trajectories2(full_ranks, shuffle_n);
 short_shuffle = generate_shuffled_trajectories2(short_ranks, shuffle_n);
 short_shuffle_lengths = [];
@@ -167,22 +177,205 @@ short_shuffle_dist_vec = nonzeros(triu(short_shuffle_dist,1));
 %Plot resulting histograms
 figure;
 subplot(1,2,1)
-histogram(full_dist_vec,'DisplayName','Full Vector Distances')
-hold on
 histogram(full_shuffle_dist_vec,'DisplayName','Shuffled Full Vector Distances')
+hold on
+histogram(full_dist_vec,'DisplayName','Full Vector Distances')
 xlabel('Distance')
 ylabel('Number of Distances')
 title('Full Rank Sequence Distances')
 legend()
 subplot(1,2,2)
-histogram(short_dist_vec,'DisplayName','Short Vector Distances')
-hold on
 histogram(short_shuffle_dist_vec,'DisplayName','Shuffled Short Vector Distances')
+hold on
+histogram(short_dist_vec,'DisplayName','Short Vector Distances')
 xlabel('Distance')
 ylabel('Number of Distances')
 title('Short Rank Sequence Distances')
 legend()
 
+%% Matching Indices with Fractional Rank Nonspiking
+
+%Load data if not in Workspace
+msgbox('Select folder where the network results are stored.')
+data_path = uigetdir('/Users/hannahgermaine/Documents/PhD/');
+load(strcat(data_path,'/spike_struct.mat')) %From Above Code Block
+load(strcat(data_path,'/short_ranks.mat')) %From Above Code Block
+load(strcat(data_path,'/short_ranks_nonspiking.mat')) %From Above Code Block
+load(strcat(data_path,'/full_ranks.mat')) %From Above Code Block
+load(strcat(data_path,'/full_ranks_nonspiking.mat')) %From Above Code Block
+load(strcat(data_path,'/sequence_lengths.mat')) %From Above Code Block
+
+%___Calculate Matching Indices (Vas et al..)___
+shuffle_n = 100;
+
+%Generate shuffled sequences with fractional ranks
+full_shuffle_spike = generate_shuffled_trajectories2(full_ranks, shuffle_n);
+full_shuffle_nonspike = [];
+for i = 1:shuffle_n
+    full_shuffle_spike_seq = full_shuffle_spike(:,i);
+    [mode_full_shuffle_spike_seq, mode_n] = mode(full_shuffle_spike_seq);
+    if mode_n > 1
+        full_shuffle_nonspike = [full_shuffle_nonspike, full_shuffle_spike_seq == mode_full_shuffle_spike_seq];
+    else
+        full_shuffle_nonspike = [full_shuffle_nonspike, zeros(size(full_shuffle_spike_seq))];
+    end
+end    
+short_shuffle_spike = generate_shuffled_trajectories2(short_ranks, shuffle_n);
+short_shuffle_nonspike = [];
+for i = 1:shuffle_n
+    short_shuffle_spike_seq = short_shuffle_spike(:,i);
+    [mode_short_shuffle_spike_seq, mode_n] = mode(short_shuffle_spike_seq);
+    if mode_n > 1
+        short_shuffle_nonspike = [short_shuffle_nonspike, short_shuffle_spike_seq == mode_short_shuffle_spike_seq];
+    else
+        short_shuffle_nonspike = [short_shuffle_nonspike, zeros(size(short_shuffle_spike_seq))];
+    end
+end
+%Matching indices with ranks of nonspiking = n_s + (n - n_s)/2
+penalize_nonspike = 1;
+[full_matching_index, full_matching_index_mod] = calculate_trajectory_similarity_mi2(full_ranks, ...
+    full_ranks_nonspiking, penalize_nonspike);
+[short_matching_index, short_matching_index_mod] = calculate_trajectory_similarity_mi2(short_ranks, ...
+    short_ranks_nonspiking, penalize_nonspike);
+[shuffle_full_matching_index, shuffle_full_matching_index_mod] = calculate_trajectory_similarity_mi2(full_shuffle_spike, ...
+    full_shuffle_nonspike, penalize_nonspike);
+[shuffle_short_matching_index, shuffle_short_matching_index_mod] = calculate_trajectory_similarity_mi2(short_ranks, ...
+    short_shuffle_nonspike, penalize_nonspike);
+%Vectorize the MI Values
+full_matching_index_vec = nonzeros(triu(full_matching_index,1));
+full_matching_index_mod_vec = nonzeros(triu(full_matching_index_mod,1));
+short_matching_index_vec = nonzeros(triu(short_matching_index,1));
+short_matching_index_mod_vec = nonzeros(triu(short_matching_index_mod,1));
+shuffle_full_matching_index_vec = nonzeros(triu(shuffle_full_matching_index,1));
+shuffle_full_matching_index_mod_vec = nonzeros(triu(shuffle_full_matching_index_mod,1));
+shuffle_short_matching_index_vec = nonzeros(triu(shuffle_short_matching_index,1));
+shuffle_short_matching_index_mod_vec = nonzeros(triu(shuffle_short_matching_index,1));
+%Plot Histograms of MI Values for fractional ranks
+figure;
+subplot(2,2,1)
+histogram(shuffle_full_matching_index_vec,'DisplayName','Shuffled Full Sequence Matching Index')
+hold on
+histogram(full_matching_index_vec,'DisplayName','Full Sequence Matching Index')
+xlabel('Matching Index')
+ylabel('Number of Occurrences')
+title('Full Sequence Matching Indices')
+legend()
+subplot(2,2,2)
+histogram(shuffle_short_matching_index_vec,'DisplayName','Shuffled Short Sequence Matching Index')
+hold on
+histogram(short_matching_index_vec,'DisplayName','Short Sequence Matching Index')
+xlabel('Matching Index')
+ylabel('Number of Occurrences')
+title('Short Sequence Matching Indices')
+legend()
+subplot(2,2,3)
+histogram(shuffle_full_matching_index_mod_vec,'DisplayName','Shuffled Full Sequence Matching Index')
+hold on
+histogram(full_matching_index_mod_vec,'DisplayName','Full Sequence Matching Index')
+xlabel('Matching Index')
+ylabel('Number of Occurrences')
+title({'Full Sequence Matching Indices','Excluding Overlapping Nonspiking'})
+legend()
+subplot(2,2,4)
+histogram(shuffle_short_matching_index_mod_vec,'DisplayName','Shuffled Short Sequence Matching Index')
+hold on
+histogram(short_matching_index_mod_vec,'DisplayName','Short Sequence Matching Index')
+xlabel('Matching Index')
+ylabel('Number of Occurrences')
+title({'Short Sequence Matching Indices','Excluding Overlapping Nonspiking'})
+legend()
+
+%% Matching Index with 0 Rank Nonspiking
+
+%Uncomment next section if running independently of the above MI fractional
+%rank section.
+
+% %Load data if not in Workspace
+% msgbox('Select folder where the network results are stored.')
+% data_path = uigetdir('/Users/hannahgermaine/Documents/PhD/');
+% load(strcat(data_path,'/spike_struct.mat')) %From Above Code Block
+% load(strcat(data_path,'/short_ranks.mat')) %From Above Code Block
+% load(strcat(data_path,'/short_ranks_nonspiking.mat')) %From Above Code Block
+% load(strcat(data_path,'/full_ranks.mat')) %From Above Code Block
+% load(strcat(data_path,'/full_ranks_nonspiking.mat')) %From Above Code Block
+% load(strcat(data_path,'/sequence_lengths.mat')) %From Above Code Block
+% 
+% %___Calculate Matching Indices (Vas et al..)___
+% shuffle_n = 100;
+% 
+% %Generate shuffled sequences with fractional ranks
+% full_shuffle_spike = generate_shuffled_trajectories2(full_ranks, shuffle_n);
+% full_shuffle_nonspike = [];
+% for i = 1:shuffle_n
+%     full_shuffle_spike_seq = full_shuffle_spike(:,i);
+%     [mode_full_shuffle_spike_seq, mode_n] = mode(full_shuffle_spike_seq);
+%     if mode_n > 1
+%         full_shuffle_nonspike = [full_shuffle_nonspike, full_shuffle_spike_seq == mode_full_shuffle_spike_seq];
+%     else
+%         full_shuffle_nonspike = [full_shuffle_nonspike, zeros(size(full_shuffle_spike_seq))];
+%     end
+% end    
+% short_shuffle_spike = generate_shuffled_trajectories2(short_ranks, shuffle_n);
+% short_shuffle_nonspike = [];
+% for i = 1:shuffle_n
+%     short_shuffle_spike_seq = short_shuffle_spike(:,i);
+%     [mode_short_shuffle_spike_seq, mode_n] = mode(short_shuffle_spike_seq);
+%     if mode_n > 1
+%         short_shuffle_nonspike = [short_shuffle_nonspike, short_shuffle_spike_seq == mode_short_shuffle_spike_seq];
+%     else
+%         short_shuffle_nonspike = [short_shuffle_nonspike, zeros(size(short_shuffle_spike_seq))];
+%     end
+% end
+
+%Generate shuffled (and true) sequences with 0 ranks
+full_ranks_0_nonspike = full_ranks.*(~full_ranks_nonspiking);
+short_ranks_0_nonspike = short_ranks.*(~short_ranks_nonspiking);
+full_shuffle_0_nonspike = full_shuffle_spike.*(~full_shuffle_nonspike);
+short_shuffle_0_nonspike = short_shuffle_spike.*(~short_shuffle_nonspike);
+%Matching indices with ranks of nonspiking = 0
+penalize_nonspike = 1;
+[full_0_matching_index, full_0_matching_index_mod] = calculate_trajectory_similarity_mi2(full_ranks_0_nonspike, ...
+    full_ranks_nonspiking, penalize_nonspike);
+[short_0_matching_index, short_0_matching_index_mod] = calculate_trajectory_similarity_mi2(short_ranks_0_nonspike, ...
+    short_ranks_nonspiking, penalize_nonspike);
+[shuffle_full_0_matching_index, shuffle_full_0_matching_index_mod] = calculate_trajectory_similarity_mi2(full_shuffle_0_nonspike, ...
+    full_shuffle_nonspike, penalize_nonspike);
+[shuffle_short_0_matching_index, shuffle_short_0_matching_index_mod] = calculate_trajectory_similarity_mi2(short_shuffle_0_nonspike, ...
+    short_shuffle_nonspike, penalize_nonspike);
+%Plot Histograms of MI Values
+figure;
+subplot(2,2,1)
+histogram(full_matching_index_vec,'DisplayName','Full Sequence Matching Index')
+hold on
+histogram(shuffle_full_matching_index_vec,'DisplayName','Shuffled Full Sequence Matching Index')
+xlabel('Matching Index')
+ylabel('Number of Occurrences')
+title('Full Sequence Matching Indices')
+legend()
+subplot(2,2,2)
+histogram(short_matching_index_vec,'DisplayName','Short Sequence Matching Index')
+hold on
+histogram(shuffle_short_matching_index_vec,'DisplayName','Shuffled Short Sequence Matching Index')
+xlabel('Matching Index')
+ylabel('Number of Occurrences')
+title('Short Sequence Matching Indices')
+legend()
+subplot(2,2,3)
+histogram(full_matching_index_mod_vec,'DisplayName','Full Sequence Matching Index')
+hold on
+histogram(shuffle_full_matching_index_mod_vec,'DisplayName','Shuffled Full Sequence Matching Index')
+xlabel('Matching Index')
+ylabel('Number of Occurrences')
+title({'Full Sequence Matching Indices','Excluding Overlapping Nonspiking'})
+legend()
+subplot(2,2,4)
+histogram(short_matching_index_mod_vec,'DisplayName','Short Sequence Matching Index')
+hold on
+histogram(shuffle_short_matching_index_mod_vec,'DisplayName','Shuffled Short Sequence Matching Index')
+xlabel('Matching Index')
+ylabel('Number of Occurrences')
+title({'Short Sequence Matching Indices','Excluding Overlapping Nonspiking'})
+legend()
 
 %% Investigating interesting results
 %Full Rank current sequences exhibited a bimodal distance distribution -

@@ -1,5 +1,23 @@
 function [network_spike_sequences, network_cluster_sequences, overallResults] = detect_events(parameters, ...
                     network, V_m , ithTest, network_spike_sequences, network_cluster_sequences)
+    %_________
+    %ABOUT: This function detects events from the activity in V_m and the
+    %event criterion parameters in "paramters"
+    %
+    %INPUTS:
+    %   parameters = simulations' parameter structure
+    %   network = newtork structure
+    %   V_m = a single simulations membrane potential matrix
+    %   ithTest = if network is being simulated multiple times, this saves
+    %   results to the ith component of the output structures
+    %   network_spike_sequences, network_cluster_sequences = initialized or
+    %   pre-existing structures that have results for the ithTest appended
+    %
+    %OUTPUTS:
+    %   network_spike_sequences = struct of spike sequences
+    %   network_cluster_sequences = struct of cluster sequences
+    %_________
+    
     
     %Find spike profile
     spikes_V_m = V_m >= parameters.V_th;

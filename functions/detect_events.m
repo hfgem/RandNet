@@ -1,21 +1,24 @@
-function [network_spike_sequences, network_cluster_sequences] = detect_events(parameters, ...
+function [network_spike_sequences, network_cluster_sequences, overallResults] = detect_events(parameters, ...
                     network, V_m , ithTest, network_spike_sequences, network_cluster_sequences)
     
     %Find spike profile
     spikes_V_m = V_m >= parameters.V_th;
     [spikes_x,spikes_t] = find(spikes_V_m);
-    max_time = max(spikes_t);
+    % max_time = max(spikes_t);
     spiking_neurons = unique(spikes_x, 'stable');
     
+    avg_event_length = nan; % Initialize, in case there are no events
+    
+    %Find maximum firing rate + average maximum firing rates of neurons
+    all_fr = sum(spikes_V_m,2)/parameters.t_max;
+    max_fr = max(all_fr);
+    avg_fr = mean(all_fr);
+    display(avg_fr)
+        
     %TEST 1: The number of neurons participating in a sequence must
     %pass a threshold:
     if length(spiking_neurons) >= parameters.event_cutoff*parameters.n
 
-        %Find maximum firing rate + average maximum firing rates of neurons
-        all_fr = sum(spikes_V_m,2)/parameters.t_max;
-        max_fr = max(all_fr);
-        avg_fr = mean(all_fr);
-        display(avg_fr)
 
         %TEST 2: The firing rate must fall within a realistic range
         if and(avg_fr>= parameters.min_avg_fr, avg_fr <= parameters.max_avg_fr)
@@ -89,4 +92,9 @@ function [network_spike_sequences, network_cluster_sequences] = detect_events(pa
             end %Sequence length loop
         end %Firing rate loop
     end %Number of neurons in sequence loop
+    
+    % Statistics over the whole simulation
+    overallResults(1) = length(spiking_neurons); % number of spiking neurons
+    overallResults(2) = avg_fr; %average firing rate
+    overallResults(3) = avg_event_length; %Average event length
 end

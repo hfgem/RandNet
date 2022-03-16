@@ -1,5 +1,5 @@
 function avg_mat = parallelize_parameter_tests_2(parameters,num_nets,...
-    num_inits, parameter_vec, test_n, ind, save_path)
+    num_inits, parameter_vec, test_n, ithParamSet, save_path)
     %_________
     %ABOUT: This function runs through a series of commands to test the
     %outputs of a particular parameter set in comparison to a strict set of
@@ -71,6 +71,8 @@ function avg_mat = parallelize_parameter_tests_2(parameters,num_nets,...
     %       2. average firing rate
     %       3. average event length
     %_________
+    
+    %{
     %Get index values for parameter combination
     [num_params, ~] = size(parameter_vec);
     indices = 1:test_n^num_params;
@@ -80,11 +82,54 @@ function avg_mat = parallelize_parameter_tests_2(parameters,num_nets,...
     parameters.G_coeff = parameter_vec(1,ind_1(ind));
     parameters.I_strength = parameter_vec(2,ind_2(ind));
     parameters.del_G_sra = parameter_vec(3,ind_3(ind));
+    %}
+    
+    parameters.G_coeff = parameter_vec(1,ithParamSet);
+    parameters.I_strength = parameter_vec(2,ithParamSet);
+    parameters.del_G_sra = parameter_vec(3,ithParamSet);
+    
     %Run network initialization code
     resp_mat = zeros(num_nets, 3);
-    for i = 1:num_nets, resp_mat(i,:) = parallelize_networks_2(parameters, ...
-            i, num_inits, save_path); end
+    for ithNet = 1:num_nets
+        
+        rng(ithNet,'twister') %set random number generator for network structure
+        all_indices = [1:parameters.n];
+        I_indices = datasample(all_indices,parameters.n_I,'Replace',false); %indices of inhibitory neurons
+        E_indices = find(~ismember(all_indices,I_indices)); %indices of excitatory neurons
+        [cluster_mat, conns] = create_clusters(parameters, ithNet, 1);
+        clear all_indices
+        
+        %Add in global inhibition, added to individual connections already
+        %given. If global inhibition overrides any pre-set connections with
+        %inhibitory neurons, reset values to global inhibition values.
+        if parameters.only_global
+            conns(I_indices,:) = parameters.I_strength*(rand([parameters.n*(1-parameters.p_E), parameters.n]) < parameters.p_I);
+        else
+            conns(I_indices,:) = conns(I_indices,:) + parameters.I_strength*(rand([parameters.n*(1-parameters.p_E), parameters.n]) < parameters.p_I);
+        end
+        
+        %Save network structure
+        network = struct;
+        network(1).cluster_mat = cluster_mat;
+        network(1).conns = conns;
+        network(1).I_indices = I_indices;
+        network(1).E_indices = E_indices;
+        clear cluster_mat conns I_indices E_indices
+        
+        mat = zeros(num_inits,3);
+        for j = 1:num_inits
+            mat(j,:) = parallelize_network_tests_2(parameters, network, j, save_path); 
+        end
+        mat(isnan(mat)) = 0;
+        
+        %avg_mat = sum(mat,1) ./ sum(mat > 0,1); %Only averaging those that did successfully produce data
+        resp_mat(ithNet,:) = sum(mat,1) ./ sum(mat > 0,1); %Only averaging those that did successfully produce data        
+        %resp_mat(ithNet,:) = parallelize_networks_2(parameters, i, num_inits, save_path); 
+        
+    end
     resp_mat(isnan(resp_mat)) = 0;
     avg_mat = sum(resp_mat,1)./sum(resp_mat > 0,1); %Only averaging those that had results
-    disp(strcat('Index #',string(ind),'= complete'))
+
+    disp(['Parameter set ', num2str(ithParamSet), '/', num2str(size(parameter_vec, 2)), ' complete'])
+    %disp(strcat('Index #',string(ind),'= complete'))
 end

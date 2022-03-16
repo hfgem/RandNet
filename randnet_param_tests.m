@@ -56,6 +56,15 @@ end
 load(strcat(load_path,'/parameters.mat'))
 param_names = fieldnames(parameters);
 
+%% Parametesr that are different from the loaded parameters
+parameters.saveFlag = saveFlag; % needed to override the loaded parameters
+parameters.plotResults = plotResults; % needed to override the loaded parameters
+
+parameters.event_cutoff = 0;
+parameters.min_avg_fr = 0;
+parameters.max_avg_fr= inf;
+parameters.min_avg_length = 0;
+parameters.max_avg_length = inf;
 
 %%
 %___________________________________
@@ -102,6 +111,13 @@ num_inits = 5;
 
 %Number of parameters to test (each)
 test_n = 5;
+num_params = 3;
+
+% % temp, for testing code
+num_nets = 2;
+num_inits = 2;
+test_n = 2;
+% % 
 
 %Parameter 1: coefficient of input conductance
 G_coeff_vec = linspace(0,100,test_n);
@@ -113,7 +129,9 @@ I_strength_vec = linspace(0,1,test_n);
 del_G_sra_vec = linspace(0*10^(-9),200*10^(-9),test_n);
 
 %Combined into one parameter vector to pass
-parameter_vec = [G_coeff_vec; I_strength_vec; del_G_sra_vec];
+%parameter_vec = [G_coeff_vec; I_strength_vec; del_G_sra_vec];
+parameter_vec = combvec(G_coeff_vec, I_strength_vec, del_G_sra_vec);
+
 clear G_coeff_vec I_strength_vec
 
 %Save parameter values
@@ -122,22 +140,21 @@ if saveFlag
 end
 
 %Set up storage matrix
-[num_params, ~] = size(parameter_vec);
 success = zeros(test_n*ones(1,num_params));
 
 %% Run Grid Search With Spike Stats Returned
 %Start parallel pool for parallelizing the grid search
 % parpool(4)
 
-results = zeros(test_n^3,3);
+results = zeros(test_n^num_params,num_params);
 
 %Loop through all parameter sets
 % parfevalOnAll(gcp(), @warning, 0, 'off', 'MATLAB:singularMatrix');
 
 tic
-parfor ind = 1:test_n^3
-    results(ind,:) = parallelize_parameter_tests_2(parameters,num_nets,...
-                        num_inits, parameter_vec, test_n, ind, save_path);
+parfor ithParamSet = 1:test_n^num_params
+    results(ithParamSet,:) = parallelize_parameter_tests_2(parameters,num_nets,...
+                        num_inits, parameter_vec, test_n, ithParamSet, save_path);
 end
 runTime = toc
 
@@ -145,9 +162,9 @@ if saveFlag
     save(strcat(save_path,'/results.mat'),'results','-v7.3')
 end
 
-num_spikers = reshape(squeeze(results(:,1)),test_n,test_n,test_n);
-avg_fr = reshape(squeeze(results(:,2)),test_n,test_n,test_n);
-avg_event_length = reshape(squeeze(results(:,3)),test_n,test_n,test_n);
+num_spikers = reshape(squeeze(results(:,1)),test_n,test_n,test_n)
+avg_fr = reshape(squeeze(results(:,2)),test_n,test_n,test_n)
+avg_event_length = reshape(squeeze(results(:,3)),test_n,test_n,test_n)
 
 %% Visualize Value Grid Search Results
 

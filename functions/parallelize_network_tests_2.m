@@ -1,4 +1,4 @@
-function outputVec = parallelize_network_tests_2(parameters,network,j, save_path)
+function outputVec = parallelize_network_tests_2(parameters, network, j, save_path)
     %_________
     %ABOUT: This function runs through a series of commands to test the
     %outputs of a particular parameter set in comparison to a strict set of
@@ -69,7 +69,8 @@ function outputVec = parallelize_network_tests_2(parameters,network,j, save_path
     seed = j;
     
     %Create input conductance variable
-    G_in = parameters.G_coeff*randn(parameters.n,parameters.t_steps+1)*parameters.G_scale;
+    G_in = (parameters.G_std*randn(parameters.n,parameters.t_steps+1))+parameters.G_mean;
+    % G_in = parameters.G_coeff*randn(parameters.n,parameters.t_steps+1)*parameters.G_scale;
     G_in(G_in < 0) = 0;
     parameters.('G_in') = G_in;
     
@@ -85,10 +86,16 @@ function outputVec = parallelize_network_tests_2(parameters,network,j, save_path
     [spikes_x,spikes_t] = find(spikes_V_m);
     spiking_neurons = unique(spikes_x, 'stable');
     
+    % detect events and compute outputs
+    network_spike_sequences = struct; 
+    network_cluster_sequences = struct;
+    [network_spike_sequences, network_cluster_sequences, outputVec] = detect_events(parameters, network, V_m , j, network_spike_sequences, network_cluster_sequences);
+
+	%{
     %First value: the number of spiking neurons
     outputVec(1) = length(spiking_neurons);
-    
-    if length(spiking_neurons) > 0
+
+    if length(spiking_neurons) > parameters.event_cutoff*parameters.n
         %Find maximum firing rate + average maximum firing rates of neurons
         all_fr = sum(spikes_V_m(spiking_neurons,:),2)/parameters.t_max; %only look at neurons that fired at least 1x
         avg_fr = mean(all_fr);
@@ -99,7 +106,7 @@ function outputVec = parallelize_network_tests_2(parameters,network,j, save_path
         %Second value: the average firing rate
         outputVec(2) = avg_fr;
         
-        if avg_fr > 0
+        if and(avg_fr>= parameters.min_avg_fr, avg_fr <= parameters.max_avg_fr)
             %Find firing event times
             events = [];
             event_lengths = [];
@@ -131,7 +138,7 @@ function outputVec = parallelize_network_tests_2(parameters,network,j, save_path
             [num_events,~] = size(events);
             
             %Select results to visualize and save
-            if avg_event_length > 0
+            if and(avg_event_length >= parameters.min_avg_length, avg_event_length <= parameters.max_avg_length)
                 if length(spiking_neurons) >= parameters.event_cutoff*parameters.n
                     if and(avg_fr>= 0.02, avg_fr <= 1.5)
 %                         if and(avg_event_length >= 0.02, avg_event_length <= 0.15)
@@ -157,8 +164,10 @@ function outputVec = parallelize_network_tests_2(parameters,network,j, save_path
                                 catch
                                     short_del_G_str = del_G_str;
                                 end
-                                saveas(f,strcat(save_path,'/figures/sequence_G_',G_str,'_del_',short_del_G_str,'_I_',I_str,'.jpg'))
-                                close(f)
+                                if parameters.saveFlag
+                                    saveas(f,strcat(save_path,'/figures/sequence_G_',G_str,'_del_',short_del_G_str,'_I_',I_str,'.jpg'))
+                                    close(f)
+                                end
 %                             end
 %                         end
                     end
@@ -167,5 +176,6 @@ function outputVec = parallelize_network_tests_2(parameters,network,j, save_path
 
             outputVec(3) = avg_event_length; %Average event length
         end
-    end    
+    end  
+    %}
 end

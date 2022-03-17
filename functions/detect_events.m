@@ -31,7 +31,7 @@ function [network_spike_sequences, network_cluster_sequences, overallResults] = 
     all_fr = sum(spikes_V_m,2)/parameters.t_max;
     max_fr = max(all_fr);
     avg_fr = mean(all_fr);
-    display(avg_fr)
+    %display(avg_fr)
         
     %TEST 1: The number of neurons participating in a sequence must
     %pass a threshold:

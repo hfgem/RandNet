@@ -1,4 +1,4 @@
-function avg_mat = parallelize_parameter_tests_2(parameters,num_nets,...
+function [avg_mat, allResults] = parallelize_parameter_tests_2(parameters,num_nets,...
     num_inits, parameter_vec, test_n, ithParamSet, save_path)
     %_________
     %ABOUT: This function runs through a series of commands to test the
@@ -90,6 +90,7 @@ function avg_mat = parallelize_parameter_tests_2(parameters,num_nets,...
     
     %Run network initialization code
     resp_mat = zeros(num_nets, 3);
+    %allResults = cell(1, num_nets) ;
     for ithNet = 1:num_nets
         
         rng(ithNet,'twister') %set random number generator for network structure
@@ -118,7 +119,7 @@ function avg_mat = parallelize_parameter_tests_2(parameters,num_nets,...
         
         mat = zeros(num_inits,3);
         for j = 1:num_inits
-            mat(j,:) = parallelize_network_tests_2(parameters, network, j, save_path); 
+            [mat(j,:), allResults{ithNet}(j)] = parallelize_network_tests_2(parameters, network, j, save_path); 
         end
         mat(isnan(mat)) = 0;
         

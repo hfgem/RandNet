@@ -1,4 +1,4 @@
-function outputVec = parallelize_network_tests_2(parameters, network, j, save_path)
+function [outputVec, allResults] = parallelize_network_tests_2(parameters, network, j, save_path)
     %_________
     %ABOUT: This function runs through a series of commands to test the
     %outputs of a particular parameter set in comparison to a strict set of
@@ -90,7 +90,11 @@ function outputVec = parallelize_network_tests_2(parameters, network, j, save_pa
     network_spike_sequences = struct; 
     network_cluster_sequences = struct;
     [network_spike_sequences, network_cluster_sequences, outputVec] = detect_events(parameters, network, V_m , j, network_spike_sequences, network_cluster_sequences);
-
+    
+    allResults.eventLength = {network_spike_sequences(j).event_lengths};
+    allResults.numEvents = numel(network_spike_sequences(j).event_lengths);
+    allResults.ithInit = j;
+    
 	%{
     %First value: the number of spiking neurons
     outputVec(1) = length(spiking_neurons);

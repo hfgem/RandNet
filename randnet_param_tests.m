@@ -146,14 +146,15 @@ success = zeros(test_n*ones(1,num_params));
 %Start parallel pool for parallelizing the grid search
 % parpool(4)
 
-results = zeros(test_n^num_params,num_params);
+resultsMat = zeros(test_n^num_params,num_params);
+resultsStruct = cell(1, test_n^num_params);
 
 %Loop through all parameter sets
 % parfevalOnAll(gcp(), @warning, 0, 'off', 'MATLAB:singularMatrix');
 
 tic
-parfor ithParamSet = 1:test_n^num_params
-    results(ithParamSet,:) = parallelize_parameter_tests_2(parameters,num_nets,...
+for ithParamSet = 1:test_n^num_params
+    [resultsMat(ithParamSet,:), resultsStruct{ithParamSet}] = parallelize_parameter_tests_2(parameters,num_nets,...
                         num_inits, parameter_vec, test_n, ithParamSet, save_path);
 end
 runTime = toc
@@ -162,9 +163,9 @@ if saveFlag
     save(strcat(save_path,'/results.mat'),'results','-v7.3')
 end
 
-num_spikers = reshape(squeeze(results(:,1)),test_n,test_n,test_n)
-avg_fr = reshape(squeeze(results(:,2)),test_n,test_n,test_n)
-avg_event_length = reshape(squeeze(results(:,3)),test_n,test_n,test_n)
+num_spikers = reshape(squeeze(resultsMat(:,1)),test_n,test_n,test_n);
+avg_fr = reshape(squeeze(resultsMat(:,2)),test_n,test_n,test_n);
+avg_event_length = reshape(squeeze(resultsMat(:,3)),test_n,test_n,test_n);
 
 %% Visualize Value Grid Search Results
 

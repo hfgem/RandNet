@@ -123,13 +123,22 @@ test_n = 2;
 % % 
 
 %Parameter 1: coefficient of input conductance
-G_coeff_vec = linspace(0,100,test_n);
+G_coeff_Min = 0; 
+G_coeff_Max = 100; 
+G_coeff_n = test_n;
+G_coeff_vec = linspace(0, G_coeff_Max, G_coeff_n);
 
 %Parameter 2: global inhibition strength
-I_strength_vec = linspace(0,1,test_n);
+I_strength_Min = 0; 
+I_strength_Max = 1; 
+I_strength_n = test_n;
+I_strength_vec = linspace(I_strength_Min, I_strength_Max, I_strength_n);
 
 %Parameter 3: SRA step size
-del_G_sra_vec = linspace(0*10^(-9),200*10^(-9),test_n);
+del_G_sra_Min = 0*10^(-9); 
+del_G_sra_Max = 200*10^(-9); 
+del_G_sra_n = test_n;
+del_G_sra_vec = linspace(del_G_sra_Min, del_G_sra_Max, del_G_sra_n);
 
 %Combined into one parameter vector to pass
 %parameter_vec = [G_coeff_vec; I_strength_vec; del_G_sra_vec];
@@ -143,19 +152,20 @@ if saveFlag
 end
 
 %Set up storage matrix
-success = zeros(test_n*ones(1,num_params));
+%success = zeros(test_n*ones(1,num_params));
+success = zeros(G_coeff_n, I_strength_n, del_G_sra_n);
 
 
 %% Run Grid Search With Spike Stats Returned
 %Start parallel pool for parallelizing the grid search
 
-resultsMat = zeros(test_n^num_params,num_params);
-resultsStruct = cell(1, test_n^num_params);
+resultsMat = zeros(size(parameter_vec));
+resultsStruct = cell(1, size(parameter_vec, 2));
 
 %parpool % initialize parallel pool before tic
 tic
-parfor ithParamSet = 1:test_n^num_params
-    [resultsMat(ithParamSet,:), resultsStruct{ithParamSet}] = parallelize_parameter_tests_2(parameters,num_nets,...
+for ithParamSet = 1:size(parameter_vec, 2)
+    [resultsMat(:,ithParamSet), resultsStruct{ithParamSet}] = parallelize_parameter_tests_2(parameters,num_nets,...
                         num_inits, parameter_vec, test_n, ithParamSet, save_path);
 end
 runTime = toc
@@ -164,9 +174,9 @@ if saveFlag
     save(strcat(save_path,'/results.mat'),'results','-v7.3')
 end
 
-num_spikers = reshape(squeeze(resultsMat(:,1)),test_n,test_n,test_n);
-avg_fr = reshape(squeeze(resultsMat(:,2)),test_n,test_n,test_n);
-avg_event_length = reshape(squeeze(resultsMat(:,3)),test_n,test_n,test_n);
+num_spikers = reshape(squeeze(resultsMat(1,:)), G_coeff_n, I_strength_n, del_G_sra_n);
+avg_fr = reshape(squeeze(resultsMat(2,:)), G_coeff_n, I_strength_n, del_G_sra_n);
+avg_event_length = reshape(squeeze(resultsMat(3,:)), G_coeff_n, I_strength_n, del_G_sra_n);
 
 
 %% Visualize Value Grid Search Results

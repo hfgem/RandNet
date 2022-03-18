@@ -56,6 +56,7 @@ end
 load(strcat(load_path,'/parameters.mat'))
 param_names = fieldnames(parameters);
 
+
 %% Parametesr that are different from the loaded parameters
 parameters.saveFlag = saveFlag; % needed to override the loaded parameters
 parameters.plotResults = plotResults; % needed to override the loaded parameters
@@ -65,6 +66,7 @@ parameters.min_avg_fr = 0;
 parameters.max_avg_fr= inf;
 parameters.min_avg_length = 0;
 parameters.max_avg_length = inf;
+
 
 %%
 %___________________________________
@@ -102,6 +104,7 @@ parameters.('n_I') = n_I;
 if saveFlag
     save(strcat(save_path,'/parameters.mat'),'parameters')
 end
+
 
 %% Set Up Grid Search Parameters
 
@@ -142,18 +145,16 @@ end
 %Set up storage matrix
 success = zeros(test_n*ones(1,num_params));
 
+
 %% Run Grid Search With Spike Stats Returned
 %Start parallel pool for parallelizing the grid search
-% parpool(4)
 
 resultsMat = zeros(test_n^num_params,num_params);
 resultsStruct = cell(1, test_n^num_params);
 
-%Loop through all parameter sets
-% parfevalOnAll(gcp(), @warning, 0, 'off', 'MATLAB:singularMatrix');
-
+%parpool % initialize parallel pool before tic
 tic
-for ithParamSet = 1:test_n^num_params
+parfor ithParamSet = 1:test_n^num_params
     [resultsMat(ithParamSet,:), resultsStruct{ithParamSet}] = parallelize_parameter_tests_2(parameters,num_nets,...
                         num_inits, parameter_vec, test_n, ithParamSet, save_path);
 end
@@ -166,6 +167,7 @@ end
 num_spikers = reshape(squeeze(resultsMat(:,1)),test_n,test_n,test_n);
 avg_fr = reshape(squeeze(resultsMat(:,2)),test_n,test_n,test_n);
 avg_event_length = reshape(squeeze(resultsMat(:,3)),test_n,test_n,test_n);
+
 
 %% Visualize Value Grid Search Results
 

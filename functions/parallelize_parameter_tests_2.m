@@ -118,9 +118,11 @@ function [avg_mat, allResults] = parallelize_parameter_tests_2(parameters,num_ne
         clear cluster_mat conns I_indices E_indices
         
         mat = zeros(num_inits,3);
+        initResults = cell(1, num_inits);
         for j = 1:num_inits
-            [mat(j,:), allResults{ithNet}(j)] = parallelize_network_tests_2(parameters, network, j, save_path); 
+            [mat(j,:), initResults{j}] = parallelize_network_tests_2(parameters, network, j, save_path); 
         end
+        allResults{ithNet} = initResults;
         mat(isnan(mat)) = 0;
         
         %avg_mat = sum(mat,1) ./ sum(mat > 0,1); %Only averaging those that did successfully produce data

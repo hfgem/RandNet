@@ -91,9 +91,17 @@ function [outputVec, allResults] = parallelize_network_tests_2(parameters, netwo
     network_cluster_sequences = struct;
     [network_spike_sequences, network_cluster_sequences, outputVec] = detect_events(parameters, network, V_m , j, network_spike_sequences, network_cluster_sequences);
     
-    allResults.eventLength = {network_spike_sequences(j).event_lengths};
-    allResults.numEvents = numel(network_spike_sequences(j).event_lengths);
+    % Overall simulation statistics
     allResults.ithInit = j;
+    allResults.numEvents = numel(network_spike_sequences(j).event_lengths); % number of detected events
+    allResults.fracFire =  mean(sum(spikes_V_m, 2)>0); % Fraction of cells that fire at all during simulation
+    allResults.meanRate = mean(sum(spikes_V_m, 2)/parameters.t_max); % mean over cells' average firing rate
+    allResults.stdRate = std(sum(spikes_V_m, 2)/parameters.t_max); % STD over cells' average firing rate
+    
+    % Stats for each detected event
+    allResults.eventLength = network_spike_sequences(j).event_lengths; % duration in seconds of all detected events
+    allResults.eventParticipation = structfun( @mean , network_spike_sequences(j).nonspiking_neurons )'; % fraction of cells that fired in each event
+    
     
 	%{
     %First value: the number of spiking neurons

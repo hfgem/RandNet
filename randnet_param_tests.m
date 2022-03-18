@@ -144,7 +144,6 @@ del_G_sra_vec = linspace(del_G_sra_Min, del_G_sra_Max, del_G_sra_n);
 %parameter_vec = [G_coeff_vec; I_strength_vec; del_G_sra_vec];
 parameter_vec = combvec(G_coeff_vec, I_strength_vec, del_G_sra_vec);
 
-clear G_coeff_vec I_strength_vec
 
 %Save parameter values
 if saveFlag
@@ -157,16 +156,14 @@ success = zeros(G_coeff_n, I_strength_n, del_G_sra_n);
 
 
 %% Run Grid Search With Spike Stats Returned
-%Start parallel pool for parallelizing the grid search
 
 resultsMat = zeros(size(parameter_vec));
 resultsStruct = cell(1, size(parameter_vec, 2));
 
-%parpool % initialize parallel pool before tic
 tic
-for ithParamSet = 1:size(parameter_vec, 2)
-    [resultsMat(:,ithParamSet), resultsStruct{ithParamSet}] = parallelize_parameter_tests_2(parameters,num_nets,...
-                        num_inits, parameter_vec, test_n, ithParamSet, save_path);
+parfor ithParamSet = 1:size(parameter_vec, 2)
+    [resultsMat(:,ithParamSet), resultsStruct{ithParamSet}] = parallelize_parameter_tests_2(...
+                parameters,num_nets,num_inits, parameter_vec, test_n, ithParamSet, save_path);
 end
 runTime = toc
 
@@ -186,47 +183,53 @@ avg_event_length = reshape(squeeze(resultsMat(3,:)), G_coeff_n, I_strength_n, de
 %Parameter 2: global inhibition strength (I_strength)
 %Parameter 3: SRA step size (del_G_sra)
 
+G_coeff_vec, I_strength_vec, del_G_sra_vec
+
 if plotResults
+    
     %G_coeff vs I_strength
     num_spikers_G_I = squeeze(mean(num_spikers,3));
     avg_fr_G_I = squeeze(mean(avg_fr,3));
     avg_event_length_G_I = squeeze(mean(avg_event_length,3));
+    
     figure;
     subplot(1,3,1)
-    imagesc(num_spikers_G_I())
+    imagesc(G_coeff_vec, I_strength_vec, num_spikers_G_I())
     c1 = colorbar();
     c1.Label.String = 'Number of Neurons';
     title('Number of Spiking Neurons')
-    xticks(1:test_n)
-    xticklabels(parameter_vec(1,:))
-    yticks(1:test_n)
-    yticklabels(parameter_vec(2,:))
+    %xticks(1:test_n)
+    %xticklabels(parameter_vec(1,:))
+    %yticks(1:test_n)
+    %yticklabels(parameter_vec(2,:))
     xlabel('G_{coeff}')
     ylabel('I_{strength}')
     subplot(1,3,2)
-    imagesc(avg_fr_G_I)
+    imagesc(G_coeff_vec, I_strength_vec, avg_fr_G_I)
     c2 = colorbar();
     c2.Label.String = "Hz";
     title('Average Firing Rate')
-    xticks(1:test_n)
-    xticklabels(parameter_vec(1,:))
-    yticks(1:test_n)
-    yticklabels(parameter_vec(2,:))
+    %xticks(1:test_n)
+    %xticklabels(parameter_vec(1,:))
+    %yticks(1:test_n)
+    %yticklabels(parameter_vec(2,:))
     xlabel('G_{coeff}')
     ylabel('I_{strength}')
     subplot(1,3,3)
-    imagesc(avg_event_length_G_I)
+    imagesc(G_coeff_vec, I_strength_vec, avg_event_length_G_I)
     c3 = colorbar();
     c3.Label.String = "Seconds";
     title('Average Event Length')
-    xticks(1:test_n)
-    xticklabels(parameter_vec(1,:))
-    yticks(1:test_n)
-    yticklabels(parameter_vec(2,:))
+    %xticks(1:test_n)
+    %xticklabels(parameter_vec(1,:))
+    %yticks(1:test_n)
+    %yticklabels(parameter_vec(2,:))
     xlabel('G_{coeff}')
     ylabel('I_{strength}')
 
     clear c1 c2 c3
+    
+    
 
     %G_coeff vs del_G_sra
     num_spikers_G_S = squeeze(mean(num_spikers,2));

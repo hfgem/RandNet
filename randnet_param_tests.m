@@ -67,6 +67,7 @@ parameters.max_avg_fr= inf;
 parameters.min_avg_length = 0;
 parameters.max_avg_length = inf;
 
+parameters.t_max = 10;
 
 %%
 %___________________________________
@@ -118,8 +119,8 @@ num_params = 3;
 
 % % temp, for testing code
 num_nets = 2;
-num_inits = 2;
-test_n = 2;
+num_inits = 1;
+test_n = 10;
 % % 
 
 assert(parameters.usePoisson==1)
@@ -169,17 +170,17 @@ parfor ithParamSet = 1:size(parameter_vec, 2)
 end
 runTime = toc
 
-if saveFlag
-    save(strcat(save_path,'/results.mat'),'resultsMat', 'resultsStruct', '-v7.3')
-    
-    % Save everything, with unique filename based on date-time
-    save( strcat(save_path,'/results_', datestr(now,'yyyy-mm-dd_HH-MM'), '.mat'), '-v7.3')
-end
-
 num_spikers = reshape(squeeze(resultsMat(1,:)), W_gin_n, del_G_syn_E_E_n, del_G_syn_I_E_n);
 avg_fr = reshape(squeeze(resultsMat(2,:)), W_gin_n, del_G_syn_E_E_n, del_G_syn_I_E_n);
 avg_event_length = reshape(squeeze(resultsMat(3,:)), W_gin_n, del_G_syn_E_E_n, del_G_syn_I_E_n);
 
+
+if saveFlag
+    save(strcat(save_path,'/results.mat'),'resultsMat', 'resultsStruct', '-v7.3')
+    
+    % Save everything, with unique filename based on date-time
+    save( strcat(save_path,'/results_', datestr(now,'yyyy-mm-ddTHH-MM'), '.mat'), '-v7.3')
+end
 
 %% Visualize Value Grid Search Results
 

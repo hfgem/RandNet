@@ -84,9 +84,9 @@ function [avg_mat, allResults] = parallelize_parameter_tests_2(parameters,num_ne
     parameters.del_G_sra = parameter_vec(3,ind_3(ind));
     %}
     
-    parameters.G_coeff = parameter_vec(1,ithParamSet);
-    parameters.I_strength = parameter_vec(2,ithParamSet);
-    parameters.del_G_sra = parameter_vec(3,ithParamSet);
+    parameters.W_gin = parameter_vec(1,ithParamSet);
+    parameters.del_G_syn_E_E = parameter_vec(2,ithParamSet);
+    parameters.del_G_syn_I_E = parameter_vec(3,ithParamSet);
     
     %Run network initialization code
     resp_mat = zeros(num_nets, 3);

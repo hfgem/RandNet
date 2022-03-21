@@ -69,10 +69,19 @@ function [outputVec, allResults] = parallelize_network_tests_2(parameters, netwo
     seed = j;
     
     %Create input conductance variable
-    G_in = (parameters.G_std*randn(parameters.n,parameters.t_steps+1))+parameters.G_mean;
-    % G_in = parameters.G_coeff*randn(parameters.n,parameters.t_steps+1)*parameters.G_scale;
-    G_in(G_in < 0) = 0;
+    if parameters.usePoisson
+        G_in = zeros(parameters.n, parameters.t_steps+1);
+        for k = 2:(parameters.t_steps+1)
+            G_in(:,k) = G_in(:,k-1)*exp(-parameters.dt/parameters.tau_syn_E);
+            G_in(:,k) = G_in(:,k) + parameters.W_gin * [rand(parameters.n, 1) < (parameters.dt*parameters.rG)];
+        end
+    else
+        G_in = (parameters.G_std*randn(parameters.n,parameters.t_steps+1))+parameters.G_mean;
+        G_in(G_in<0) = 0;
+    end
     parameters.('G_in') = G_in;
+        
+        
     
     %Create Storage Variables
     V_m = zeros(parameters.n,parameters.t_steps+1); %membrane potential for each neuron at each timestep
@@ -93,15 +102,26 @@ function [outputVec, allResults] = parallelize_network_tests_2(parameters, netwo
     
     % Overall simulation statistics
     allResults.ithInit = j;
-    allResults.numEvents = numel(network_spike_sequences(j).event_lengths); % number of detected events
+    try
+        allResults.numEvents = numel(network_spike_sequences(j).event_lengths); % number of detected events
+    catch
+        allResults.numEvents = [];
+    end
     allResults.fracFire =  mean(sum(spikes_V_m, 2)>0); % Fraction of cells that fire at all during simulation
     allResults.meanRate = mean(sum(spikes_V_m, 2)/parameters.t_max); % mean over cells' average firing rate
     allResults.stdRate = std(sum(spikes_V_m, 2)/parameters.t_max); % STD over cells' average firing rate
     
     % Stats for each detected event
-    allResults.eventLength = network_spike_sequences(j).event_lengths; % duration in seconds of all detected events
-    allResults.eventParticipation = structfun( @mean , network_spike_sequences(j).nonspiking_neurons )'; % fraction of cells that fired in each event
-    
+    try
+        allResults.eventLength = network_spike_sequences(j).event_lengths; % duration in seconds of all detected events
+    catch
+        allResults.eventLength = [];
+    end
+    try
+        allResults.eventParticipation = structfun( @mean , network_spike_sequences(j).nonspiking_neurons )'; % fraction of cells that fired in each event
+    catch
+        allResults.eventParticipation = [];
+    end
     
 	%{
     %First value: the number of spiking neurons

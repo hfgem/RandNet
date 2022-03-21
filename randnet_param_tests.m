@@ -28,21 +28,21 @@
 %% Save Path + Load Parameters
 addpath('functions')
 
-saveFlag = 0; % 1 to save simulation results
+saveFlag = 1; % 1 to save simulation results
 selectSavePath = 0; % 1 to select save destination, 0 to save in results dir
 selectLoadPath = 0; % 1 to select load source, 0 to load from results dir
 plotResults = 1; % 1 to plot basic simulation results
-scriptFolder = '/param_tests_figures'; % sub-folder so save analysis results to
+scriptFolder = '/param_tests'; % sub-folder so save analysis results to
 
 % Save path
 if selectSavePath
     save_path = uigetdir('/Users/hannahgermaine/Documents/PhD/'); %Have user input where they'd like the output stored
 else
-    save_path = [pwd, '/results'];
+    save_path = [pwd, '/results', scriptFolder];
 end
 
 if saveFlag & ~isfolder(save_path)
-    mkdir(save_path, scriptFolder);
+    mkdir(save_path);
 end
 
 %Load parameters
@@ -62,7 +62,7 @@ parameters.saveFlag = saveFlag; % needed to override the loaded parameters
 parameters.plotResults = plotResults; % needed to override the loaded parameters
 
 parameters.event_cutoff = 0;
-parameters.min_avg_fr = 0;
+parameters.min_avg_fr = 0.001;
 parameters.max_avg_fr= inf;
 parameters.min_avg_length = 0;
 parameters.max_avg_length = inf;
@@ -122,27 +122,29 @@ num_inits = 2;
 test_n = 2;
 % % 
 
+assert(parameters.usePoisson==1)
+
 %Parameter 1: coefficient of input conductance
-G_coeff_Min = 0; 
-G_coeff_Max = 100; 
-G_coeff_n = test_n;
-G_coeff_vec = linspace(0, G_coeff_Max, G_coeff_n);
+W_gin_Min = 0; 
+W_gin_Max = 100; 
+W_gin_n = test_n;
+W_gin_vec = linspace(W_gin_Min, W_gin_Max, W_gin_n);
 
-%Parameter 2: global inhibition strength
-I_strength_Min = 0; 
-I_strength_Max = 1; 
-I_strength_n = test_n;
-I_strength_vec = linspace(I_strength_Min, I_strength_Max, I_strength_n);
+%Parameter 2: E-E strength
+del_G_syn_E_E_Min = 8.5*10^(-9); 
+del_G_syn_E_E_Max = 10.5*10^(-9); 
+del_G_syn_E_E_n = test_n;
+del_G_syn_E_E_vec = linspace(del_G_syn_E_E_Min, del_G_syn_E_E_Max, del_G_syn_E_E_n);
 
-%Parameter 3: SRA step size
-del_G_sra_Min = 0*10^(-9); 
-del_G_sra_Max = 200*10^(-9); 
-del_G_sra_n = test_n;
-del_G_sra_vec = linspace(del_G_sra_Min, del_G_sra_Max, del_G_sra_n);
+%Parameter 3: I-E strength
+del_G_syn_I_E_Min = 0.3300e-08; 
+del_G_syn_I_E_Max = 2.3300e-08; 
+del_G_syn_I_E_n = test_n;
+del_G_syn_I_E_vec = linspace(del_G_syn_I_E_Min, del_G_syn_I_E_Max, del_G_syn_I_E_n);
 
 %Combined into one parameter vector to pass
 %parameter_vec = [G_coeff_vec; I_strength_vec; del_G_sra_vec];
-parameter_vec = combvec(G_coeff_vec, I_strength_vec, del_G_sra_vec);
+parameter_vec = combvec(W_gin_vec, del_G_syn_E_E_vec, del_G_syn_I_E_vec);
 
 
 %Save parameter values
@@ -152,7 +154,7 @@ end
 
 %Set up storage matrix
 %success = zeros(test_n*ones(1,num_params));
-success = zeros(G_coeff_n, I_strength_n, del_G_sra_n);
+success = zeros(W_gin_n, del_G_syn_E_E_n, del_G_syn_I_E_n);
 
 
 %% Run Grid Search With Spike Stats Returned
@@ -168,12 +170,15 @@ end
 runTime = toc
 
 if saveFlag
-    save(strcat(save_path,'/results.mat'),'results','-v7.3')
+    save(strcat(save_path,'/results.mat'),'resultsMat', 'resultsStruct', '-v7.3')
+    
+    % Save everything, with unique filename based on date-time
+    save( strcat(save_path,'/results_', datestr(now,'yyyy-mm-dd_HH-MM'), '.mat'), '-v7.3')
 end
 
-num_spikers = reshape(squeeze(resultsMat(1,:)), G_coeff_n, I_strength_n, del_G_sra_n);
-avg_fr = reshape(squeeze(resultsMat(2,:)), G_coeff_n, I_strength_n, del_G_sra_n);
-avg_event_length = reshape(squeeze(resultsMat(3,:)), G_coeff_n, I_strength_n, del_G_sra_n);
+num_spikers = reshape(squeeze(resultsMat(1,:)), W_gin_n, del_G_syn_E_E_n, del_G_syn_I_E_n);
+avg_fr = reshape(squeeze(resultsMat(2,:)), W_gin_n, del_G_syn_E_E_n, del_G_syn_I_E_n);
+avg_event_length = reshape(squeeze(resultsMat(3,:)), W_gin_n, del_G_syn_E_E_n, del_G_syn_I_E_n);
 
 
 %% Visualize Value Grid Search Results
@@ -183,7 +188,7 @@ avg_event_length = reshape(squeeze(resultsMat(3,:)), G_coeff_n, I_strength_n, de
 %Parameter 2: global inhibition strength (I_strength)
 %Parameter 3: SRA step size (del_G_sra)
 
-G_coeff_vec, I_strength_vec, del_G_sra_vec
+W_gin_vec, del_G_syn_E_E_vec, del_G_syn_I_E_vec
 
 if plotResults
     
@@ -194,7 +199,7 @@ if plotResults
     
     figure;
     subplot(1,3,1)
-    imagesc(G_coeff_vec, I_strength_vec, num_spikers_G_I())
+    imagesc(W_gin_vec, del_G_syn_E_E_vec, num_spikers_G_I())
     c1 = colorbar();
     c1.Label.String = 'Number of Neurons';
     title('Number of Spiking Neurons')
@@ -205,7 +210,7 @@ if plotResults
     xlabel('G_{coeff}')
     ylabel('I_{strength}')
     subplot(1,3,2)
-    imagesc(G_coeff_vec, I_strength_vec, avg_fr_G_I)
+    imagesc(W_gin_vec, del_G_syn_E_E_vec, avg_fr_G_I)
     c2 = colorbar();
     c2.Label.String = "Hz";
     title('Average Firing Rate')
@@ -216,7 +221,7 @@ if plotResults
     xlabel('G_{coeff}')
     ylabel('I_{strength}')
     subplot(1,3,3)
-    imagesc(G_coeff_vec, I_strength_vec, avg_event_length_G_I)
+    imagesc(W_gin_vec, del_G_syn_E_E_vec, avg_event_length_G_I)
     c3 = colorbar();
     c3.Label.String = "Seconds";
     title('Average Event Length')

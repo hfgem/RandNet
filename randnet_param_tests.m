@@ -175,9 +175,9 @@ resultsMat = zeros(size(parameter_vec));
 resultsStruct = cell(1, size(parameter_vec, 2));
 
 tic
-for ithParamSet = 1:size(parameter_vec, 2)
+parfor ithParamSet = 1:size(parameter_vec, 2)
     [resultsMat(:,ithParamSet), resultsStruct{ithParamSet}] = parallelize_parameter_tests_2(...
-                parameters,num_nets,num_inits, parameter_vec, test_n, ithParamSet, save_path);
+                parameters, num_nets, num_inits, parameter_vec, ithParamSet);
     send(D, 1);
 end
 runTime = toc

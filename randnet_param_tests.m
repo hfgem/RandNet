@@ -28,7 +28,7 @@
 %% Save Path + Load Parameters
 addpath('functions')
 
-saveFlag = 1; % 1 to save simulation results
+saveFlag = 0 % 1 to save simulation results
 selectSavePath = 0; % 1 to select save destination, 0 to save in results dir
 selectLoadPath = 0; % 1 to select load source, 0 to load from results dir
 plotResults = 1; % 1 to plot basic simulation results
@@ -68,6 +68,7 @@ parameters.min_avg_length = 0;
 parameters.max_avg_length = inf;
 
 parameters.t_max = 10;
+parameters.t_max = 2;
 
 %%
 %___________________________________
@@ -110,24 +111,24 @@ end
 %% Set Up Grid Search Parameters
 
 %Test parameters
-num_nets = 5;
-num_inits = 5;
+num_nets = 3;
+num_inits = 1;
 
 %Number of parameters to test (each)
-test_n = 5;
+test_n = 10;
 num_params = 3;
 
 % % temp, for testing code
 num_nets = 2;
 num_inits = 1;
-test_n = 10;
+test_n = 2;
 % % 
 
 assert(parameters.usePoisson==1)
 
 %Parameter 1: coefficient of input conductance
-W_gin_Min = 0; 
-W_gin_Max = 100; 
+W_gin_Min = 4.4*10^-9; 
+W_gin_Max = 6.4*10^-9; 
 W_gin_n = test_n;
 W_gin_vec = linspace(W_gin_Min, W_gin_Max, W_gin_n);
 
@@ -160,13 +161,24 @@ success = zeros(W_gin_n, del_G_syn_E_E_n, del_G_syn_I_E_n);
 
 %% Run Grid Search With Spike Stats Returned
 
+
+D = parallel.pool.DataQueue;
+h = waitbar(0, 'Starting simulation ...');
+num_files = size(parameter_vec, 2);
+% Dummy call to nUpdateWaitbar to initialise
+nUpdateWaitbar(num_files, h);
+% Go back to simply calling nUpdateWaitbar with the data
+afterEach(D, @nUpdateWaitbar);
+
+
 resultsMat = zeros(size(parameter_vec));
 resultsStruct = cell(1, size(parameter_vec, 2));
 
 tic
-parfor ithParamSet = 1:size(parameter_vec, 2)
+for ithParamSet = 1:size(parameter_vec, 2)
     [resultsMat(:,ithParamSet), resultsStruct{ithParamSet}] = parallelize_parameter_tests_2(...
                 parameters,num_nets,num_inits, parameter_vec, test_n, ithParamSet, save_path);
+    send(D, 1);
 end
 runTime = toc
 
@@ -318,4 +330,26 @@ if plotResults
     ylabel('\delta G_{SRA}')
 
     clear c1 c2 c3
+end
+
+%% Functions 
+
+
+function p = nUpdateWaitbar(data, h)
+% https://www.mathworks.com/matlabcentral/answers/660793-help-with-parfor-progress-bar-using-data-queue
+persistent TOTAL COUNT H
+if nargin == 2
+    % initialisation mode
+    H = h;
+    TOTAL = data;
+    COUNT = 0;
+else
+    % afterEach call, increment COUNT
+    COUNT = 1 + COUNT;
+    p = COUNT / TOTAL;
+    waitbar(p, H, ...
+        ['Simulation ', num2str(COUNT), ' of ', num2str(TOTAL), ...
+        ' complete. Runtime: ', datestr(datenum(0,0,0,0,0,toc),'HH:MM:SS'), ...
+        ' Remaining time: ', datestr(datenum(0,0,0,0,0,toc/p-toc),'HH:MM:SS')]);
+end
 end

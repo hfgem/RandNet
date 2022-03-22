@@ -68,7 +68,7 @@ parameters.min_avg_length = 0;
 parameters.max_avg_length = inf;
 
 parameters.t_max = 10;
-parameters.t_max = 2;
+% parameters.t_max = 2;
 
 %%
 %___________________________________
@@ -97,18 +97,17 @@ end
 %Test parameters
 num_nets = 3;
 num_inits = 1;
+test_n = 10; % Number of parameters to test (each)
 
-%Number of parameters to test (each)
-test_n = 10;
-num_params = 3;
-
+%{  
 % % temp, for testing code
 num_nets = 2;
 num_inits = 1;
-test_n = 5;
-% % 
-
+test_n = 3;
 assert(parameters.usePoisson==1)
+% %
+%}  
+
 
 %Parameter 1: coefficient of input conductance
 W_gin_Min = 4.4*10^-9; 
@@ -128,52 +127,52 @@ del_G_syn_I_E_Max = 1.3300e-08;
 del_G_syn_I_E_n = 1;
 del_G_syn_I_E_vec = linspace(del_G_syn_I_E_Min, del_G_syn_I_E_Max, del_G_syn_I_E_n);
 
-%Combined into one parameter vector to pass
-parameter_vec = [W_gin_vec, del_G_syn_E_E_vec, del_G_syn_I_E_vec];
-parameterSets_vec = combvec(W_gin_vec, del_G_syn_E_E_vec, del_G_syn_I_E_vec);
 
+%Combined into one parameter vector to pass
+parameterSets_vec = combvec(W_gin_vec, del_G_syn_E_E_vec, del_G_syn_I_E_vec);
 
 %Save parameter values
 if saveFlag
     save(strcat(save_path,'/parameter_vec.mat'),'parameter_vec','-v7.3')
 end
 
-%Set up storage matrix
-%success = zeros(test_n*ones(1,num_params));
-success = zeros(W_gin_n, del_G_syn_E_E_n, del_G_syn_I_E_n);
-
-
 %% Run Grid Search With Spike Stats Returned
 
-
+% Waitbar code
 D = parallel.pool.DataQueue;
 h = waitbar(0, 'Starting simulation ...');
 num_files = size(parameterSets_vec, 2);
-% Dummy call to nUpdateWaitbar to initialise
-nUpdateWaitbar(num_files, h);
-% Go back to simply calling nUpdateWaitbar with the data
+nUpdateWaitbar(num_files, h); % Dummy call to nUpdateWaitbar to initialise
 afterEach(D, @nUpdateWaitbar);
 
-
-resultsMat = zeros(size(parameterSets_vec));
-resultsStruct = cell(1, size(parameterSets_vec, 2));
-
+gcp % start parallel pool is not already running
 tic
+resultsLinear = zeros(3, size(parameterSets_vec, 2));
+resultsStruct = cell(1, size(parameterSets_vec, 2));
 parfor ithParamSet = 1:size(parameterSets_vec, 2)
-    [resultsMat(:,ithParamSet), resultsStruct{ithParamSet}] = parallelize_parameter_tests_2(...
+    
+    [resultsLinear(:,ithParamSet), resultsStruct{ithParamSet}] = parallelize_parameter_tests_2(...
                 parameters, num_nets, num_inits, parameterSets_vec, ithParamSet);
     send(D, 1);
 end
 runTime = toc
 
-num_spikers = reshape(squeeze(resultsMat(1,:)), W_gin_n, del_G_syn_E_E_n, del_G_syn_I_E_n);
-avg_fr = reshape(squeeze(resultsMat(2,:)), W_gin_n, del_G_syn_E_E_n, del_G_syn_I_E_n);
-avg_event_length = reshape(squeeze(resultsMat(3,:)), W_gin_n, del_G_syn_E_E_n, del_G_syn_I_E_n);
+%% Format results matrix
+resultsMat = zeros(W_gin_n, del_G_syn_E_E_n, del_G_syn_I_E_n, 3);
+for i = 1:size(resultsLinear, 2)
+    ind1 = find(parameterSets_vec(1,i)==W_gin_vec);
+    ind2 = find(parameterSets_vec(2,i)==del_G_syn_E_E_vec);
+    ind3 = find(parameterSets_vec(3,i)==del_G_syn_I_E_vec);
+    resultsMat(ind1,ind2,ind3,:) = resultsLinear(:,i);
+end
 
+num_spikers = resultsMat(:,:,:,1);
+avg_fr = resultsMat(:,:,:,2);
+avg_event_length = resultsMat(:,:,:,3);
 
 if saveFlag
     save(strcat(save_path,'/results.mat'),'resultsMat', 'resultsStruct', '-v7.3')
-    
+   
     % Save everything, with unique filename based on date-time
     save( strcat(save_path,'/results_', datestr(now,'yyyy-mm-ddTHH-MM'), '.mat'), '-v7.3')
 end
@@ -181,15 +180,13 @@ end
 %% Visualize Value Grid Search Results
 
 %Recall:
-%Parameter 1: coefficient of input conductance (G_coeff)
-%Parameter 2: global inhibition strength (I_strength)
-%Parameter 3: SRA step size (del_G_sra)
-
-W_gin_vec, del_G_syn_E_E_vec, del_G_syn_I_E_vec
+%Parameter 1:
+%Parameter 2:
+%Parameter 3:
 
 if plotResults
     
-    %G_coeff vs I_strength
+    % 1 v 2
     num_spikers_G_I = squeeze(mean(num_spikers,3));
     avg_fr_G_I = squeeze(mean(avg_fr,3));
     avg_event_length_G_I = squeeze(mean(avg_event_length,3));
@@ -208,7 +205,7 @@ if plotResults
     title('Average Event Length'); xlabel('W_{EE}'); ylabel('G_{in}')
     clear c1 c2 c3
     
-    %G_coeff vs del_G_sra
+    % 1 v 3
     num_spikers_G_S = squeeze(mean(num_spikers,2));
     avg_fr_G_S = squeeze(mean(avg_fr,2));
     avg_event_length_G_S = squeeze(mean(avg_event_length,2));
@@ -227,7 +224,7 @@ if plotResults
     title('Average Event Length'); xlabel('W_{IE}'); ylabel('G_{in}')
     clear c1 c2 c3
 
-    %I_strength vs del_G_sra
+    % 2 v 3
     num_spikers_I_S = squeeze(mean(num_spikers,1));
     avg_fr_I_S = squeeze(mean(avg_fr,1));
     avg_event_length_I_S = squeeze(mean(avg_event_length,1));

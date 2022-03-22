@@ -1,5 +1,5 @@
 function [avg_mat, allResults] = parallelize_parameter_tests_2(parameters,num_nets,...
-    num_inits, parameter_vec, ithParamSet)
+    num_inits, parameterSets_vec, ithParamSet)
     %_________
     %ABOUT: This function runs through a series of commands to test the
     %outputs of a particular parameter set in comparison to a strict set of
@@ -73,9 +73,9 @@ function [avg_mat, allResults] = parallelize_parameter_tests_2(parameters,num_ne
     %_________
     
     % Set up parameter values for current parameter set
-    parameters.W_gin = parameter_vec(1,ithParamSet);
-    parameters.del_G_syn_E_E = parameter_vec(2,ithParamSet);
-    parameters.del_G_syn_I_E = parameter_vec(3,ithParamSet);
+    parameters.W_gin = parameterSets_vec(1,ithParamSet);
+    parameters.del_G_syn_E_E = parameterSets_vec(2,ithParamSet);
+    parameters.del_G_syn_I_E = parameterSets_vec(3,ithParamSet);
     
     %Run network initialization code
     resp_mat = zeros(num_nets, 3);
@@ -119,5 +119,5 @@ function [avg_mat, allResults] = parallelize_parameter_tests_2(parameters,num_ne
     resp_mat(isnan(resp_mat)) = 0;
     avg_mat = sum(resp_mat,1)./sum(resp_mat > 0,1); %Only averaging those that had results
 
-    disp(['Parameter set ', num2str(ithParamSet), '/', num2str(size(parameter_vec, 2)), ' complete'])
+    disp(['Parameter set ', num2str(ithParamSet), '/', num2str(size(parameterSets_vec, 2)), ' complete'])
 end

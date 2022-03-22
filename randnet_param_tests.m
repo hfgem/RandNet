@@ -57,7 +57,7 @@ load(strcat(load_path,'/parameters.mat'))
 param_names = fieldnames(parameters);
 
 
-%% Parametesr that are different from the loaded parameters
+%% Parameters that are different from the loaded parameters
 parameters.saveFlag = saveFlag; % needed to override the loaded parameters
 parameters.plotResults = plotResults; % needed to override the loaded parameters
 
@@ -74,39 +74,23 @@ parameters.t_max = 2;
 %___________________________________
 %____Define dependent parameters____
 %___________________________________
-cluster_n = min(parameters.n*2/parameters.clusters,parameters.n); %number of neurons in a cluster (for small n round(n/3), for large n round(n/5)) 
-parameters.('cluster_n') = cluster_n;
+parameters.cluster_n = min(parameters.n*2/parameters.clusters,parameters.n); %number of neurons in a cluster (for small n round(n/3), for large n round(n/5)) 
 
 %Interaction constants
-t_steps = parameters.t_max/parameters.dt; %number of timesteps in simulation
-syn_E = parameters.V_syn_E*ones(parameters.n,1); %vector of the synaptic reversal potential for excitatory connections
-syn_I = parameters.V_syn_I*ones(parameters.n,1); %vector of the synaptic reversal potential for inhibitory connections
-IES = ceil(parameters.IEI/parameters.dt); %inter-event-steps = the number of steps to elapse between spikes
-%save for easy calculations
-parameters.('t_steps') = t_steps;
-parameters.('syn_E') = syn_E;
-parameters.('syn_I') = syn_I;
-parameters.('IES') = IES;
+parameters.t_steps = parameters.t_max/parameters.dt; %number of timesteps in simulation
+parameters.syn_E = parameters.V_syn_E*ones(parameters.n,1); %vector of the synaptic reversal potential for excitatory connections
+parameters.syn_I = parameters.V_syn_I*ones(parameters.n,1); %vector of the synaptic reversal potential for inhibitory connections
+parameters.IES = ceil(parameters.IEI/parameters.dt); %inter-event-steps = the number of steps to elapse between spikes
 
 %Calculate connection probabilites
-npairs = parameters.n*(parameters.n-1); %total number of possible neuron connections
-nclusterpairs = parameters.cluster_n*(parameters.cluster_n - 1)*parameters.clusters; %total number of possible intra-cluster connections
-cluster_prob = min(parameters.conn_prob*npairs/nclusterpairs,1); %0.2041; %intra-cluster connection probability
-%___MOVE TO INITIAL PARAM SECTION SINCE NOT DEPENDENT
-p_I = 0.5; %probability of an inhibitory making a connection in global inhibition
-%___
-n_I = round((1-parameters.p_E)*parameters.n); %number of inhibitory neurons
-%save for easy calculations
-parameters.('npairs') = npairs;
-parameters.('nclusterpairs') = nclusterpairs;
-parameters.('cluster_prob') = cluster_prob;
-parameters.('p_I') = p_I;
-parameters.('n_I') = n_I;
+parameters.npairs = parameters.n*(parameters.n-1); %total number of possible neuron connections
+parameters.nclusterpairs = parameters.cluster_n*(parameters.cluster_n - 1)*parameters.clusters; %total number of possible intra-cluster connections
+parameters.cluster_prob = min(parameters.conn_prob*parameters.npairs/parameters.nclusterpairs,1); %0.2041; %intra-cluster connection probability
+parameters.n_I = round((1-parameters.p_E)*parameters.n); %number of inhibitory neurons
 
 if saveFlag
     save(strcat(save_path,'/parameters.mat'),'parameters')
 end
-
 
 %% Set Up Grid Search Parameters
 
@@ -121,7 +105,7 @@ num_params = 3;
 % % temp, for testing code
 num_nets = 2;
 num_inits = 1;
-test_n = 2;
+test_n = 5;
 % % 
 
 assert(parameters.usePoisson==1)
@@ -139,14 +123,14 @@ del_G_syn_E_E_n = test_n;
 del_G_syn_E_E_vec = linspace(del_G_syn_E_E_Min, del_G_syn_E_E_Max, del_G_syn_E_E_n);
 
 %Parameter 3: I-E strength
-del_G_syn_I_E_Min = 0.3300e-08; 
-del_G_syn_I_E_Max = 2.3300e-08; 
-del_G_syn_I_E_n = test_n;
+del_G_syn_I_E_Min = 1.3300e-08; 
+del_G_syn_I_E_Max = 1.3300e-08; 
+del_G_syn_I_E_n = 1;
 del_G_syn_I_E_vec = linspace(del_G_syn_I_E_Min, del_G_syn_I_E_Max, del_G_syn_I_E_n);
 
 %Combined into one parameter vector to pass
-%parameter_vec = [G_coeff_vec; I_strength_vec; del_G_sra_vec];
-parameter_vec = combvec(W_gin_vec, del_G_syn_E_E_vec, del_G_syn_I_E_vec);
+parameter_vec = [W_gin_vec, del_G_syn_E_E_vec, del_G_syn_I_E_vec];
+parameterSets_vec = combvec(W_gin_vec, del_G_syn_E_E_vec, del_G_syn_I_E_vec);
 
 
 %Save parameter values
@@ -164,20 +148,20 @@ success = zeros(W_gin_n, del_G_syn_E_E_n, del_G_syn_I_E_n);
 
 D = parallel.pool.DataQueue;
 h = waitbar(0, 'Starting simulation ...');
-num_files = size(parameter_vec, 2);
+num_files = size(parameterSets_vec, 2);
 % Dummy call to nUpdateWaitbar to initialise
 nUpdateWaitbar(num_files, h);
 % Go back to simply calling nUpdateWaitbar with the data
 afterEach(D, @nUpdateWaitbar);
 
 
-resultsMat = zeros(size(parameter_vec));
-resultsStruct = cell(1, size(parameter_vec, 2));
+resultsMat = zeros(size(parameterSets_vec));
+resultsStruct = cell(1, size(parameterSets_vec, 2));
 
 tic
-parfor ithParamSet = 1:size(parameter_vec, 2)
+parfor ithParamSet = 1:size(parameterSets_vec, 2)
     [resultsMat(:,ithParamSet), resultsStruct{ithParamSet}] = parallelize_parameter_tests_2(...
-                parameters, num_nets, num_inits, parameter_vec, ithParamSet);
+                parameters, num_nets, num_inits, parameterSets_vec, ithParamSet);
     send(D, 1);
 end
 runTime = toc
@@ -209,85 +193,38 @@ if plotResults
     num_spikers_G_I = squeeze(mean(num_spikers,3));
     avg_fr_G_I = squeeze(mean(avg_fr,3));
     avg_event_length_G_I = squeeze(mean(avg_event_length,3));
-    
     figure;
     subplot(1,3,1)
-    imagesc(W_gin_vec, del_G_syn_E_E_vec, num_spikers_G_I())
-    c1 = colorbar();
-    c1.Label.String = 'Number of Neurons';
-    title('Number of Spiking Neurons')
-    %xticks(1:test_n)
-    %xticklabels(parameter_vec(1,:))
-    %yticks(1:test_n)
-    %yticklabels(parameter_vec(2,:))
-    xlabel('G_{coeff}')
-    ylabel('I_{strength}')
+    imagesc(W_gin_vec, del_G_syn_E_E_vec, num_spikers_G_I)
+    c1 = colorbar(); c1.Label.String = 'Number of Neurons';
+    title('Number of Spiking Neurons'); xlabel('W_{EE}'); ylabel('G_{in}')
     subplot(1,3,2)
     imagesc(W_gin_vec, del_G_syn_E_E_vec, avg_fr_G_I)
-    c2 = colorbar();
-    c2.Label.String = "Hz";
-    title('Average Firing Rate')
-    %xticks(1:test_n)
-    %xticklabels(parameter_vec(1,:))
-    %yticks(1:test_n)
-    %yticklabels(parameter_vec(2,:))
-    xlabel('G_{coeff}')
-    ylabel('I_{strength}')
+    c2 = colorbar(); c2.Label.String = "Hz";
+    title('Average Firing Rate'); xlabel('W_{EE}'); ylabel('G_{in}')
     subplot(1,3,3)
     imagesc(W_gin_vec, del_G_syn_E_E_vec, avg_event_length_G_I)
-    c3 = colorbar();
-    c3.Label.String = "Seconds";
-    title('Average Event Length')
-    %xticks(1:test_n)
-    %xticklabels(parameter_vec(1,:))
-    %yticks(1:test_n)
-    %yticklabels(parameter_vec(2,:))
-    xlabel('G_{coeff}')
-    ylabel('I_{strength}')
-
+    c3 = colorbar(); c3.Label.String = "Seconds";
+    title('Average Event Length'); xlabel('W_{EE}'); ylabel('G_{in}')
     clear c1 c2 c3
     
-    
-
     %G_coeff vs del_G_sra
     num_spikers_G_S = squeeze(mean(num_spikers,2));
     avg_fr_G_S = squeeze(mean(avg_fr,2));
     avg_event_length_G_S = squeeze(mean(avg_event_length,2));
     figure;
     subplot(1,3,1)
-    imagesc(num_spikers_G_S)
-    c1 = colorbar();
-    c1.Label.String = 'Number of Neurons';
-    title('Number of Spiking Neurons')
-    xticks(1:test_n)
-    xticklabels(parameter_vec(1,:))
-    yticks(1:test_n)
-    yticklabels(parameter_vec(3,:))
-    xlabel('G_{coeff}')
-    ylabel('\delta G_{SRA}')
+    imagesc(W_gin_vec, del_G_syn_I_E_vec, num_spikers_G_S)
+    c1 = colorbar(); c1.Label.String = 'Number of Neurons';
+    title('Number of Spiking Neurons'); xlabel('W_{IE}'); ylabel('G_{in}')
     subplot(1,3,2)
-    imagesc(avg_fr_G_S)
-    c2 = colorbar();
-    c2.Label.String = "Hz";
-    title('Average Firing Rate')
-    xticks(1:test_n)
-    xticklabels(parameter_vec(1,:))
-    yticks(1:test_n)
-    yticklabels(parameter_vec(3,:))
-    xlabel('G_{coeff}')
-    ylabel('\delta G_{SRA}')
+    imagesc(W_gin_vec, del_G_syn_I_E_vec, avg_fr_G_S)
+    c2 = colorbar(); c2.Label.String = "Hz";
+    title('Average Firing Rate'); xlabel('W_{IE}'); ylabel('G_{in}')
     subplot(1,3,3)
-    imagesc(avg_event_length_G_S)
-    c3 = colorbar();
-    c3.Label.String = "Seconds";
-    title('Average Event Length')
-    xticks(1:test_n)
-    xticklabels(parameter_vec(1,:))
-    yticks(1:test_n)
-    yticklabels(parameter_vec(3,:))
-    xlabel('G_{coeff}')
-    ylabel('\delta G_{SRA}')
-
+    imagesc(W_gin_vec, del_G_syn_I_E_vec, avg_event_length_G_S)
+    c3 = colorbar(); c3.Label.String = "Seconds";
+    title('Average Event Length'); xlabel('W_{IE}'); ylabel('G_{in}')
     clear c1 c2 c3
 
     %I_strength vs del_G_sra
@@ -296,40 +233,19 @@ if plotResults
     avg_event_length_I_S = squeeze(mean(avg_event_length,1));
     figure;
     subplot(1,3,1)
-    imagesc(num_spikers_I_S)
-    c1 = colorbar();
-    c1.Label.String = 'Number of Neurons';
-    title('Number of Spiking Neurons')
-    xticks(1:test_n)
-    xticklabels(parameter_vec(2,:))
-    yticks(1:test_n)
-    yticklabels(parameter_vec(3,:))
-    xlabel('I_{strength}')
-    ylabel('\delta G_{SRA}')
+    imagesc(del_G_syn_E_E_vec, del_G_syn_I_E_vec, num_spikers_I_S)
+    c1 = colorbar(); c1.Label.String = 'Number of Neurons';
+    title('Number of Spiking Neurons'); xlabel('W_{IE}'); ylabel('W_{EE}')
     subplot(1,3,2)
-    imagesc(avg_fr_I_S)
-    c2 = colorbar();
-    c2.Label.String = "Hz";
-    title('Average Firing Rate')
-    xticks(1:test_n)
-    xticklabels(parameter_vec(2,:))
-    yticks(1:test_n)
-    yticklabels(parameter_vec(3,:))
-    xlabel('I_{strength}')
-    ylabel('\delta G_{SRA}')
+    imagesc(del_G_syn_E_E_vec, del_G_syn_I_E_vec, avg_fr_I_S)
+    c2 = colorbar(); c2.Label.String = "Hz";
+    title('Average Firing Rate'); xlabel('W_{IE}'); ylabel('W_{EE}')
     subplot(1,3,3)
-    imagesc(avg_event_length_I_S)
-    c3 = colorbar();
-    c3.Label.String = "Seconds";
-    title('Average Event Length')
-    xticks(1:test_n)
-    xticklabels(parameter_vec(2,:))
-    yticks(1:test_n)
-    yticklabels(parameter_vec(3,:))
-    xlabel('I_{strength}')
-    ylabel('\delta G_{SRA}')
-
+    imagesc(del_G_syn_E_E_vec, del_G_syn_I_E_vec, avg_event_length_I_S)
+    c3 = colorbar(); c3.Label.String = "Seconds";
+    title('Average Event Length'); xlabel('W_{IE}'); ylabel('W_{EE}')
     clear c1 c2 c3
+    
 end
 
 %% Functions 

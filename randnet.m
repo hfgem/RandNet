@@ -98,6 +98,18 @@ min_avg_length = 0.02;
 max_avg_length = 0.15;
 
 
+%{
+%TEST 1: The number of neurons participating in a sequence must pass a threshold:
+event_cutoff = 0.05; %0.25; %fraction of neurons that have to be involved to constitute a successful event
+%TEST 2: The firing rate must fall within a realistic range
+min_avg_fr = 0.02;
+max_avg_fr = 3;
+
+% TEST 3: The sequence(s) of firing is(are) within reasonable lengths
+min_avg_length = 0.01;
+max_avg_length = 0.5;
+%}
+
 %% Save parameters to a structure and to computer
 w = whos;
 parameters = struct;
@@ -164,38 +176,14 @@ for i = 1:1%10 %how many different network structures to test
         mkdir(net_save_path);
     end
     
-    %SET UP NETWORK
-    %Decide which neurons are inhib and excit 
-    all_indices = [1:parameters.n];
-    I_indices = datasample(all_indices,parameters.n_I,'Replace',false); %indices of inhibitory neurons
-    E_indices = find(~ismember(all_indices,I_indices)); %indices of excitatory neurons
-    [cluster_mat, conns] = create_clusters(parameters, i, 1);
-    %Add in global inhibition, added to individual connections already
-    %given. If global inhibition overrides any pre-set connections with
-    %inhibitory neurons, reset values to global inhibition values.
-    if parameters.only_global
-        conns(I_indices,:) = parameters.I_strength*(rand([parameters.n*(1-parameters.p_E), parameters.n]) < parameters.p_I);
-    else
-        conns(I_indices,:) = conns(I_indices,:) + parameters.I_strength*(rand([parameters.n*(1-parameters.p_E), parameters.n]) < parameters.p_I);
-    end
-    conns_copy = conns; %just a copy of the connections to maintain for reset runs if there's "plasticity"
-    n_EE = sum(conns(E_indices,E_indices),'all'); %number of E-E connections
-    n_EI = sum(conns(E_indices,I_indices),'all'); %number of E-I connections
-    n_II = sum(conns(I_indices,I_indices),'all'); %number of I-I connections
-    n_IE = sum(conns(I_indices,E_indices),'all'); %number of I-E connections
-    clear all_indices
- 
-    %SAVE NETWORK STRUCTURE
-    network = struct;
-    network(1).cluster_mat = cluster_mat;
-    network(1).conns = conns;
-    network(1).I_indices = I_indices;
-    network(1).E_indices = E_indices;
+
+    network = create_clusters(parameters, 'seed', i, 'include_all', 1, 'global_inhib', 1);
     if saveFlag
         save(strcat(net_save_path,'/network.mat'),'network');
     end
     
-    clear cluster_mat conns I_indices E_indices
+    % clear cluster_mat conns I_indices E_indices
+    
     
     %RUN MODEL AND CALCULATE
     %Run through every cluster initialization and store relevant data and
@@ -241,7 +229,6 @@ for i = 1:1%10 %how many different network structures to test
         [network_spike_sequences, network_cluster_sequences] = detect_events(parameters, network, V_m , j, network_spike_sequences, network_cluster_sequences);
     
         if plotResults
-            events = network_spike_sequences(j).events;
 
             %Find spike profile
             spikes_V_m = V_m >= parameters.V_th;
@@ -249,40 +236,44 @@ for i = 1:1%10 %how many different network structures to test
             max_time = max(spikes_t);
             spiking_neurons = unique(spikes_x, 'stable');
 
-            %Visualize re-ordered spike sequences
-            if any(strcmp('spike_order',fieldnames(network_spike_sequences)))
-                f = figure;
-                axes = [];
-                num_events = size(events, 1)
-                for e_i = 1:num_events
-                    spike_order = network_spike_sequences(j).spike_order.(strcat('sequence_',string(e_i)));
-                    sub_spikes_V_m = spikes_V_m(:,events(e_i,1):events(e_i,2));
-                    reordered_spikes = sub_spikes_V_m(spike_order,:);
-                    [~,event_length] = size(reordered_spikes); 
-                    ax = subplot(1,num_events,e_i);
-                    axes = [axes, ax];
-                    imagesc(reordered_spikes)
-                    xticks(round(linspace(1,event_length,20))) %20 ticks will be displayed
-                    xt = get(gca,'XTick');
-                    xtlbl = round(linspace(events(e_i,1)*parameters.dt,events(e_i,2)*parameters.dt,numel(xt)),2);
-                    colormap(flip(gray))
-                    xlabel('Time (s)','FontSize',16)
-                    ylabel('Reordered Neuron Number','FontSize',16)
-                    title(strcat('Event #',string(e_i)))
-                    set(gca, 'XTick',xt, 'XTickLabel',xtlbl)
-                end
-                sgtitle('Spiking Behavior','FontSize',16)
+            if isfield(network_spike_sequences(j), 'events')
+                events = network_spike_sequences(j).events;
 
-                %linkaxes(axes)
-                if saveFlag
-                    savefig(f,strcat(net_save_path,'/','_',string(j),'firing_sequence.fig'))
-                    saveas(f,strcat(net_save_path,'/', '_',string(j),'firing_sequence.jpg'))
-                    close(f)
-                end
-                clear e_i spike_order reordered_spikes event_length s_i ax ...
-                    axes xt xtlbl
-            end      
+                %Visualize re-ordered spike sequences
+                if any(strcmp('spike_order',fieldnames(network_spike_sequences)))
+                    f = figure;
+                    axes = [];
+                    num_events = size(events, 1)
+                    for e_i = 1:num_events
+                        spike_order = network_spike_sequences(j).spike_order.(strcat('sequence_',string(e_i)));
+                        sub_spikes_V_m = spikes_V_m(:,events(e_i,1):events(e_i,2));
+                        reordered_spikes = sub_spikes_V_m(spike_order,:);
+                        [~,event_length] = size(reordered_spikes); 
+                        ax = subplot(1,num_events,e_i);
+                        axes = [axes, ax];
+                        imagesc(reordered_spikes)
+                        xticks(round(linspace(1,event_length,20))) %20 ticks will be displayed
+                        xt = get(gca,'XTick');
+                        xtlbl = round(linspace(events(e_i,1)*parameters.dt,events(e_i,2)*parameters.dt,numel(xt)),2);
+                        colormap(flip(gray))
+                        xlabel('Time (s)','FontSize',16)
+                        ylabel('Reordered Neuron Number','FontSize',16)
+                        title(strcat('Event #',string(e_i)))
+                        set(gca, 'XTick',xt, 'XTickLabel',xtlbl)
+                    end
+                    sgtitle('Spiking Behavior','FontSize',16)
 
+                    %linkaxes(axes)
+                    if saveFlag
+                        savefig(f,strcat(net_save_path,'/','_',string(j),'firing_sequence.fig'))
+                        saveas(f,strcat(net_save_path,'/', '_',string(j),'firing_sequence.jpg'))
+                        close(f)
+                    end
+                    clear e_i spike_order reordered_spikes event_length s_i ax ...
+                        axes xt xtlbl
+                end      
+            end
+            
             t = [0:dt:t_max];
             figure; plot(t, V_m(1:2,:)); ylabel('Vm (V)'); xlabel('Time (s)'); 
             % figure; plot(t, V_m); ylabel('Vm (V)'); xlabel('Time (s)'); 

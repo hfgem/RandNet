@@ -1,4 +1,4 @@
-function [cluster_mat, conns] = create_clusters(parameters, seed, include_all, global_inhib)
+function [network] = create_clusters(parameters, varargin)
     %_________
     %ABOUT: This function generates the network clusters and connections
     %based on the number of neurons, number of clusters, number of neurons
@@ -23,8 +23,34 @@ function [cluster_mat, conns] = create_clusters(parameters, seed, include_all, g
     %                 connectivity
     %_________
 
+        
+    % Defaults for optional parameters
+    seed =  randi(10^6); % rng seed, to replicate network construction
+    include_all = 1;    % if 1, all neurons are included in at least 1 cluster by reducing high participating cells
+    global_inhib = 1;   % if 1, I-cells have widespread, unclustered connectivity
+    
+    
+    % Read in optional parameters, to overwrite above defaults
+    for i=1:2:length(varargin)
+        switch varargin{i}
+            case 'seed'
+                seed = varargin{i+1};
+            case 'include_all'
+                include_all = varargin{i+1};
+            case  'global_inhib'
+                global_inhib = varargin{i+1};
+        end
+    end
+    
     rng(seed)
     
+    %SET UP NETWORK
+    %Decide which neurons are inhib and excit 
+    all_indices = [1:parameters.n];
+    I_indices = datasample(all_indices,parameters.n_I,'Replace',false); %indices of inhibitory neurons
+    E_indices = find(~ismember(all_indices,I_indices)); %indices of excitatory neurons
+    
+
     %Create clusters by randomly selecting cluster_n neurons for each
     cluster_mat = zeros(parameters.clusters,parameters.n);
     for i = 1:parameters.clusters %set clusters
@@ -64,5 +90,32 @@ function [cluster_mat, conns] = create_clusters(parameters, seed, include_all, g
     for i = 1:parameters.n
         conns(i,i) = 0;
     end
+    
+    
+    
+    % Below was previously outside this function % % %
+    
+    %Add in global inhibition, added to individual connections already
+    %given. If global inhibition overrides any pre-set connections with
+    %inhibitory neurons, reset values to global inhibition values.
+    if parameters.only_global
+        conns(I_indices,:) = parameters.I_strength*(rand([parameters.n*(1-parameters.p_E), parameters.n]) < parameters.p_I);
+    else
+        conns(I_indices,:) = conns(I_indices,:) + parameters.I_strength*(rand([parameters.n*(1-parameters.p_E), parameters.n]) < parameters.p_I);
+    end
+    
+     
+    network.n_EE = sum(conns(E_indices,E_indices),'all'); %number of E-E connections
+    network.n_EI = sum(conns(E_indices,I_indices),'all'); %number of E-I connections
+    network.n_II = sum(conns(I_indices,I_indices),'all'); %number of I-I connections
+    network.n_IE = sum(conns(I_indices,E_indices),'all'); %number of I-E connections
+ 
+    %SAVE NETWORK STRUCTURE
+    network = struct;
+    network.cluster_mat = cluster_mat;
+    network.conns = conns;
+    network.I_indices = I_indices;
+    network.E_indices = E_indices;
+    
     
 end

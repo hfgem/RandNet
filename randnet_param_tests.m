@@ -28,7 +28,7 @@
 %% Save Path + Load Parameters
 addpath('functions')
 
-saveFlag = 0 % 1 to save simulation results
+saveFlag = 1 % 1 to save simulation results
 selectSavePath = 0; % 1 to select save destination, 0 to save in results dir
 selectLoadPath = 0; % 1 to select load source, 0 to load from results dir
 plotResults = 1; % 1 to plot basic simulation results
@@ -97,7 +97,7 @@ end
 %Test parameters
 num_nets = 3;
 num_inits = 1;
-test_n = 10; % Number of parameters to test (each)
+test_n = 50; % Number of parameters to test (each)
 
 %{  
 % % temp, for testing code
@@ -110,14 +110,14 @@ assert(parameters.usePoisson==1)
 
 
 %Parameter 1: coefficient of input conductance
-W_gin_Min = 4.4*10^-9; 
-W_gin_Max = 6.4*10^-9; 
+W_gin_Min = 3.4*10^-9; 
+W_gin_Max = 7.4*10^-9; 
 W_gin_n = test_n;
 W_gin_vec = linspace(W_gin_Min, W_gin_Max, W_gin_n);
 
 %Parameter 2: E-E strength
-del_G_syn_E_E_Min = 8.5*10^(-9); 
-del_G_syn_E_E_Max = 10.5*10^(-9); 
+del_G_syn_E_E_Min = 7.5*10^(-9); 
+del_G_syn_E_E_Max = 11.5*10^(-9); 
 del_G_syn_E_E_n = test_n;
 del_G_syn_E_E_vec = linspace(del_G_syn_E_E_Min, del_G_syn_E_E_Max, del_G_syn_E_E_n);
 
@@ -132,9 +132,9 @@ del_G_syn_I_E_vec = linspace(del_G_syn_I_E_Min, del_G_syn_I_E_Max, del_G_syn_I_E
 parameterSets_vec = combvec(W_gin_vec, del_G_syn_E_E_vec, del_G_syn_I_E_vec);
 
 %Save parameter values
-if saveFlag
-    save(strcat(save_path,'/parameter_vec.mat'),'parameter_vec','-v7.3')
-end
+%if saveFlag
+%    save(strcat(save_path,'/parameter_vec.mat'),'parameter_vec','-v7.3')
+%end
 
 %% Run Grid Search With Spike Stats Returned
 
@@ -173,8 +173,9 @@ avg_event_length = resultsMat(:,:,:,3);
 if saveFlag
     save(strcat(save_path,'/results.mat'),'resultsMat', 'resultsStruct', '-v7.3')
    
+    clear D h % Don't save pool.DataQueue or waitbar handle
     % Save everything, with unique filename based on date-time
-    save( strcat(save_path,'/results_', datestr(now,'yyyy-mm-ddTHH-MM'), '.mat'), '-v7.3')
+    save( strcat(save_path,'/results_', datestr(now,'yyyy-mm-ddTHH-MM'), '.mat'), '-v7.3') 
 end
 
 %% Visualize Value Grid Search Results

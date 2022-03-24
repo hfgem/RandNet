@@ -29,7 +29,6 @@ function [network] = create_clusters(parameters, varargin)
     include_all = 1;    % if 1, all neurons are included in at least 1 cluster by reducing high participating cells
     global_inhib = 1;   % if 1, I-cells have widespread, unclustered connectivity
     
-    
     % Read in optional parameters, to overwrite above defaults
     for i=1:2:length(varargin)
         switch varargin{i}
@@ -90,15 +89,10 @@ function [network] = create_clusters(parameters, varargin)
         conns(i,i) = 0;
     end
     
-    
 
-    %Add in global inhibition, added to individual connections already
-    %given. If global inhibition overrides any pre-set connections with
-    %inhibitory neurons, reset values to global inhibition values.
-    if parameters.only_global
-        conns(I_indices,:) = parameters.I_strength*(rand([parameters.n*(1-parameters.p_E), parameters.n]) < parameters.p_I);
-    else
-        conns(I_indices,:) = conns(I_indices,:) + parameters.I_strength*(rand([parameters.n*(1-parameters.p_E), parameters.n]) < parameters.p_I);
+    % If global_inhib, overwrite all inhibitory outputs
+    if global_inhib
+        conns(I_indices,:) = (rand([parameters.n*(1-parameters.p_E), parameters.n]) < parameters.p_I);
     end
     
     %SAVE NETWORK STRUCTURE
@@ -112,6 +106,5 @@ function [network] = create_clusters(parameters, varargin)
     network.n_IE = sum(network.conns(I_indices,E_indices),'all'); %number of I-E connections
     network.I_indices = I_indices;
     network.E_indices = E_indices;
-    
     
 end

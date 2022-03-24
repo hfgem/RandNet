@@ -246,8 +246,6 @@ if plotResults
 end
 
 %% Functions 
-
-
 function p = nUpdateWaitbar(data, h)
 % https://www.mathworks.com/matlabcentral/answers/660793-help-with-parfor-progress-bar-using-data-queue
 persistent TOTAL COUNT H

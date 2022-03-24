@@ -5,7 +5,7 @@
 
 clear all
 
-saveFlag = 1; % 1 to save simulation results
+saveFlag = 0; % 1 to save simulation results
 selectPath = 0; % 1 to select save destination, 0 to save in current dir
 plotResults = 1; % 1 to plot basic simulation results
 
@@ -53,34 +53,26 @@ tau_sra = 30*10^(-3); %spike rate adaptation time constant (s)
 %If want to have STDP, change connectivity_gain to > 0.
 connectivity_gain = 0; %0.005; %amount to increase or decrease connectivity by with each spike (more at the range of 0.002-0.005)
 
-% Input conductance
+% Input conductance, if using non-Poisson input
 G_std = -19*10^-9; % STD of the input conductance G_in, if using randn()
 G_mean = 0* 10^-12; % mean of the input conductance G_in, if using randn()
 
 % Poisson input parameters
 usePoisson = 1; % 1 to use poisson spike inputs, 0 for randn() input
-% rG = 1000; Wgin = 3.25e-9
 rG = 500; % input spiking rate, if using poisson inputs
 W_gin = 5.4*10^-9; % increase in conductance, if using poisson inputs
-
 
 %Calculate connection probabilites
 conn_prob = 0.08; %set a total desired connection probability
 p_E = 0.75; %probability of an excitatory neuron
 
 %Global Inhibition
-%This value controls the amount of global inhibition - set to 0 if you want
-%no global inhibition, and scale upward for scaled connectivity.
-I_strength = 1;
-only_global = 0; %Set this flag to 1 if you want global inhibition to override random inhibitory connections given by "create_cluters"
-global_inhib = 1; 
+global_inhib = 1; % if 1, I-cells are not clusterd and have connection probability p_I
 p_I = 0.5; % probability of an I cell connecting to any other cell
 
-%How many tests of different initializations to run
-test_val_max = 1; %This value can be modified as you see fit
 
-
-include_all = 1; % if a neuron is not in any cluster, swap connections
+test_val_max = 1; % How many tests of different initializations to run
+include_all = 1; % if a neuron is not in any cluster, take cluster membership from a highly connected neuron
 
 %% Parameters for sequence analysis
 
@@ -159,7 +151,6 @@ end
 %____________________________________________
 
 for i = 1:1%10 %how many different network structures to test
-    rng(i,'twister') %set random number generator for network structure
     
     %CREATE NETWORK SAVE PATH
     net_save_path = strcat(save_path,'/network_',string(i));
@@ -172,9 +163,7 @@ for i = 1:1%10 %how many different network structures to test
     if saveFlag
         save(strcat(net_save_path,'/network.mat'),'network');
     end
-    
-    % clear cluster_mat conns I_indices E_indices
-    
+
     
     %RUN MODEL AND CALCULATE
     %Run through every cluster initialization and store relevant data and

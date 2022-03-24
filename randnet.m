@@ -74,6 +74,8 @@ p_I = 0.5; % probability of an I cell connecting to any other cell
 test_val_max = 1; % How many tests of different initializations to run
 include_all = 1; % if a neuron is not in any cluster, take cluster membership from a highly connected neuron
 
+E_events_only = 1; % if 1, only consider E-cells for detect_events
+
 %% Parameters for sequence analysis
 
 IEI = 0.02; %inter-event-interval (s) the elapsed time between spikes to count separate events
@@ -174,7 +176,7 @@ for i = 1:1%10 %how many different network structures to test
     network_spike_sequences = struct;
     network_cluster_sequences = struct; 
     
-    for j = 1:parameters.test_val_max        
+    for ithTest = 1:parameters.test_val_max        
         
         %Create input conductance variable
         if parameters.usePoisson
@@ -193,20 +195,21 @@ for i = 1:1%10 %how many different network structures to test
         V_m = zeros(parameters.n,parameters.t_steps+1); %membrane potential for each neuron at each timestep
         V_m(:,1) = parameters.V_reset + randn([parameters.n,1])*(10^(-3))*sqrt(dt); %set all neurons to baseline reset membrane potential with added noise
         
-        seed = j;
+        seed = ithTest;
         
         %Run model
         [V_m, G_sra, G_syn_E_E, G_syn_I_E, G_syn_E_I, G_syn_I_I, conns] = ...
                 randnet_calculator(parameters, seed, network, V_m);
-        V_m_var(j).V_m = V_m;
-        G_var(j).G_in = G_in;
-        G_var(j).G_sra = G_sra;
-        G_var(j).G_syn_I_E = G_syn_I_E;
-        G_var(j).G_syn_E_E = G_syn_E_E;
-        G_var(j).G_syn_I_I = G_syn_I_I;
-        G_var(j).G_syn_E_I = G_syn_E_I;
+        V_m_var(ithTest).V_m = V_m;
+        G_var(ithTest).G_in = G_in;
+        G_var(ithTest).G_sra = G_sra;
+        G_var(ithTest).G_syn_I_E = G_syn_I_E;
+        G_var(ithTest).G_syn_E_E = G_syn_E_E;
+        G_var(ithTest).G_syn_I_I = G_syn_I_I;
+        G_var(ithTest).G_syn_E_I = G_syn_E_I;
         
-        [network_spike_sequences, network_cluster_sequences] = detect_events(parameters, network, V_m , j, network_spike_sequences, network_cluster_sequences);
+        [network_spike_sequences, network_cluster_sequences] = detect_events(parameters, network, V_m , ithTest,...
+            network_spike_sequences, network_cluster_sequences, 'E_events_only', parameters.E_events_only);
     
         if plotResults
 
@@ -216,8 +219,8 @@ for i = 1:1%10 %how many different network structures to test
             max_time = max(spikes_t);
             spiking_neurons = unique(spikes_x, 'stable');
 
-            if isfield(network_spike_sequences(j), 'events')
-                events = network_spike_sequences(j).events;
+            if isfield(network_spike_sequences(ithTest), 'events')
+                events = network_spike_sequences(ithTest).events;
 
                 %Visualize re-ordered spike sequences
                 if any(strcmp('spike_order',fieldnames(network_spike_sequences)))
@@ -225,32 +228,35 @@ for i = 1:1%10 %how many different network structures to test
                     axes = [];
                     num_events = size(events, 1)
                     for e_i = 1:num_events
-                        spike_order = network_spike_sequences(j).spike_order.(strcat('sequence_',string(e_i)));
-                        sub_spikes_V_m = spikes_V_m(:,events(e_i,1):events(e_i,2));
-                        reordered_spikes = sub_spikes_V_m(spike_order,:);
-                        [~,event_length] = size(reordered_spikes); 
-                        ax = subplot(1,num_events,e_i);
-                        axes = [axes, ax];
-                        imagesc(reordered_spikes)
-                        xticks(round(linspace(1,event_length,20))) %20 ticks will be displayed
-                        xt = get(gca,'XTick');
-                        xtlbl = round(linspace(events(e_i,1)*parameters.dt,events(e_i,2)*parameters.dt,numel(xt)),2);
-                        colormap(flip(gray))
+                        
+                        spike_ranks = network_spike_sequences(ithTest).spike_ranks.(strcat('sequence_',string(e_i)));
+                        spike_ranks(spike_ranks==0)=nan;
+                        if E_events_only
+                            [~, Ie] = sort(spike_ranks);
+                            eventSpikes = [spikes_V_m(network.E_indices(Ie),events(e_i,1):events(e_i,2)); ...
+                                spikes_V_m(network.I_indices,events(e_i,1):events(e_i,2))];
+                        else
+                            [~, Ie] = sort(spike_ranks(network.E_indices));
+                            [~, Ii] = sort(spike_ranks(network.I_indices));
+                            eventSpikes = [spikes_V_m(network.E_indices(Ie),events(e_i,1):events(e_i,2)); ...
+                                spikes_V_m(network.I_indices(Ii),events(e_i,1):events(e_i,2))];
+                        end
+                        subplot(1,num_events,e_i)
+                        plotSpikeRaster( eventSpikes, 'TimePerBin', parameters.dt, 'PlotType', 'scatter');
                         xlabel('Time (s)','FontSize',16)
                         ylabel('Reordered Neuron Number','FontSize',16)
                         title(strcat('Event #',string(e_i)))
-                        set(gca, 'XTick',xt, 'XTickLabel',xtlbl)
+                        
                     end
                     sgtitle('Spiking Behavior','FontSize',16)
 
                     %linkaxes(axes)
                     if saveFlag
-                        savefig(f,strcat(net_save_path,'/','_',string(j),'firing_sequence.fig'))
-                        saveas(f,strcat(net_save_path,'/', '_',string(j),'firing_sequence.jpg'))
+                        savefig(f,strcat(net_save_path,'/','_',string(ithTest),'firing_sequence.fig'))
+                        saveas(f,strcat(net_save_path,'/', '_',string(ithTest),'firing_sequence.jpg'))
                         close(f)
                     end
-                    clear e_i spike_order reordered_spikes event_length s_i ax ...
-                        axes xt xtlbl
+                    clear e_i spike_order reordered_spikes event_length s_i ax axes xt xtlbl
                 end      
             end
             
@@ -266,8 +272,9 @@ for i = 1:1%10 %how many different network structures to test
                     fill([t(events(i,:)), fliplr(t(events(i,:)))], [0, 0, size(spikes_V_m, 1), size(spikes_V_m, 1)], 'k', 'FaceAlpha', 0.2, 'EdgeColor', 'none')
                 end
             end
-            plotSpikeRaster( spikes_V_m, 'TimePerBin', parameters.dt, 'PlotType', 'scatter'); 
+            plotSpikeRaster( [spikes_V_m(network.E_indices,:);  spikes_V_m(network.I_indices,:)], 'TimePerBin', parameters.dt, 'PlotType', 'scatter'); 
             ylabel('Cell'); xlabel('Time (s)'); 
+            
 
             movmeanWindow = (1/parameters.dt) * 0.05;
             meanPopRate = movmean(mean(spikes_V_m, 1)/parameters.dt, movmeanWindow);

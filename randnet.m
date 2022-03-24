@@ -5,7 +5,7 @@
 
 clear all
 
-saveFlag = 0; % 1 to save simulation results
+saveFlag = 1; % 1 to save simulation results
 selectPath = 0; % 1 to select save destination, 0 to save in current dir
 plotResults = 1; % 1 to plot basic simulation results
 
@@ -58,7 +58,7 @@ G_std = -19*10^-9; % STD of the input conductance G_in, if using randn()
 G_mean = 0* 10^-12; % mean of the input conductance G_in, if using randn()
 
 % Poisson input parameters
-usePoisson = 0; % 1 to use poisson spike inputs, 0 for randn() input
+usePoisson = 1; % 1 to use poisson spike inputs, 0 for randn() input
 % rG = 1000; Wgin = 3.25e-9
 rG = 500; % input spiking rate, if using poisson inputs
 W_gin = 5.4*10^-9; % increase in conductance, if using poisson inputs
@@ -73,42 +73,33 @@ p_E = 0.75; %probability of an excitatory neuron
 %no global inhibition, and scale upward for scaled connectivity.
 I_strength = 1;
 only_global = 0; %Set this flag to 1 if you want global inhibition to override random inhibitory connections given by "create_cluters"
+global_inhib = 1; 
 p_I = 0.5; % probability of an I cell connecting to any other cell
 
 %How many tests of different initializations to run
 test_val_max = 1; %This value can be modified as you see fit
 
 
+include_all = 1; % if a neuron is not in any cluster, swap connections
+
 %% Parameters for sequence analysis
 
-% IEI = 0.05; %inter-event-interval (s) the elapsed time between spikes to count separate events
 IEI = 0.02; %inter-event-interval (s) the elapsed time between spikes to count separate events
 
 bin_width = 5*10^(-3); %5 ms bin
 
 %TEST 1: The number of neurons participating in a sequence must pass a threshold:
-event_cutoff = 0.25; %0.25; %fraction of neurons that have to be involved to constitute a successful event
+event_cutoff = 0.10; %0.25; %fraction of neurons that have to be involved to constitute a successful event
 
 %TEST 2: The firing rate must fall within a realistic range
-min_avg_fr = 0.02;
-max_avg_fr = 1.5;
-
-% TEST 3: The sequence(s) of firing is(are) within reasonable lengths
-min_avg_length = 0.02;
-max_avg_length = 0.15;
-
-
-%{
-%TEST 1: The number of neurons participating in a sequence must pass a threshold:
-event_cutoff = 0.05; %0.25; %fraction of neurons that have to be involved to constitute a successful event
-%TEST 2: The firing rate must fall within a realistic range
-min_avg_fr = 0.02;
-max_avg_fr = 3;
+min_avg_fr = 0.01;
+max_avg_fr = 3.0;
 
 % TEST 3: The sequence(s) of firing is(are) within reasonable lengths
 min_avg_length = 0.01;
 max_avg_length = 0.5;
-%}
+
+
 
 %% Save parameters to a structure and to computer
 w = whos;
@@ -177,7 +168,7 @@ for i = 1:1%10 %how many different network structures to test
     end
     
 
-    network = create_clusters(parameters, 'seed', i, 'include_all', 1, 'global_inhib', 1);
+    network = create_clusters(parameters, 'seed', i, 'include_all', parameters.include_all, 'global_inhib', parameters.global_inhib);
     if saveFlag
         save(strcat(net_save_path,'/network.mat'),'network');
     end
@@ -317,4 +308,8 @@ for i = 1:1%10 %how many different network structures to test
     end
     
 end %End of network structure loop
+
+try; disp(events); end
+
+structfun(@sum, network_spike_sequences.nonspiking_neurons)
 

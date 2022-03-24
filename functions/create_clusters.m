@@ -44,12 +44,11 @@ function [network] = create_clusters(parameters, varargin)
     
     rng(seed)
     
-    %SET UP NETWORK
+    
     %Decide which neurons are inhib and excit 
     all_indices = [1:parameters.n];
     I_indices = datasample(all_indices,parameters.n_I,'Replace',false); %indices of inhibitory neurons
     E_indices = find(~ismember(all_indices,I_indices)); %indices of excitatory neurons
-    
 
     %Create clusters by randomly selecting cluster_n neurons for each
     cluster_mat = zeros(parameters.clusters,parameters.n);
@@ -92,9 +91,7 @@ function [network] = create_clusters(parameters, varargin)
     end
     
     
-    
-    % Below was previously outside this function % % %
-    
+
     %Add in global inhibition, added to individual connections already
     %given. If global inhibition overrides any pre-set connections with
     %inhibitory neurons, reset values to global inhibition values.
@@ -104,16 +101,15 @@ function [network] = create_clusters(parameters, varargin)
         conns(I_indices,:) = conns(I_indices,:) + parameters.I_strength*(rand([parameters.n*(1-parameters.p_E), parameters.n]) < parameters.p_I);
     end
     
-     
-    network.n_EE = sum(conns(E_indices,E_indices),'all'); %number of E-E connections
-    network.n_EI = sum(conns(E_indices,I_indices),'all'); %number of E-I connections
-    network.n_II = sum(conns(I_indices,I_indices),'all'); %number of I-I connections
-    network.n_IE = sum(conns(I_indices,E_indices),'all'); %number of I-E connections
- 
     %SAVE NETWORK STRUCTURE
     network = struct;
     network.cluster_mat = cluster_mat;
     network.conns = conns;
+    network.seed = seed;
+    network.n_EE = sum(network.conns(E_indices,E_indices),'all'); %number of E-E connections
+    network.n_EI = sum(network.conns(E_indices,I_indices),'all'); %number of E-I connections
+    network.n_II = sum(network.conns(I_indices,I_indices),'all'); %number of I-I connections
+    network.n_IE = sum(network.conns(I_indices,E_indices),'all'); %number of I-E connections
     network.I_indices = I_indices;
     network.E_indices = E_indices;
     

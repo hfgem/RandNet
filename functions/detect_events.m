@@ -101,7 +101,7 @@ function [network_spike_sequences, network_cluster_sequences, overallResults] = 
                     spike_order = unique(e_spikes_x,'stable');
                     network_spike_sequences(ithTest).spike_order.(strcat('sequence_',string(e_i))) = spike_order;
                     %store ranks for each neuron
-                    ranks_vec = zeros(1,numel(indices));
+                    ranks_vec = nan(1,numel(indices));
                     for k = 1:length(spike_order)
                         n_ind = spike_order(k);
                         ranks_vec(1,n_ind) = k;

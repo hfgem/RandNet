@@ -74,7 +74,7 @@ p_I = 0.5; % probability of an I cell connecting to any other cell
 test_val_max = 1; % How many tests of different initializations to run
 include_all = 1; % if a neuron is not in any cluster, take cluster membership from a highly connected neuron
 
-E_events_only = 1; % if 1, only consider E-cells for detect_events
+E_events_only = 0; % if 1, only consider E-cells for detect_events
 
 %% Parameters for sequence analysis
 
@@ -230,7 +230,6 @@ for i = 1:1%10 %how many different network structures to test
                     for e_i = 1:num_events
                         
                         spike_ranks = network_spike_sequences(ithTest).spike_ranks.(strcat('sequence_',string(e_i)));
-                        spike_ranks(spike_ranks==0)=nan;
                         if E_events_only
                             [~, Ie] = sort(spike_ranks);
                             eventSpikes = [spikes_V_m(network.E_indices(Ie),events(e_i,1):events(e_i,2)); ...

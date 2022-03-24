@@ -104,6 +104,7 @@ function [network] = create_clusters(parameters, varargin)
     network.n_EI = sum(network.conns(E_indices,I_indices),'all'); %number of E-I connections
     network.n_II = sum(network.conns(I_indices,I_indices),'all'); %number of I-I connections
     network.n_IE = sum(network.conns(I_indices,E_indices),'all'); %number of I-E connections
+    network.all_indices = all_indices;
     network.I_indices = I_indices;
     network.E_indices = E_indices;
     

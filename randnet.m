@@ -36,14 +36,14 @@ E_K = -80*10^(-3); %potassium reversal potential (V) %-75 or -80 mV
 E_L = -70*10^(-3); %leak reversal potential (V) %-60 - -70 mV range
 G_L = 25*10^(-9); %leak conductance (S) %10 - 30 nS range
 C_m = 0.4*10^(-9); %total membrane capacitance (F) %Huge range from 0.1 - 100 pF
-V_m_noise = 10^(-4); %magnitude of noise to use in membrane potential simulation (V)
+V_m_noise = 0.0*10^(-3); % 10^(-4); %magnitude of noise to use in membrane potential simulation (V)
 V_th = -50*10^(-3); %threshold membrane potential (V)
 V_reset = -70*10^(-3); %reset membrane potential (V)
 V_syn_E = 0; %synaptic reversal potential (excitatory)
 V_syn_I = -70*10^(-3); %synaptic reversal potential (inhibitory) %generally -70 pr -80 mV
 %______Split del_G_syn______
 del_G_syn_E_E = 9.5*10^(-9); %synaptic conductance step following spike (S)
-del_G_syn_I_I = 1.4*del_G_syn_E_E; %synaptic conductance step following spike (S)
+del_G_syn_I_I = 0; %1.4*del_G_syn_E_E; %synaptic conductance step following spike (S)
 del_G_syn_E_I = del_G_syn_E_E; %synaptic conductance step following spike (S)
 del_G_syn_I_E = 1.4*del_G_syn_E_E; %synaptic conductance step following spike (S)
 
@@ -67,14 +67,14 @@ conn_prob = 0.08; %set a total desired connection probability
 p_E = 0.75; %probability of an excitatory neuron
 
 %Global Inhibition
-global_inhib = 1; % if 1, I-cells are not clusterd and have connection probability p_I
+global_inhib = 1; % if 1, I-cells are not clustered and have connection probability p_I
 p_I = 0.5; % probability of an I cell connecting to any other cell
 
 
 test_val_max = 1; % How many tests of different initializations to run
 include_all = 1; % if a neuron is not in any cluster, take cluster membership from a highly connected neuron
 
-E_events_only = 0; % if 1, only consider E-cells for detect_events
+E_events_only = 1; % if 1, only consider E-cells for detect_events
 
 %% Parameters for sequence analysis
 

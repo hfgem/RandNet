@@ -38,6 +38,8 @@ function [network] = create_clusters(parameters, varargin)
                 include_all = varargin{i+1};
             case  'global_inhib'
                 global_inhib = varargin{i+1};
+            otherwise
+                error('create_clusters: Unknown input')
         end
     end
     

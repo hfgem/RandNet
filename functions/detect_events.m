@@ -26,6 +26,8 @@ function [network_spike_sequences, network_cluster_sequences, overallResults] = 
         switch varargin{i}
             case 'E_events_only'
                 E_events_only = varargin{i+1};
+            otherwise
+                error('detect_events: Unknown input')
         end
     end
     

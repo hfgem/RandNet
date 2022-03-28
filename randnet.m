@@ -28,7 +28,9 @@ parameters.t_max = 2; %maximum amount of time (s)
 parameters.dt = 0.1*10^(-3); %timestep (s)
 
 % Basic model parameters
+% tau_E ~= 10 ms from direct data, DOI: 10.1126/science.aaf1836
 parameters.tau_syn_E = 2*10^(-3); % Exc. synaptic decay time constant (s) PF19=50ms, HF18=10ms for figs 7-8 and longer for earlier figs
+% tau_I ~= 1.2-8 ms from direct data, https://doi.org/10.1073/pnas.192233099
 parameters.tau_syn_I = 5*10^(-3);  % Inh. synaptic decay time constant (s) PF19=5ms,  HF18=10ms for figs 7-8 and for earlier figs
 parameters.tau_stdp = 5*10^(-3); %STDP time constant (s)                 
 parameters.E_K = -80*10^(-3); %potassium reversal potential (V) %-75 or -80 mV

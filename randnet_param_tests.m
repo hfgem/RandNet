@@ -27,7 +27,7 @@
 %% Save Path + Load Parameters
 addpath('functions')
 
-saveFlag = 0 % 1 to save simulation results
+saveFlag = 1 % 1 to save simulation results
 selectSavePath = 0; % 1 to select save destination, 0 to save in results dir
 selectLoadPath = 0; % 1 to select load source, 0 to load from results dir
 plotResults = 1; % 1 to plot basic simulation results

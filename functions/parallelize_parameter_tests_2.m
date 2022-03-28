@@ -87,7 +87,63 @@ function [avg_mat, allResults] = parallelize_parameter_tests_2(parameters,num_ne
         mat = zeros(num_inits,4);
         initResults = cell(1, num_inits);
         for j = 1:num_inits
-            [mat(j,:), initResults{j}] = parallelize_network_tests_2(parameters, network, j); 
+            seed = j;
+
+            %Create input conductance variable
+            if parameters.usePoisson
+                G_in = zeros(parameters.n, parameters.t_steps+1);
+                for k = 2:(parameters.t_steps+1)
+                    G_in(:,k) = G_in(:,k-1)*exp(-parameters.dt/parameters.tau_syn_E);
+                    G_in(:,k) = G_in(:,k) + parameters.W_gin * [rand(parameters.n, 1) < (parameters.dt*parameters.rG)];
+                end
+            else
+                G_in = (parameters.G_std*randn(parameters.n,parameters.t_steps+1))+parameters.G_mean;
+                G_in(G_in<0) = 0;
+            end
+            parameters.('G_in') = G_in;
+
+            %Create Storage Variables
+            V_m = zeros(parameters.n,parameters.t_steps+1); %membrane potential for each neuron at each timestep
+            V_m(:,1) = parameters.V_reset + randn([parameters.n,1])*parameters.V_m_noise; %set all neurons to baseline reset membrane potential with added noise
+            %Run model
+            [V_m, ~, ~, ~, ~] = randnet_calculator(parameters, seed, network, V_m);
+            clear I_syn G_syn_I G_syn_E
+
+            %Find spike profile
+            spikes_V_m = V_m >= parameters.V_th;
+            [spikes_x,spikes_t] = find(spikes_V_m);
+            spiking_neurons = unique(spikes_x, 'stable');
+
+            % detect events and compute outputs
+            network_spike_sequences = struct; 
+            network_cluster_sequences = struct;
+            [network_spike_sequences, network_cluster_sequences, outputVec] = detect_events(parameters, network, V_m , j, network_spike_sequences, network_cluster_sequences);
+
+            % Overall simulation statistics
+            allTrialResults.ithInit = j;
+            try
+                allTrialResults.numEvents = numel(network_spike_sequences(j).event_lengths); % number of detected events
+            catch
+                allTrialResults.numEvents = [];
+            end
+            allTrialResults.fracFire =  mean(sum(spikes_V_m, 2)>0); % Fraction of cells that fire at all during simulation
+            allTrialResults.meanRate = mean(sum(spikes_V_m, 2)/parameters.t_max); % mean over cells' average firing rate
+            allTrialResults.stdRate = std(sum(spikes_V_m, 2)/parameters.t_max); % STD over cells' average firing rate
+
+            % Stats for each detected event
+            try
+                allTrialResults.eventLength = network_spike_sequences(j).event_lengths; % duration in seconds of all detected events
+            catch
+                allTrialResults.eventLength = [];
+            end
+            try
+                allTrialResults.eventParticipation = structfun( @mean , network_spike_sequences(j).nonspiking_neurons )'; % fraction of cells that fired in each event
+            catch
+                allTrialResults.eventParticipation = [];
+            end
+    
+            mat(j,:) = outputVec; initResults{j} = allTrialResults;
+            % [mat(j,:), initResults{j}] = parallelize_network_tests_2(parameters, network, j); 
         end
         allResults{ithNet} = initResults;
         mat(isnan(mat)) = 0;

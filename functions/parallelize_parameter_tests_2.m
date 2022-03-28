@@ -85,7 +85,6 @@ function [avg_mat, allResults] = parallelize_parameter_tests_2(parameters,num_ne
         network = create_clusters(parameters, 'seed', ithNet, 'include_all', parameters.include_all, 'global_inhib', parameters.global_inhib);
         
         mat = zeros(num_inits,4);
-        initResults = cell(1, num_inits);
         for j = 1:num_inits
             seed = j;
 
@@ -120,32 +119,31 @@ function [avg_mat, allResults] = parallelize_parameter_tests_2(parameters,num_ne
             [network_spike_sequences, network_cluster_sequences, outputVec] = detect_events(parameters, network, V_m , j, network_spike_sequences, network_cluster_sequences);
 
             % Overall simulation statistics
-            allTrialResults.ithInit = j;
+            allResults{ithNet}{j}.ithInit = j;
             try
-                allTrialResults.numEvents = numel(network_spike_sequences(j).event_lengths); % number of detected events
+                allResults{ithNet}{j}.numEvents = numel(network_spike_sequences(j).event_lengths); % number of detected events
             catch
-                allTrialResults.numEvents = [];
+                allResults{ithNet}{j}.numEvents = [];
             end
-            allTrialResults.fracFire =  mean(sum(spikes_V_m, 2)>0); % Fraction of cells that fire at all during simulation
-            allTrialResults.meanRate = mean(sum(spikes_V_m, 2)/parameters.t_max); % mean over cells' average firing rate
-            allTrialResults.stdRate = std(sum(spikes_V_m, 2)/parameters.t_max); % STD over cells' average firing rate
+            allResults{ithNet}{j}.fracFire =  mean(sum(spikes_V_m, 2)>0); % Fraction of cells that fire at all during simulation
+            allResults{ithNet}{j}.meanRate = mean(sum(spikes_V_m, 2)/parameters.t_max); % mean over cells' average firing rate
+            allResults{ithNet}{j}.stdRate = std(sum(spikes_V_m, 2)/parameters.t_max); % STD over cells' average firing rate
 
             % Stats for each detected event
             try
-                allTrialResults.eventLength = network_spike_sequences(j).event_lengths; % duration in seconds of all detected events
+                allResults{ithNet}{j}.eventLength = network_spike_sequences(j).event_lengths; % duration in seconds of all detected events
             catch
-                allTrialResults.eventLength = [];
+                allResults{ithNet}{j}.eventLength = [];
             end
             try
-                allTrialResults.eventParticipation = structfun( @mean , network_spike_sequences(j).nonspiking_neurons )'; % fraction of cells that fired in each event
+                allResults{ithNet}{j}.eventParticipation = structfun( @mean , network_spike_sequences(j).nonspiking_neurons )'; % fraction of cells that fired in each event
             catch
-                allTrialResults.eventParticipation = [];
+                allResults{ithNet}{j}.eventParticipation = [];
             end
     
-            mat(j,:) = outputVec; initResults{j} = allTrialResults;
-            % [mat(j,:), initResults{j}] = parallelize_network_tests_2(parameters, network, j); 
+            mat(j,:) = outputVec; 
+            %allResults{ithNet}{j} = allTrialResults;
         end
-        allResults{ithNet} = initResults;
         mat(isnan(mat)) = 0;
         resp_mat(ithNet,:) = sum(mat,1) ./ sum(mat > 0,1); %Only averaging those that did successfully produce data        
         

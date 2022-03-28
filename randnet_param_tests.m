@@ -27,7 +27,7 @@
 %% Save Path + Load Parameters
 addpath('functions')
 
-saveFlag = 1 % 1 to save simulation results
+saveFlag = 0 % 1 to save simulation results
 selectSavePath = 0; % 1 to select save destination, 0 to save in results dir
 selectLoadPath = 0; % 1 to select load source, 0 to load from results dir
 plotResults = 1; % 1 to plot basic simulation results
@@ -146,13 +146,13 @@ num_files = size(parameterSets_vec, 2);
 nUpdateWaitbar(num_files, h); % Dummy call to nUpdateWaitbar to initialise
 afterEach(D, @nUpdateWaitbar);
 
-gcp % starts parallel pool if not already running
+gcp; % starts parallel pool if not already running
 tic
-resultsLinear = zeros(4, size(parameterSets_vec, 2));
-resultsStruct = cell(1, size(parameterSets_vec, 2));
+resultsMatLinear = zeros(4, size(parameterSets_vec, 2));
+resultsStructLinear = cell(1, size(parameterSets_vec, 2));
 parfor ithParamSet = 1:size(parameterSets_vec, 2)
     
-    [resultsLinear(:,ithParamSet), resultsStruct{ithParamSet}] = parallelize_parameter_tests_2(...
+    [resultsMatLinear(:,ithParamSet), resultsStructLinear{ithParamSet}] = parallelize_parameter_tests_2(...
                 parameters, num_nets, num_inits, parameterSets_vec, ithParamSet);
     send(D, 1);
 end
@@ -160,11 +160,18 @@ runTime = toc
 
 %% Format results matrix
 resultsMat = zeros(W_gin_n, del_G_syn_E_E_n, del_G_syn_I_E_n, 4);
-for i = 1:size(resultsLinear, 2)
+resultsStruct = struct;
+for i = 1:size(resultsMatLinear, 2)
     ind1 = find(parameterSets_vec(1,i)==W_gin_vec);
     ind2 = find(parameterSets_vec(2,i)==del_G_syn_E_E_vec);
     ind3 = find(parameterSets_vec(3,i)==del_G_syn_I_E_vec);
-    resultsMat(ind1,ind2,ind3,:) = resultsLinear(:,i);
+    resultsMat(ind1,ind2,ind3,:) = resultsMatLinear(:,i);
+    
+    for j = 1:num_nets
+        for k = 1:num_inits
+            resultsStruct(ind1,ind2,ind3, j, k).results = resultsStructLinear{i}{j}{k};
+        end
+    end
 end
 
 num_spikers = resultsMat(:,:,:,1);

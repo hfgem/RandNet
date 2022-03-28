@@ -1,5 +1,5 @@
 function [network_spike_sequences, network_cluster_sequences, overallResults] = detect_events(parameters, ...
-                    network, V_m , ithTest, network_spike_sequences, network_cluster_sequences)
+                    network, V_m , ithTest, network_spike_sequences, network_cluster_sequences, varargin)
     %_________
     %ABOUT: This function detects events from the activity in V_m and the
     %event criterion parameters in "paramters"
@@ -18,9 +18,27 @@ function [network_spike_sequences, network_cluster_sequences, overallResults] = 
     %   network_cluster_sequences = struct of cluster sequences
     %_________
     
+    % Defaults for optional parameters
+    E_events_only = 0;   % if 1, only consider E_cells for events
+    
+    % Read in optional parameters, to overwrite above defaults
+    for i=1:2:length(varargin)
+        switch varargin{i}
+            case 'E_events_only'
+                E_events_only = varargin{i+1};
+            otherwise
+                error('detect_events: Unknown input')
+        end
+    end
     
     %Find spike profile
-    spikes_V_m = V_m >= parameters.V_th;
+    if E_events_only
+        indices = network.E_indices;
+    else
+        indices = network.all_indices;
+    end
+    spikes_V_m = V_m(indices,:) >= parameters.V_th;
+    
     [spikes_x,spikes_t] = find(spikes_V_m);
     % max_time = max(spikes_t);
     spiking_neurons = unique(spikes_x, 'stable');
@@ -35,7 +53,7 @@ function [network_spike_sequences, network_cluster_sequences, overallResults] = 
         
     %TEST 1: The number of neurons participating in a sequence must
     %pass a threshold:
-    if length(spiking_neurons) >= parameters.event_cutoff*parameters.n
+    if length(spiking_neurons) >= parameters.event_cutoff*numel(indices)
 
 
         %TEST 2: The firing rate must fall within a realistic range
@@ -52,7 +70,7 @@ function [network_spike_sequences, network_cluster_sequences, overallResults] = 
                     last_time = s_i;
                     spike_count = spike_count + 1;
                 else
-                    if (last_start ~= last_time) && (spike_count > parameters.event_cutoff*parameters.n) %weed out events w/ too few spikes
+                    if (last_start ~= last_time) && (spike_count > parameters.event_cutoff*numel(indices)) %weed out events w/ too few spikes
                         events = [events; [last_start, last_time]]; %#ok<AGROW> %add the last range of spikes to the events vector
                         event_lengths = [event_lengths, (last_time - last_start)*parameters.dt]; %#ok<*AGROW>
                     end
@@ -61,7 +79,7 @@ function [network_spike_sequences, network_cluster_sequences, overallResults] = 
                     spike_count = 1;
                 end
             end
-            if (last_start ~= last_time) && (spike_count > parameters.event_cutoff*parameters.n) %weed out events w/ too few spikes
+            if (last_start ~= last_time) && (spike_count > parameters.event_cutoff*numel(indices)) %weed out events w/ too few spikes
                 events = [events; [last_start, last_time]]; %#ok<AGROW> %add the last interval
                 event_lengths = [event_lengths, (last_time - last_start)*parameters.dt]; %#ok<*SAGROW>
             end
@@ -85,7 +103,7 @@ function [network_spike_sequences, network_cluster_sequences, overallResults] = 
                     spike_order = unique(e_spikes_x,'stable');
                     network_spike_sequences(ithTest).spike_order.(strcat('sequence_',string(e_i))) = spike_order;
                     %store ranks for each neuron
-                    ranks_vec = zeros(1,parameters.n);
+                    ranks_vec = nan(1,numel(indices));
                     for k = 1:length(spike_order)
                         n_ind = spike_order(k);
                         ranks_vec(1,n_ind) = k;
@@ -101,7 +119,7 @@ function [network_spike_sequences, network_cluster_sequences, overallResults] = 
                 %Find cluster sequence per event by moving bin
                 bin_size = ceil(parameters.bin_width/parameters.dt); %number of timesteps to use in a bin
                 for e_i = 1:num_events
-                    cluster_spikes = network.cluster_mat*spikes_V_m(:,events(e_i,1):events(e_i,2));
+                    cluster_spikes = network.cluster_mat(:,indices)*spikes_V_m(:,events(e_i,1):events(e_i,2));
                     cluster_mov_sum = movsum(cluster_spikes',bin_size)';
                     network_cluster_sequences(ithTest).clusters.(strcat('sequence_',string(e_i))) = cluster_spikes;
                     network_cluster_sequences(ithTest).movsum.(strcat('sequence_',string(e_i))) = cluster_mov_sum;

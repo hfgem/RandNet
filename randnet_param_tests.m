@@ -68,7 +68,7 @@ parameters.min_avg_length = 0;
 parameters.max_avg_length = inf;
 
 parameters.t_max = 10;
-% parameters.t_max = 2;
+parameters.t_max = 2;
 
 %%
 %___________________________________
@@ -99,14 +99,14 @@ num_nets = 3;
 num_inits = 1;
 test_n = 50; % Number of parameters to test (each)
 
-%{  
+
 % % temp, for testing code
 num_nets = 2;
 num_inits = 1;
 test_n = 3;
 assert(parameters.usePoisson==1)
 % %
-%}  
+
 
 
 %Parameter 1: coefficient of input conductance
@@ -247,8 +247,6 @@ if plotResults
 end
 
 %% Functions 
-
-
 function p = nUpdateWaitbar(data, h)
 % https://www.mathworks.com/matlabcentral/answers/660793-help-with-parfor-progress-bar-using-data-queue
 persistent TOTAL COUNT H

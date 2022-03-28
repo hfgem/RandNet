@@ -82,29 +82,7 @@ function [avg_mat, allResults] = parallelize_parameter_tests_2(parameters,num_ne
     allResults = cell(1, num_nets) ;
     for ithNet = 1:num_nets
         
-        rng(ithNet,'twister') %set random number generator for network structure
-        all_indices = [1:parameters.n];
-        I_indices = datasample(all_indices,parameters.n_I,'Replace',false); %indices of inhibitory neurons
-        E_indices = find(~ismember(all_indices,I_indices)); %indices of excitatory neurons
-        [cluster_mat, conns] = create_clusters(parameters, ithNet, 1);
-        clear all_indices
-        
-        %Add in global inhibition, added to individual connections already
-        %given. If global inhibition overrides any pre-set connections with
-        %inhibitory neurons, reset values to global inhibition values.
-        if parameters.only_global
-            conns(I_indices,:) = parameters.I_strength*(rand([parameters.n*(1-parameters.p_E), parameters.n]) < parameters.p_I);
-        else
-            conns(I_indices,:) = conns(I_indices,:) + parameters.I_strength*(rand([parameters.n*(1-parameters.p_E), parameters.n]) < parameters.p_I);
-        end
-        
-        %Save network structure
-        network = struct;
-        network(1).cluster_mat = cluster_mat;
-        network(1).conns = conns;
-        network(1).I_indices = I_indices;
-        network(1).E_indices = E_indices;
-        clear cluster_mat conns I_indices E_indices
+        network = create_clusters(parameters, 'seed', ithNet, 'include_all', parameters.include_all, 'global_inhib', parameters.global_inhib);
         
         mat = zeros(num_inits,3);
         initResults = cell(1, num_inits);

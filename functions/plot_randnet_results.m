@@ -1,4 +1,4 @@
-function plot_randnet_results(parameters, network, V_m, G_in, network_spike_sequences, ithTest)
+function plot_randnet_results(parameters, network, V_m, G_in, network_spike_sequences, ithTest, net_save_path)
 
 %Find spike profile
 spikes_V_m = V_m >= parameters.V_th;

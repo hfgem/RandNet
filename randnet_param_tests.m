@@ -21,7 +21,6 @@
 % New parallelized parameter grid code, based on simulation function randnet_calculator:
 % randnet_param_tests.m 
 %   ->parallelize_parameter_tests_2 
-%       ->parallelize_networks_2
 %           ->parallelize_network_tests_2
 %               ->randnet_calculator
 
@@ -58,35 +57,38 @@ param_names = fieldnames(parameters);
 
 
 %% Parameters that are different from the loaded parameters
-parameters.saveFlag = saveFlag; % needed to override the loaded parameters
-parameters.plotResults = plotResults; % needed to override the loaded parameters
 
+% Analysis parameters
+assert(parameters.E_events_only==1)
 parameters.event_cutoff = 0;
 parameters.min_avg_fr = 0.001;
 parameters.max_avg_fr= inf;
 parameters.min_avg_length = 0;
 parameters.max_avg_length = inf;
 
+% Simulation duration
 parameters.t_max = 10;
 parameters.t_max = 2;
 
-%%
-%___________________________________
-%____Define dependent parameters____
-%___________________________________
-parameters.cluster_n = min(parameters.n*2/parameters.clusters,parameters.n); %number of neurons in a cluster (for small n round(n/3), for large n round(n/5)) 
+% __Necessary to override the loaded parameters__ %
+parameters.saveFlag = saveFlag;
+parameters.plotResults = plotResults; 
 
+
+%% __Calculate Dependent Parameters__ %%
 %Interaction constants
 parameters.t_steps = parameters.t_max/parameters.dt; %number of timesteps in simulation
-parameters.syn_E = parameters.V_syn_E*ones(parameters.n,1); %vector of the synaptic reversal potential for excitatory connections
-parameters.syn_I = parameters.V_syn_I*ones(parameters.n,1); %vector of the synaptic reversal potential for inhibitory connections
+parameters.syn_E = parameters.V_syn_E; %vector of the synaptic reversal potential for excitatory connections
+parameters.syn_I = parameters.V_syn_I; %vector of the synaptic reversal potential for inhibitory connections
 parameters.IES = ceil(parameters.IEI/parameters.dt); %inter-event-steps = the number of steps to elapse between spikes
-
 %Calculate connection probabilites
+% parameters.cluster_n = min(parameters.n*2/parameters.clusters,parameters.n); %number of neurons in a cluster (for small n round(n/3), for large n round(n/5)) 
+parameters.cluster_n = round((parameters.mnc*parameters.n) / parameters.clusters) ; % Rather than above method, explicitly declare mnc as a parameter
 parameters.npairs = parameters.n*(parameters.n-1); %total number of possible neuron connections
 parameters.nclusterpairs = parameters.cluster_n*(parameters.cluster_n - 1)*parameters.clusters; %total number of possible intra-cluster connections
 parameters.cluster_prob = min(parameters.conn_prob*parameters.npairs/parameters.nclusterpairs,1); %0.2041; %intra-cluster connection probability
 parameters.n_I = round((1-parameters.p_E)*parameters.n); %number of inhibitory neurons
+% -- Dependent parameters -- %
 
 if saveFlag
     save(strcat(save_path,'/parameters.mat'),'parameters')
@@ -106,7 +108,6 @@ num_inits = 1;
 test_n = 3;
 assert(parameters.usePoisson==1)
 % %
-
 
 
 %Parameter 1: coefficient of input conductance
@@ -145,7 +146,7 @@ num_files = size(parameterSets_vec, 2);
 nUpdateWaitbar(num_files, h); % Dummy call to nUpdateWaitbar to initialise
 afterEach(D, @nUpdateWaitbar);
 
-gcp % start parallel pool is not already running
+gcp % starts parallel pool if not already running
 tic
 resultsLinear = zeros(3, size(parameterSets_vec, 2));
 resultsStruct = cell(1, size(parameterSets_vec, 2));
@@ -179,11 +180,6 @@ if saveFlag
 end
 
 %% Visualize Value Grid Search Results
-
-%Recall:
-%Parameter 1:
-%Parameter 2:
-%Parameter 3:
 
 if plotResults
     

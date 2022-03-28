@@ -78,13 +78,13 @@ function [avg_mat, allResults] = parallelize_parameter_tests_2(parameters,num_ne
     parameters.del_G_syn_I_E = parameterSets_vec(3,ithParamSet);
     
     %Run network initialization code
-    resp_mat = zeros(num_nets, 3);
+    resp_mat = zeros(num_nets, 4);
     allResults = cell(1, num_nets) ;
     for ithNet = 1:num_nets
         
         network = create_clusters(parameters, 'seed', ithNet, 'include_all', parameters.include_all, 'global_inhib', parameters.global_inhib);
         
-        mat = zeros(num_inits,3);
+        mat = zeros(num_inits,4);
         initResults = cell(1, num_inits);
         for j = 1:num_inits
             [mat(j,:), initResults{j}] = parallelize_network_tests_2(parameters, network, j); 

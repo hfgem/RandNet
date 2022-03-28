@@ -27,7 +27,7 @@
 %% Save Path + Load Parameters
 addpath('functions')
 
-saveFlag = 1 % 1 to save simulation results
+saveFlag = 0 % 1 to save simulation results
 selectSavePath = 0; % 1 to select save destination, 0 to save in results dir
 selectLoadPath = 0; % 1 to select load source, 0 to load from results dir
 plotResults = 1; % 1 to plot basic simulation results
@@ -148,7 +148,7 @@ afterEach(D, @nUpdateWaitbar);
 
 gcp % starts parallel pool if not already running
 tic
-resultsLinear = zeros(3, size(parameterSets_vec, 2));
+resultsLinear = zeros(4, size(parameterSets_vec, 2));
 resultsStruct = cell(1, size(parameterSets_vec, 2));
 parfor ithParamSet = 1:size(parameterSets_vec, 2)
     
@@ -159,7 +159,7 @@ end
 runTime = toc
 
 %% Format results matrix
-resultsMat = zeros(W_gin_n, del_G_syn_E_E_n, del_G_syn_I_E_n, 3);
+resultsMat = zeros(W_gin_n, del_G_syn_E_E_n, del_G_syn_I_E_n, 4);
 for i = 1:size(resultsLinear, 2)
     ind1 = find(parameterSets_vec(1,i)==W_gin_vec);
     ind2 = find(parameterSets_vec(2,i)==del_G_syn_E_E_vec);
@@ -170,6 +170,7 @@ end
 num_spikers = resultsMat(:,:,:,1);
 avg_fr = resultsMat(:,:,:,2);
 avg_event_length = resultsMat(:,:,:,3);
+nEvents = resultsMat(:,:,:,4);
 
 if saveFlag
     save(strcat(save_path,'/results.mat'),'resultsMat', 'resultsStruct', '-v7.3')
@@ -187,17 +188,23 @@ if plotResults
     num_spikers_G_I = squeeze(mean(num_spikers,3));
     avg_fr_G_I = squeeze(mean(avg_fr,3));
     avg_event_length_G_I = squeeze(mean(avg_event_length,3));
+    avg_n_events_G_I = squeeze(mean(nEvents,3));
     figure;
-    subplot(1,3,1)
+    subplot(1,4,1)
     imagesc(W_gin_vec, del_G_syn_E_E_vec, num_spikers_G_I)
     c1 = colorbar(); c1.Label.String = 'Number of Neurons';
     title('Number of Spiking Neurons'); xlabel('W_{EE}'); ylabel('G_{in}')
-    subplot(1,3,2)
+    subplot(1,4,2)
     imagesc(W_gin_vec, del_G_syn_E_E_vec, avg_fr_G_I)
     c2 = colorbar(); c2.Label.String = "Hz";
     title('Average Firing Rate'); xlabel('W_{EE}'); ylabel('G_{in}')
-    subplot(1,3,3)
+    subplot(1,4,3)
     imagesc(W_gin_vec, del_G_syn_E_E_vec, avg_event_length_G_I)
+    c3 = colorbar(); c3.Label.String = "Seconds";
+    title('Average Event Length'); xlabel('W_{EE}'); ylabel('G_{in}')
+    clear c1 c2 c3
+    subplot(1,4,4)
+    imagesc(W_gin_vec, del_G_syn_E_E_vec, avg_n_events_G_I)
     c3 = colorbar(); c3.Label.String = "Seconds";
     title('Average Event Length'); xlabel('W_{EE}'); ylabel('G_{in}')
     clear c1 c2 c3

@@ -77,6 +77,9 @@ function [avg_mat, allResults] = parallelize_parameter_tests_2(parameters,num_ne
     parameters.del_G_syn_E_E = parameterSets_vec(2,ithParamSet);
     parameters.del_G_syn_I_E = parameterSets_vec(3,ithParamSet);
     
+    % update any parameters that are dependent on a varied parameter
+    parameters = set_depedent_parameters(parameters);
+
     %Run network initialization code
     resp_mat = zeros(num_nets, 4);
     allResults = cell(1, num_nets) ;

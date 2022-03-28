@@ -44,16 +44,13 @@ if saveFlag & ~isfolder(save_path)
     mkdir(save_path);
 end
 
-%Load parameters
-% Save path
+% Load parameters
 if selectLoadPath
     load_path = uigetdir('/Users/hannahgermaine/Documents/PhD/');
 else
     load_path = [pwd, '/results'];
 end
-
 load(strcat(load_path,'/parameters.mat'))
-param_names = fieldnames(parameters);
 
 
 %% Parameters that are different from the loaded parameters
@@ -75,12 +72,13 @@ parameters.saveFlag = saveFlag;
 parameters.plotResults = plotResults; 
 
 
-%% __set/update Dependent Parameters__ %%
+%% __set/update dependent parameters__ %%
 parameters = set_depedent_parameters(parameters);
 
 if saveFlag
     save(strcat(save_path,'/parameters.mat'),'parameters')
 end
+
 
 %% Set Up Grid Search Parameters
 
@@ -116,14 +114,9 @@ del_G_syn_I_E_Max = 1.3300e-08;
 del_G_syn_I_E_n = 1;
 del_G_syn_I_E_vec = linspace(del_G_syn_I_E_Min, del_G_syn_I_E_Max, del_G_syn_I_E_n);
 
-
-%Combined into one parameter vector to pass
+%Combined into one parameter vector to pass to parfor function
 parameterSets_vec = combvec(W_gin_vec, del_G_syn_E_E_vec, del_G_syn_I_E_vec);
 
-%Save parameter values
-%if saveFlag
-%    save(strcat(save_path,'/parameter_vec.mat'),'parameter_vec','-v7.3')
-%end
 
 %% Run Grid Search With Spike Stats Returned
 
@@ -168,6 +161,7 @@ avg_event_length = resultsMat(:,:,:,3);
 nEvents = resultsMat(:,:,:,4);
 
 if saveFlag
+    save(strcat(save_path,'/parameterSets_vec.mat'),'parameter_vec','-v7.3')
     save(strcat(save_path,'/results.mat'),'resultsMat', 'resultsStruct', '-v7.3')
    
     clear D h % Don't save pool.DataQueue or waitbar handle
@@ -190,20 +184,21 @@ if plotResults
     c1 = colorbar(); c1.Label.String = 'Number of Neurons';
     title('Number of Spiking Neurons'); xlabel('W_{EE}'); ylabel('G_{in}')
     subplot(1,4,2)
-    imagesc(W_gin_vec, del_G_syn_E_E_vec, avg_fr_G_I)
+    imagesc(W_gin_vec, del_G_syn_E_E_vec, avg_fr_G_I, 'AlphaData', ~isnan(avg_fr_G_I))
     c2 = colorbar(); c2.Label.String = "Hz";
     title('Average Firing Rate'); xlabel('W_{EE}'); ylabel('G_{in}')
     subplot(1,4,3)
-    imagesc(W_gin_vec, del_G_syn_E_E_vec, avg_event_length_G_I)
+    imagesc(W_gin_vec, del_G_syn_E_E_vec, avg_event_length_G_I, 'AlphaData', ~isnan(avg_event_length_G_I))
     c3 = colorbar(); c3.Label.String = "Seconds";
     title('Average Event Length'); xlabel('W_{EE}'); ylabel('G_{in}')
     clear c1 c2 c3
     subplot(1,4,4)
-    imagesc(W_gin_vec, del_G_syn_E_E_vec, avg_n_events_G_I)
-    c3 = colorbar(); c3.Label.String = "Seconds";
-    title('Average Event Length'); xlabel('W_{EE}'); ylabel('G_{in}')
+    imagesc(W_gin_vec, del_G_syn_E_E_vec, avg_n_events_G_I, 'AlphaData', ~isnan(avg_n_events_G_I))
+    c3 = colorbar(); c3.Label.String = "Event count";
+    title('Average number of events'); xlabel('W_{EE}'); ylabel('G_{in}')
     clear c1 c2 c3
     
+    %{
     % 1 v 3
     num_spikers_G_S = squeeze(mean(num_spikers,2));
     avg_fr_G_S = squeeze(mean(avg_fr,2));
@@ -241,6 +236,7 @@ if plotResults
     c3 = colorbar(); c3.Label.String = "Seconds";
     title('Average Event Length'); xlabel('W_{IE}'); ylabel('W_{EE}')
     clear c1 c2 c3
+    %}
     
 end
 

@@ -1,7 +1,7 @@
 %RandNet Project - random networks with global inhibition and their ability
 %to produce sequences
 
-%% Save Path
+%% Simulation options and save path
 
 clear all
 
@@ -16,92 +16,97 @@ else
 end
 addpath('functions')
 
-%% Initialization
+%% Initialize parameters
 
-%____________________________
-%___Independent Parameters___
-%____________________________
+% Network structure parameters
+parameters.n = 200; %number of neurons
+parameters.clusters = 10; % Number of clusters in the network
+parameters.mnc = 2; % mean number of clusters each neuron is a member of
 
-%Neuron and cluster counts
-n = 200; %number of neurons
-clusters = round(n/20); %number of clusters of neurons (for small n round(n/5), for large n round(n/20)) 
+% Time
+parameters.t_max = 2; %maximum amount of time (s)
+parameters.dt = 0.1*10^(-3); %timestep (s)
 
-%Interaction constants
-t_max = 2; %maximum amount of time (s)
-dt = 0.1*10^(-3); %timestep (s)
-tau_syn_E = 2*10^(-3); %AMPA synaptic decay time constant (s) [Ignoring NMDA as slow and weak]
-tau_syn_I = 5*10^(-3); %GABA synaptic decay time constant (s)
-tau_stdp = 5*10^(-3); %STDP time constant (s)
-E_K = -80*10^(-3); %potassium reversal potential (V) %-75 or -80 mV
-E_L = -70*10^(-3); %leak reversal potential (V) %-60 - -70 mV range
-G_L = 25*10^(-9); %leak conductance (S) %10 - 30 nS range
-C_m = 0.4*10^(-9); %total membrane capacitance (F) %Huge range from 0.1 - 100 pF
-V_m_noise = 0.0*10^(-3); % 10^(-4); %magnitude of noise to use in membrane potential simulation (V)
-V_th = -50*10^(-3); %threshold membrane potential (V)
-V_reset = -70*10^(-3); %reset membrane potential (V)
-V_syn_E = 0; %synaptic reversal potential (excitatory)
-V_syn_I = -70*10^(-3); %synaptic reversal potential (inhibitory) %generally -70 pr -80 mV
-%______Split del_G_syn______
-del_G_syn_E_E = 9.5*10^(-9); %synaptic conductance step following spike (S)
-del_G_syn_I_I = 0; %1.4*del_G_syn_E_E; %synaptic conductance step following spike (S)
-del_G_syn_E_I = del_G_syn_E_E; %synaptic conductance step following spike (S)
-del_G_syn_I_E = 1.4*del_G_syn_E_E; %synaptic conductance step following spike (S)
+% Basic model parameters
+parameters.tau_syn_E = 2*10^(-3); % Exc. synaptic decay time constant (s) PF19=50ms, HF18=10ms for figs 7-8 and longer for earlier figs
+parameters.tau_syn_I = 5*10^(-3);  % Inh. synaptic decay time constant (s) PF19=5ms,  HF18=10ms for figs 7-8 and for earlier figs
+parameters.tau_stdp = 5*10^(-3); %STDP time constant (s)                 
+parameters.E_K = -80*10^(-3); %potassium reversal potential (V) %-75 or -80 mV
+parameters.E_L = -70*10^(-3); %leak reversal potential (V) %-60 - -70 mV range
+parameters.G_L = 25*10^(-9); %leak conductance (S) %10 - 30 nS range
+parameters.C_m = 0.4*10^(-9); %total membrane capacitance (F) %Huge range from 0.1 - 100 pF
+parameters.V_m_noise = 0.0*10^(-3); % 10^(-4); %magnitude of noise to use in membrane potential simulation (V)
+parameters.V_th = -50*10^(-3); %threshold membrane potential (V)
+parameters.V_reset = -70*10^(-3); %reset membrane potential (V)
+parameters.V_syn_E = 0; %synaptic reversal potential (excitatory)
+parameters.V_syn_I = -70*10^(-3); %synaptic reversal potential (inhibitory) %generally -70 pr -80 mV
 
-%___________________________
-del_G_sra = 330e-09; %spike rate adaptation conductance step following spike %ranges from 1-200 *10^(-9) (S)
-tau_sra = 30*10^(-3); %spike rate adaptation time constant (s)
-%If want to have STDP, change connectivity_gain to > 0.
-connectivity_gain = 0; %0.005; %amount to increase or decrease connectivity by with each spike (more at the range of 0.002-0.005)
+% Recurrent connection strengths
+parameters.del_G_syn_E_E = 9.5*10^(-9); %synaptic conductance step following spike (S)
+parameters.del_G_syn_I_I = 0; %1.4*del_G_syn_E_E; %synaptic conductance step following spike (S)
+parameters.del_G_syn_E_I = parameters.del_G_syn_E_E; %synaptic conductance step following spike (S)
+parameters.del_G_syn_I_E = 1.4*parameters.del_G_syn_E_E; %synaptic conductance step following spike (S)
 
-% Input conductance, if using non-Poisson input
-G_std = -19*10^-9; % STD of the input conductance G_in, if using randn()
-G_mean = 0* 10^-12; % mean of the input conductance G_in, if using randn()
+% SRA parameters
+parameters.del_G_sra = 330e-09; %spike rate adaptation conductance step following spike %ranges from 1-200 *10^(-9) (S)
+parameters.tau_sra = 30*10^(-3); %spike rate adaptation time constant (s)
 
-% Poisson input parameters
-usePoisson = 1; % 1 to use poisson spike inputs, 0 for randn() input
-rG = 500; % input spiking rate, if using poisson inputs
-W_gin = 5.4*10^-9; % increase in conductance, if using poisson inputs
+% STDP parameters
+parameters.connectivity_gain = 0; %0.005; %amount to increase or decrease connectivity by with each spike (more at the range of 0.002-0.005)
 
-%Calculate connection probabilites
-conn_prob = 0.08; %set a total desired connection probability
-p_E = 0.75; %probability of an excitatory neuron
+% Input parameters:
+% Poisson input
+parameters.usePoisson = 1; % 1 to use poisson spike inputs, 0 for randn() input
+parameters.rG = 500; % input spiking rate, if using poisson inputs
+parameters.W_gin = 5.4*10^-9; % increase in conductance, if using poisson inputs
+% Conductance input
+parameters.G_std = -19*10^-9; % STD of the input conductance G_in, if using randn()
+parameters.G_mean = 0* 10^-12; % mean of the input conductance G_in, if using randn()
 
-%Global Inhibition
-global_inhib = 1; % if 1, I-cells are not clustered and have connection probability p_I
-p_I = 0.5; % probability of an I cell connecting to any other cell
+% Network connection parameters
+parameters.conn_prob = 0.08; %set a total desired connection probability
+parameters.p_E = 0.75; %probability of an excitatory neuron
+parameters.include_all = 1; % if a neuron is not in any cluster, take cluster membership from a highly connected neuron
+parameters.global_inhib = 1; % if 1, I-cells are not clustered and have connection probability p_I
+parameters.p_I = 0.5; % probability of an I cell connecting to any other cell
 
+% Number of trials per net to run
+parameters.test_val_max = 1; % How many tests of different initializations to run
 
-test_val_max = 1; % How many tests of different initializations to run
-include_all = 1; % if a neuron is not in any cluster, take cluster membership from a highly connected neuron
-
-E_events_only = 1; % if 1, only consider E-cells for detect_events
 
 %% Parameters for sequence analysis
 
-IEI = 0.02; %inter-event-interval (s) the elapsed time between spikes to count separate events
-
-bin_width = 5*10^(-3); %5 ms bin
+parameters.E_events_only = 1; % if 1, only consider E-cells for detect_events
+parameters.IEI = 0.02; %inter-event-interval (s) the elapsed time between spikes to count separate events
+parameters.bin_width = 5*10^(-3); %5 ms bin
 
 %TEST 1: The number of neurons participating in a sequence must pass a threshold:
-event_cutoff = 0.10; %0.25; %fraction of neurons that have to be involved to constitute a successful event
+parameters.event_cutoff = 0.10; %0.25; %fraction of neurons that have to be involved to constitute a successful event
 
 %TEST 2: The firing rate must fall within a realistic range
-min_avg_fr = 0.01;
-max_avg_fr = 3.0;
+parameters.min_avg_fr = 0.01;
+parameters.max_avg_fr = 3.0;
 
 % TEST 3: The sequence(s) of firing is(are) within reasonable lengths
-min_avg_length = 0.01;
-max_avg_length = 0.5;
+parameters.min_avg_length = 0.01;
+parameters.max_avg_length = 0.5;
 
 
+%% __Calculate Dependent Parameters__ %%
+%Interaction constants
+parameters.t_steps = parameters.t_max/parameters.dt; %number of timesteps in simulation
+parameters.syn_E = parameters.V_syn_E; %vector of the synaptic reversal potential for excitatory connections
+parameters.syn_I = parameters.V_syn_I; %vector of the synaptic reversal potential for inhibitory connections
+parameters.IES = ceil(parameters.IEI/parameters.dt); %inter-event-steps = the number of steps to elapse between spikes
+%Calculate connection probabilites
+% parameters.cluster_n = min(parameters.n*2/parameters.clusters,parameters.n); %number of neurons in a cluster (for small n round(n/3), for large n round(n/5)) 
+parameters.cluster_n = round((parameters.mnc*parameters.n) / parameters.clusters) ; % Rather than above method, explicitly declare mnc as a parameter
+parameters.npairs = parameters.n*(parameters.n-1); %total number of possible neuron connections
+parameters.nclusterpairs = parameters.cluster_n*(parameters.cluster_n - 1)*parameters.clusters; %total number of possible intra-cluster connections
+parameters.cluster_prob = min(parameters.conn_prob*parameters.npairs/parameters.nclusterpairs,1); %0.2041; %intra-cluster connection probability
+parameters.n_I = round((1-parameters.p_E)*parameters.n); %number of inhibitory neurons
+% -- Dependent parameters -- %
 
-%% Save parameters to a structure and to computer
-w = whos;
-parameters = struct;
-for a = 1:length(w) 
-    parameters.(w(a).name) = eval(w(a).name); 
-end
-clear w a
 
 %% Create Networks and Check Spike Progression
 %Runs through a series of different random number generator seeds to change
@@ -110,35 +115,6 @@ clear w a
 
 %If uploading a parameter file, uncomment the next line
 % load(strcat(save_path,'/parameters.mat'))
-
-%____________________________________
-%___Calculate Dependent Parameters___
-%____________________________________
-cluster_n = min(parameters.n*2/parameters.clusters,parameters.n); %number of neurons in a cluster (for small n round(n/3), for large n round(n/5)) 
-parameters.('cluster_n') = cluster_n;
-
-%Interaction constants
-t_steps = parameters.t_max/parameters.dt; %number of timesteps in simulation
-syn_E = parameters.V_syn_E*ones(parameters.n,1); %vector of the synaptic reversal potential for excitatory connections
-syn_I = parameters.V_syn_I*ones(parameters.n,1); %vector of the synaptic reversal potential for inhibitory connections
-IES = ceil(parameters.IEI/parameters.dt); %inter-event-steps = the number of steps to elapse between spikes
-%save for easy calculations
-parameters.('t_steps') = t_steps;
-parameters.('syn_E') = syn_E;
-parameters.('syn_I') = syn_I;
-parameters.('IES') = IES;
-
-%Calculate connection probabilites
-npairs = parameters.n*(parameters.n-1); %total number of possible neuron connections
-nclusterpairs = parameters.cluster_n*(parameters.cluster_n - 1)*parameters.clusters; %total number of possible intra-cluster connections
-cluster_prob = min(parameters.conn_prob*npairs/nclusterpairs,1); %0.2041; %intra-cluster connection probability
-n_I = round((1-parameters.p_E)*parameters.n); %number of inhibitory neurons
-%save for easy calculations
-parameters.('npairs') = npairs;
-parameters.('nclusterpairs') = nclusterpairs;
-parameters.('cluster_prob') = cluster_prob;
-parameters.('p_I') = p_I;
-parameters.('n_I') = n_I;
 
 if saveFlag & ~isfolder(save_path)
     mkdir(save_path);
@@ -160,12 +136,11 @@ for i = 1:1%10 %how many different network structures to test
         mkdir(net_save_path);
     end
     
-
+    % Generete ith network structure
     network = create_clusters(parameters, 'seed', i, 'include_all', parameters.include_all, 'global_inhib', parameters.global_inhib);
     if saveFlag
         save(strcat(net_save_path,'/network.mat'),'network');
     end
-
     
     %RUN MODEL AND CALCULATE
     %Run through every cluster initialization and store relevant data and
@@ -193,7 +168,7 @@ for i = 1:1%10 %how many different network structures to test
 
         %Create Storage Variables
         V_m = zeros(parameters.n,parameters.t_steps+1); %membrane potential for each neuron at each timestep
-        V_m(:,1) = parameters.V_reset + randn([parameters.n,1])*(10^(-3))*sqrt(dt); %set all neurons to baseline reset membrane potential with added noise
+        V_m(:,1) = parameters.V_reset + randn([parameters.n,1])*(10^(-3))*sqrt(parameters.dt); %set all neurons to baseline reset membrane potential with added noise
         
         seed = ithTest;
         
@@ -230,7 +205,7 @@ for i = 1:1%10 %how many different network structures to test
                     for e_i = 1:num_events
                         
                         spike_ranks = network_spike_sequences(ithTest).spike_ranks.(strcat('sequence_',string(e_i)));
-                        if E_events_only
+                        if parameters.E_events_only
                             [~, Ie] = sort(spike_ranks);
                             eventSpikes = [spikes_V_m(network.E_indices(Ie),events(e_i,1):events(e_i,2)); ...
                                 spikes_V_m(network.I_indices,events(e_i,1):events(e_i,2))];
@@ -259,7 +234,7 @@ for i = 1:1%10 %how many different network structures to test
                 end      
             end
             
-            t = [0:dt:t_max];
+            t = [0:parameters.dt:parameters.t_max];
             figure; plot(t, V_m(1:2,:)); ylabel('Vm (V)'); xlabel('Time (s)'); 
             % figure; plot(t, V_m); ylabel('Vm (V)'); xlabel('Time (s)'); 
             figure; plot(t, G_in(1:2,:)); ylabel('G in (S)'); xlabel('Time (s)'); 
@@ -304,7 +279,11 @@ for i = 1:1%10 %how many different network structures to test
     
 end %End of network structure loop
 
-try; disp(events); end
+try % Print some simple simulation results
+    disp(events); 
+    structfun(@sum, network_spike_sequences.nonspiking_neurons)
+catch
+    disp('No events detected');
+end
 
-structfun(@sum, network_spike_sequences.nonspiking_neurons)
 

@@ -134,4 +134,12 @@ function [network_spike_sequences, network_cluster_sequences, overallResults] = 
     overallResults(2) = avg_fr; %average firing rate
     overallResults(3) = avg_event_length; %Average event length
     overallResults(4) = size(events, 1); % Number of events
+    
+    if size(events, 1)==0 % set results as empty, to prevent errors upon analysis
+        network_spike_sequences(ithTest).events = [];
+        network_spike_sequences(ithTest).event_lengths = [];
+        network_spike_sequences(ithTest).spike_order = [];
+        network_spike_sequences(ithTest).ranks_vec = [];
+        network_spike_sequences(ithTest).nonspiking_neurons = [];
+    end
 end

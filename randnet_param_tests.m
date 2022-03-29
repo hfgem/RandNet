@@ -96,26 +96,20 @@ assert(parameters.usePoisson==1)
 % %
 
 
-%Parameter 1: coefficient of input conductance
-W_gin_Min = 3.4*10^-9; 
-W_gin_Max = 7.4*10^-9; 
-W_gin_n = test_n;
-W_gin_vec = linspace(W_gin_Min, W_gin_Max, W_gin_n);
 
-%Parameter 2: E-E strength
-del_G_syn_E_E_Min = 7.5*10^(-9); 
-del_G_syn_E_E_Max = 11.5*10^(-9); 
-del_G_syn_E_E_n = test_n;
-del_G_syn_E_E_vec = linspace(del_G_syn_E_E_Min, del_G_syn_E_E_Max, del_G_syn_E_E_n);
+% Parameters must be a field in the parameter structure, and cannot be a
+% dependent parameter set in set_depedent_parameters
+variedParam(1).name = 'W_gin'; % 1st parameter to be varied. Must be a field in the parameter structure
+variedParam(1).range = linspace(3.4*10^-9, 7.4*10^-9, test_n); % set of values to test param1 at
 
-%Parameter 3: I-E strength
-del_G_syn_I_E_Min = 1.3300e-08; 
-del_G_syn_I_E_Max = 1.3300e-08; 
-del_G_syn_I_E_n = 1;
-del_G_syn_I_E_vec = linspace(del_G_syn_I_E_Min, del_G_syn_I_E_Max, del_G_syn_I_E_n);
+variedParam(2).name = 'del_G_syn_E_E'; % 2nd parameter to be varied
+variedParam(2).range = linspace(7.5*10^(-9), 11.5*10^(-9), test_n); % set of values to test param2 at
 
-%Combined into one parameter vector to pass to parfor function
-parameterSets_vec = combvec(W_gin_vec, del_G_syn_E_E_vec, del_G_syn_I_E_vec);
+variedParam(3).name = 'del_G_syn_I_E'; % 2nd parameter to be varied
+variedParam(3).range =  linspace(1.3300e-08, 1.3300e-08, 1); % set of values to test param2 at
+
+% Combine into one parameter vector to pass to parfor function
+parameterSets_vec = combvec(variedParam(:).range);
 
 
 %% Run Grid Search With Spike Stats Returned
@@ -134,23 +128,26 @@ resultsStructLinear = cell(1, size(parameterSets_vec, 2));
 parfor ithParamSet = 1:size(parameterSets_vec, 2)
     
     [resultsMatLinear(:,ithParamSet), resultsStructLinear{ithParamSet}] = parallelize_parameter_tests_2(...
-                parameters, num_nets, num_inits, parameterSets_vec, ithParamSet);
+                parameters, num_nets, num_inits, parameterSets_vec, ithParamSet, variedParam);
     send(D, 1);
 end
 runTime = toc
 
 %% Format results matrix
-resultsMat = zeros(W_gin_n, del_G_syn_E_E_n, del_G_syn_I_E_n, 4);
+
+resultsMat = zeros([cellfun(@length, {variedParam.range}), 4]);
 resultsStruct = struct;
 for i = 1:size(resultsMatLinear, 2)
-    ind1 = find(parameterSets_vec(1,i)==W_gin_vec);
-    ind2 = find(parameterSets_vec(2,i)==del_G_syn_E_E_vec);
-    ind3 = find(parameterSets_vec(3,i)==del_G_syn_I_E_vec);
-    resultsMat(ind1,ind2,ind3,:) = resultsMatLinear(:,i);
+    
+    structIndices = {};
+    for ithParam = 1:size(variedParam, 2)
+        structIndices{ithParam} = find(parameterSets_vec(ithParam,i)==variedParam(ithParam).range);
+    end
+    resultsMat(structIndices{:},:) = resultsMatLinear(:,i);
     
     for j = 1:num_nets
         for k = 1:num_inits
-            resultsStruct(ind1,ind2,ind3, j, k).results = resultsStructLinear{i}{j}{k};
+            resultsStruct(structIndices{:}, j, k).results = resultsStructLinear{i}{j}{k};
         end
     end
 end
@@ -173,6 +170,11 @@ end
 
 if plotResults
     
+    % select index of parameters to plot against each other
+    % Note: below code is not generalized to arbitrary n of variedParam
+    paramPlot1 = 1;
+    paramPlot2 = 2;
+
     % 1 v 2
     num_spikers_G_I = squeeze(mean(num_spikers,3));
     avg_fr_G_I = squeeze(mean(avg_fr,3));
@@ -180,63 +182,24 @@ if plotResults
     avg_n_events_G_I = squeeze(mean(nEvents,3));
     figure;
     subplot(1,4,1)
-    imagesc(W_gin_vec, del_G_syn_E_E_vec, num_spikers_G_I)
+    imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, num_spikers_G_I)
     c1 = colorbar(); c1.Label.String = 'Number of Neurons';
-    title('Number of Spiking Neurons'); xlabel('W_{EE}'); ylabel('G_{in}')
+    title('Number of Spiking Neurons'); xlabel(variedParam(paramPlot1).name); ylabel(variedParam(paramPlot2).name)
     subplot(1,4,2)
-    imagesc(W_gin_vec, del_G_syn_E_E_vec, avg_fr_G_I, 'AlphaData', ~isnan(avg_fr_G_I))
+    imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, avg_fr_G_I, 'AlphaData', ~isnan(avg_fr_G_I))
     c2 = colorbar(); c2.Label.String = "Hz";
-    title('Average Firing Rate'); xlabel('W_{EE}'); ylabel('G_{in}')
+    title('Average Firing Rate'); xlabel(variedParam(paramPlot1).name); ylabel(variedParam(paramPlot2).name)
     subplot(1,4,3)
-    imagesc(W_gin_vec, del_G_syn_E_E_vec, avg_event_length_G_I, 'AlphaData', ~isnan(avg_event_length_G_I))
+    imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, avg_event_length_G_I, 'AlphaData', ~isnan(avg_event_length_G_I))
     c3 = colorbar(); c3.Label.String = "Seconds";
-    title('Average Event Length'); xlabel('W_{EE}'); ylabel('G_{in}')
+    title('Average Event Length'); xlabel(variedParam(paramPlot1).name); ylabel(variedParam(paramPlot2).name)
     clear c1 c2 c3
     subplot(1,4,4)
-    imagesc(W_gin_vec, del_G_syn_E_E_vec, avg_n_events_G_I, 'AlphaData', ~isnan(avg_n_events_G_I))
+    imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, avg_n_events_G_I, 'AlphaData', ~isnan(avg_n_events_G_I))
     c3 = colorbar(); c3.Label.String = "Event count";
-    title('Average number of events'); xlabel('W_{EE}'); ylabel('G_{in}')
-    clear c1 c2 c3
-    
-    %{
-    % 1 v 3
-    num_spikers_G_S = squeeze(mean(num_spikers,2));
-    avg_fr_G_S = squeeze(mean(avg_fr,2));
-    avg_event_length_G_S = squeeze(mean(avg_event_length,2));
-    figure;
-    subplot(1,3,1)
-    imagesc(W_gin_vec, del_G_syn_I_E_vec, num_spikers_G_S)
-    c1 = colorbar(); c1.Label.String = 'Number of Neurons';
-    title('Number of Spiking Neurons'); xlabel('W_{IE}'); ylabel('G_{in}')
-    subplot(1,3,2)
-    imagesc(W_gin_vec, del_G_syn_I_E_vec, avg_fr_G_S)
-    c2 = colorbar(); c2.Label.String = "Hz";
-    title('Average Firing Rate'); xlabel('W_{IE}'); ylabel('G_{in}')
-    subplot(1,3,3)
-    imagesc(W_gin_vec, del_G_syn_I_E_vec, avg_event_length_G_S)
-    c3 = colorbar(); c3.Label.String = "Seconds";
-    title('Average Event Length'); xlabel('W_{IE}'); ylabel('G_{in}')
+    title('Average number of events'); xlabel(variedParam(paramPlot1).name); ylabel(variedParam(paramPlot2).name)
     clear c1 c2 c3
 
-    % 2 v 3
-    num_spikers_I_S = squeeze(mean(num_spikers,1));
-    avg_fr_I_S = squeeze(mean(avg_fr,1));
-    avg_event_length_I_S = squeeze(mean(avg_event_length,1));
-    figure;
-    subplot(1,3,1)
-    imagesc(del_G_syn_E_E_vec, del_G_syn_I_E_vec, num_spikers_I_S)
-    c1 = colorbar(); c1.Label.String = 'Number of Neurons';
-    title('Number of Spiking Neurons'); xlabel('W_{IE}'); ylabel('W_{EE}')
-    subplot(1,3,2)
-    imagesc(del_G_syn_E_E_vec, del_G_syn_I_E_vec, avg_fr_I_S)
-    c2 = colorbar(); c2.Label.String = "Hz";
-    title('Average Firing Rate'); xlabel('W_{IE}'); ylabel('W_{EE}')
-    subplot(1,3,3)
-    imagesc(del_G_syn_E_E_vec, del_G_syn_I_E_vec, avg_event_length_I_S)
-    c3 = colorbar(); c3.Label.String = "Seconds";
-    title('Average Event Length'); xlabel('W_{IE}'); ylabel('W_{EE}')
-    clear c1 c2 c3
-    %}
     
 end
 

@@ -1,5 +1,5 @@
 function [avg_mat, allResults] = parallelize_parameter_tests_2(parameters,num_nets,...
-    num_inits, parameterSets_vec, ithParamSet)
+    num_inits, parameterSets_vec, ithParamSet, variedParam)
     %_________
     %ABOUT: This function runs through a series of commands to test the
     %outputs of a particular parameter set in comparison to a strict set of
@@ -72,12 +72,14 @@ function [avg_mat, allResults] = parallelize_parameter_tests_2(parameters,num_ne
     %       3. average event length
     %_________
     
+
     % Set up parameter values for current parameter set
-    parameters.W_gin = parameterSets_vec(1,ithParamSet);
-    parameters.del_G_syn_E_E = parameterSets_vec(2,ithParamSet);
-    parameters.del_G_syn_I_E = parameterSets_vec(3,ithParamSet);
+    for i = 1:size(variedParam, 2)
+        parameters.(variedParam(i).name) = parameterSets_vec(i,ithParamSet);
+    end
+
     
-    % update any parameters that are dependent on a varied parameter
+    % Update any parameters that are dependent on a varied parameter
     parameters = set_depedent_parameters(parameters);
 
     %Run network initialization code

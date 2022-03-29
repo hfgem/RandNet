@@ -105,11 +105,15 @@ variedParam(1).range = linspace(3.4*10^-9, 7.4*10^-9, test_n); % set of values t
 variedParam(2).name = 'del_G_syn_E_E'; % 2nd parameter to be varied
 variedParam(2).range = linspace(7.5*10^(-9), 11.5*10^(-9), test_n); % set of values to test param2 at
 
-variedParam(3).name = 'del_G_syn_I_E'; % 2nd parameter to be varied
-variedParam(3).range =  linspace(1.3300e-08, 1.3300e-08, 1); % set of values to test param2 at
+parameters.del_G_syn_I_E = 1.3300e-08;
+% variedParam(3).name = 'del_G_syn_I_E'; % 2nd parameter to be varied
+% variedParam(3).range =  linspace(1.3300e-08, 1.3300e-08, 1); % set of values to test param2 at
 
 % Combine into one parameter vector to pass to parfor function
 parameterSets_vec = combvec(variedParam(:).range);
+
+
+
 
 
 %% Run Grid Search With Spike Stats Returned
@@ -152,10 +156,13 @@ for i = 1:size(resultsMatLinear, 2)
     end
 end
 
-num_spikers = resultsMat(:,:,:,1);
-avg_fr = resultsMat(:,:,:,2);
-avg_event_length = resultsMat(:,:,:,3);
-nEvents = resultsMat(:,:,:,4);
+nSlices = repmat({':'},ndims(resultsMat)-1,1); % get n slices, ":", 
+
+num_spikers = resultsMat(nSlices{:},1);
+avg_fr = resultsMat(nSlices{:},2);
+avg_event_length = resultsMat(nSlices{:},3);
+nEvents = resultsMat(nSlices{:},4);
+
 
 if saveFlag
     save(strcat(save_path,'/parameterSets_vec.mat'),'parameter_vec','-v7.3')

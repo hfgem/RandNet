@@ -27,7 +27,7 @@
 %% Save Path + Load Parameters
 addpath('functions')
 
-saveFlag = 0 % 1 to save simulation results
+saveFlag = 1 % 1 to save simulation results
 selectSavePath = 0; % 1 to select save destination, 0 to save in results dir
 selectLoadPath = 0; % 1 to select load source, 0 to load from results dir
 plotResults = 1; % 1 to plot basic simulation results
@@ -65,7 +65,7 @@ parameters.max_avg_length = inf;
 
 % Simulation duration
 parameters.t_max = 10;
-parameters.t_max = 2;
+%parameters.t_max = 2;
 
 % __Necessary to override the loaded parameters__ %
 parameters.saveFlag = saveFlag;
@@ -83,15 +83,15 @@ end
 %% Set Up Grid Search Parameters
 
 %Test parameters
-num_nets = 3;
+num_nets = 5;
 num_inits = 1;
-test_n = 50; % Number of parameters to test (each)
+test_n = 75; % Number of parameters to test (each)
 
 
 % % temp, for testing code
-num_nets = 2;
-num_inits = 1;
-test_n = 10;
+% num_nets = 2;
+% num_inits = 1;
+% test_n = 10;
 assert(parameters.usePoisson==1)
 % %
 
@@ -106,10 +106,10 @@ parameters.W_gin = 6.5e-9;
 
 % parameters.del_G_syn_E_E = 9e-9;
 variedParam(2).name = 'del_G_syn_E_E'; % 2nd parameter to be varied
-variedParam(2).range = linspace(7.5*10^(-9), 11.5*10^(-9), test_n); % set of values to test param2 at
+variedParam(2).range = linspace(7.0*10^(-9), 12.0*10^(-9), test_n); % set of values to test param2 at
 
 variedParam(1).name = 'clusters'; % 2nd parameter to be varied
-variedParam(1).range =  [2:1:20]; % set of values to test param2 at
+variedParam(1).range =  [2:1:21]; % set of values to test param2 at
 
 
 parameters.del_G_syn_I_E = 1.3300e-08;
@@ -171,10 +171,13 @@ nEvents = resultsMat(nSlices{:},4);
 
 
 if saveFlag
-    save(strcat(save_path,'/parameterSets_vec.mat'),'parameter_vec','-v7.3')
+    save(strcat(save_path,'/parameterSets_vec.mat'),'parameterSets_vec','-v7.3')
     save(strcat(save_path,'/results.mat'),'resultsMat', 'resultsStruct', '-v7.3')
    
+    
     clear D h % Don't save pool.DataQueue or waitbar handle
+    clear resultsStructLinear resultsMatLinear % don't save redundant data
+    
     % Save everything, with unique filename based on date-time
     save( strcat(save_path,'/results_', datestr(now,'yyyy-mm-ddTHH-MM'), '.mat'), '-v7.3') 
 end
@@ -194,20 +197,20 @@ if plotResults
     avg_event_length_G_I = squeeze(mean(avg_event_length,3));
     avg_n_events_G_I = squeeze(mean(nEvents,3));
     figure;
-    subplot(1,4,1)
+    subplot(2,2,1)
     imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, num_spikers_G_I)
     c1 = colorbar(); c1.Label.String = 'Number of Neurons';
     title('Number of Spiking Neurons'); xlabel(variedParam(paramPlot1).name); ylabel(variedParam(paramPlot2).name)
-    subplot(1,4,2)
+    subplot(2,2,2)
     imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, avg_fr_G_I, 'AlphaData', ~isnan(avg_fr_G_I))
     c2 = colorbar(); c2.Label.String = "Hz";
     title('Average Firing Rate'); xlabel(variedParam(paramPlot1).name); ylabel(variedParam(paramPlot2).name)
-    subplot(1,4,3)
+    subplot(2,2,3)
     imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, avg_event_length_G_I, 'AlphaData', ~isnan(avg_event_length_G_I))
     c3 = colorbar(); c3.Label.String = "Seconds";
     title('Average Event Length'); xlabel(variedParam(paramPlot1).name); ylabel(variedParam(paramPlot2).name)
     clear c1 c2 c3
-    subplot(1,4,4)
+    subplot(2,2,4)
     imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, avg_n_events_G_I, 'AlphaData', ~isnan(avg_n_events_G_I))
     c3 = colorbar(); c3.Label.String = "Event count";
     title('Average number of events'); xlabel(variedParam(paramPlot1).name); ylabel(variedParam(paramPlot2).name)

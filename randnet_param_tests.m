@@ -83,7 +83,8 @@ end
 %% Set Up Grid Search Parameters
 
 %Test parameters
-num_nets = 5;
+num_nets = 10;
+% num_nets = 4;
 num_inits = 1;
 test_n = 75; % Number of parameters to test (each)
 
@@ -101,15 +102,19 @@ assert(parameters.usePoisson==1)
 % dependent parameter set in set_depedent_parameters
 
 parameters.W_gin = 6.5e-9;
-% variedParam(1).name = 'W_gin'; % 1st parameter to be varied. Must be a field in the parameter structure
-% variedParam(1).range = linspace(3.4*10^-9, 7.4*10^-9, test_n); % set of values to test param1 at
+%variedParam(1).name = 'W_gin'; % 1st parameter to be varied. Must be a field in the parameter structure
+%variedParam(1).range = linspace(3.4*10^-9, 7.4*10^-9, test_n); % set of values to test param1 at
 
-% parameters.del_G_syn_E_E = 9e-9;
-variedParam(2).name = 'del_G_syn_E_E'; % 2nd parameter to be varied
-variedParam(2).range = linspace(7.0*10^(-9), 12.0*10^(-9), test_n); % set of values to test param2 at
+parameters.del_G_syn_E_E = 9e-9;
+%variedParam(2).name = 'del_G_syn_E_E'; % 2nd parameter to be varied
+%variedParam(2).range = linspace(7.0*10^(-9), 12.0*10^(-9), test_n); % set of values to test param2 at
 
-variedParam(1).name = 'clusters'; % 2nd parameter to be varied
-variedParam(1).range =  [2:1:21]; % set of values to test param2 at
+
+variedParam(1).name = 'mnc'; % 2nd parameter to be varied
+variedParam(1).range = linspace(1, 21, 81); % set of values to test param2 at
+
+variedParam(2).name = 'clusters'; % 2nd parameter to be varied
+variedParam(2).range = [2:1:21]; % set of values to test param2 at
 
 
 parameters.del_G_syn_I_E = 1.3300e-08;
@@ -120,9 +125,15 @@ parameters.del_G_syn_I_E = 1.3300e-08;
 parameterSets_vec = combvec(variedParam(:).range);
 
 
+% Exclude cases where mnc>clusters
+if isequal(variedParam(1).name, 'mnc') && isequal(variedParam(2).name, 'clusters')
+    parameterSets_vec = parameterSets_vec(:,~[parameterSets_vec(1,:)>parameterSets_vec(2,:)]);
+end
 
 
 %% Run Grid Search With Spike Stats Returned
+
+gcp; % starts parallel pool if not already running
 
 % Waitbar code
 D = parallel.pool.DataQueue;
@@ -131,7 +142,6 @@ num_files = size(parameterSets_vec, 2);
 nUpdateWaitbar(num_files, h); % Dummy call to nUpdateWaitbar to initialise
 afterEach(D, @nUpdateWaitbar);
 
-gcp; % starts parallel pool if not already running
 tic
 resultsMatLinear = zeros(4, size(parameterSets_vec, 2));
 resultsStructLinear = cell(1, size(parameterSets_vec, 2));
@@ -145,7 +155,7 @@ runTime = toc
 
 %% Format results matrix
 
-resultsMat = zeros([cellfun(@length, {variedParam.range}), 4]);
+resultsMat = nan([cellfun(@length, {variedParam.range}), 4]);
 resultsStruct = struct;
 for i = 1:size(resultsMatLinear, 2)
     
@@ -191,27 +201,35 @@ if plotResults
     paramPlot1 = 1;
     paramPlot2 = 2;
 
-    % 1 v 2
-    num_spikers_G_I = squeeze(mean(num_spikers,3));
-    avg_fr_G_I = squeeze(mean(avg_fr,3));
-    avg_event_length_G_I = squeeze(mean(avg_event_length,3));
-    avg_n_events_G_I = squeeze(mean(nEvents,3));
+    % paramPlot1 v paramPlot2
+    num_spikers = squeeze(mean(num_spikers,3))';
+    avg_fr = squeeze(mean(avg_fr,3))';
+    avg_event_length = squeeze(mean(avg_event_length,3))';
+    avg_n_events = squeeze(mean(nEvents,3))';
+    
     figure;
     subplot(2,2,1)
-    imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, num_spikers_G_I)
+    imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, num_spikers, 'AlphaData', ~isnan(num_spikers))
+    set(gca,'YDir','normal')
     c1 = colorbar(); c1.Label.String = 'Number of Neurons';
     title('Number of Spiking Neurons'); xlabel(variedParam(paramPlot1).name); ylabel(variedParam(paramPlot2).name)
+    
     subplot(2,2,2)
-    imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, avg_fr_G_I, 'AlphaData', ~isnan(avg_fr_G_I))
+    imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, avg_fr, 'AlphaData', ~isnan(avg_fr))
+    set(gca,'YDir','normal')
     c2 = colorbar(); c2.Label.String = "Hz";
     title('Average Firing Rate'); xlabel(variedParam(paramPlot1).name); ylabel(variedParam(paramPlot2).name)
+    
     subplot(2,2,3)
-    imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, avg_event_length_G_I, 'AlphaData', ~isnan(avg_event_length_G_I))
+    imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, avg_event_length, 'AlphaData', ~isnan(avg_event_length))
+    set(gca,'YDir','normal')
     c3 = colorbar(); c3.Label.String = "Seconds";
     title('Average Event Length'); xlabel(variedParam(paramPlot1).name); ylabel(variedParam(paramPlot2).name)
     clear c1 c2 c3
+    
     subplot(2,2,4)
-    imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, avg_n_events_G_I, 'AlphaData', ~isnan(avg_n_events_G_I))
+    imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, avg_n_events, 'AlphaData', ~isnan(avg_n_events))
+    set(gca,'YDir','normal')
     c3 = colorbar(); c3.Label.String = "Event count";
     title('Average number of events'); xlabel(variedParam(paramPlot1).name); ylabel(variedParam(paramPlot2).name)
     clear c1 c2 c3

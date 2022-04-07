@@ -1,5 +1,5 @@
 function [avg_mat, allResults] = parallelize_parameter_tests_2(parameters,num_nets,...
-    num_inits, parameterSets_vec, ithParamSet)
+    num_inits, parameterSets_vec, ithParamSet, variedParam)
     %_________
     %ABOUT: This function runs through a series of commands to test the
     %outputs of a particular parameter set in comparison to a strict set of
@@ -72,11 +72,16 @@ function [avg_mat, allResults] = parallelize_parameter_tests_2(parameters,num_ne
     %       3. average event length
     %_________
     
+
     % Set up parameter values for current parameter set
-    parameters.W_gin = parameterSets_vec(1,ithParamSet);
-    parameters.del_G_syn_E_E = parameterSets_vec(2,ithParamSet);
-    parameters.del_G_syn_I_E = parameterSets_vec(3,ithParamSet);
+    for i = 1:size(variedParam, 2)
+        parameters.(variedParam(i).name) = parameterSets_vec(i,ithParamSet);
+    end
+
     
+    % Update any parameters that are dependent on a varied parameter
+    parameters = set_depedent_parameters(parameters);
+
     %Run network initialization code
     resp_mat = zeros(num_nets, 4);
     allResults = cell(1, num_nets) ;
@@ -85,17 +90,65 @@ function [avg_mat, allResults] = parallelize_parameter_tests_2(parameters,num_ne
         network = create_clusters(parameters, 'seed', ithNet, 'include_all', parameters.include_all, 'global_inhib', parameters.global_inhib);
         
         mat = zeros(num_inits,4);
-        initResults = cell(1, num_inits);
         for j = 1:num_inits
-            [mat(j,:), initResults{j}] = parallelize_network_tests_2(parameters, network, j); 
-        end
-        allResults{ithNet} = initResults;
+            seed = j;
+
+            %Create input conductance variable
+            if parameters.usePoisson
+                G_in = zeros(parameters.n, parameters.t_steps+1);
+                for k = 2:(parameters.t_steps+1)
+                    G_in(:,k) = G_in(:,k-1)*exp(-parameters.dt/parameters.tau_syn_E);
+                    G_in(:,k) = G_in(:,k) + parameters.W_gin * [rand(parameters.n, 1) < (parameters.dt*parameters.rG)];
+                end
+            else
+                G_in = (parameters.G_std*randn(parameters.n,parameters.t_steps+1))+parameters.G_mean;
+                G_in(G_in<0) = 0;
+            end
+            parameters.('G_in') = G_in;
+
+            %Create Storage Variables
+            V_m = zeros(parameters.n,parameters.t_steps+1); %membrane potential for each neuron at each timestep
+            V_m(:,1) = parameters.V_reset + randn([parameters.n,1])*parameters.V_m_noise; %set all neurons to baseline reset membrane potential with added noise
+            
+            %Run model
+            [V_m, ~, ~, ~, ~] = randnet_calculator(parameters, seed, network, V_m);
+            clear I_syn G_syn_I G_syn_E
+
+            %Find spike profile
+            spikes_V_m = V_m >= parameters.V_th;
+            [spikes_x,spikes_t] = find(spikes_V_m);
+            spiking_neurons = unique(spikes_x, 'stable');
+
+            % detect events and compute outputs
+            network_spike_sequences = struct; 
+            network_cluster_sequences = struct;
+            [network_spike_sequences, network_cluster_sequences, outputVec] = detect_events(parameters, network, V_m , j, network_spike_sequences, network_cluster_sequences);
+
+            % Overall simulation statistics
+            allResults{ithNet}{j}.ithInit = j;
+            allResults{ithNet}{j}.numEvents = numel(network_spike_sequences(j).event_lengths); % number of detected events
+            allResults{ithNet}{j}.fracFire =  mean(sum(spikes_V_m, 2)>0); % Fraction of cells that fire at all during simulation
+            allResults{ithNet}{j}.meanRate = mean(sum(spikes_V_m, 2)/parameters.t_max); % mean over cells' average firing rate
+            allResults{ithNet}{j}.stdRate = std(sum(spikes_V_m, 2)/parameters.t_max); % STD over cells' average firing rate
+
+            % Stats for each detected event
+            allResults{ithNet}{j}.eventLength = network_spike_sequences(j).event_lengths; % duration in seconds of all detected events
+            if ~isempty(network_spike_sequences(j).nonspiking_neurons)
+                allResults{ithNet}{j}.eventParticipation = structfun( @mean , network_spike_sequences(j).nonspiking_neurons )'; % fraction of cells that fired in each event
+            else
+                allResults{ithNet}{j}.eventParticipation = [];
+            end
+                
+            mat(j,:) = outputVec; 
+            %allResults{ithNet}{j} = allTrialResults;
+        end % trial loop
         mat(isnan(mat)) = 0;
         resp_mat(ithNet,:) = sum(mat,1) ./ sum(mat > 0,1); %Only averaging those that did successfully produce data        
         
-    end
+    end % Network loop
     resp_mat(isnan(resp_mat)) = 0;
     avg_mat = sum(resp_mat,1)./sum(resp_mat > 0,1); %Only averaging those that had results
 
     disp(['Parameter set ', num2str(ithParamSet), '/', num2str(size(parameterSets_vec, 2)), ' complete'])
-end
+
+end % Function

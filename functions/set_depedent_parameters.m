@@ -6,7 +6,10 @@ function parameters = set_depedent_parameters(parameters)
 parameters.t_steps = parameters.t_max/parameters.dt; %number of timesteps in simulation
 parameters.syn_E = parameters.V_syn_E; %vector of the synaptic reversal potential for excitatory connections
 parameters.syn_I = parameters.V_syn_I; %vector of the synaptic reversal potential for inhibitory connections
-parameters.IES = ceil(parameters.IEI/parameters.dt); %inter-event-steps = the number of steps to elapse between spikes
+
+if isfield(parameters, 'IEI')
+    parameters.IES = ceil(parameters.IEI/parameters.dt); %inter-event-steps = the number of steps to elapse between spikes
+end
 
 %Calculate connection probabilites
 % parameters.cluster_n = min(parameters.n*2/parameters.clusters,parameters.n); %number of neurons in a cluster (for small n round(n/3), for large n round(n/5)) 

@@ -79,6 +79,7 @@ parameters.nNets = 1; % How many networks to run
 
 %% Parameters for sequence analysis
 
+%{
 parameters.E_events_only = 1; % if 1, only consider E-cells for detect_events
 parameters.IEI = 0.02; %inter-event-interval (s) the elapsed time between spikes to count separate events
 parameters.bin_width = 5*10^(-3); %5 ms bin
@@ -93,6 +94,14 @@ parameters.max_avg_fr = 3.0;
 % TEST 3: The sequence(s) of firing is(are) within reasonable lengths
 parameters.min_avg_length = 0.01;
 parameters.max_avg_length = 0.5;
+%}
+
+% Analysis parameters for PBE detection
+parameters.PBE_min_Hz = 0.5; % minimum population mean rate during PBE
+parameters.PBE_zscore = 1.0; % minimum stds above mean rate to detect PBE
+parameters.PBE_min_dur = 30 * (1/1000); % minimum duration of a PBE
+parameters.PBE_window =  30 * (1/1000) *(1/parameters.dt); % width of gaussian kernel used to calculate mean pop activity rate
+parameters.PBE_max_combine = 10 * (1/1000); % Combine adjacent PBEs separaeted by less than this duration
 
 
 %% __set/update Dependent Parameters__ %%
@@ -174,12 +183,18 @@ for ithNet = 1:parameters.nNets
         G_var(ithTest).G_syn_I_I = G_syn_I_I;
         G_var(ithTest).G_syn_E_I = G_syn_E_I;
         
-        [network_spike_sequences, network_cluster_sequences] = detect_events(parameters, network, V_m , ithTest,...
-            network_spike_sequences, network_cluster_sequences, 'E_events_only', parameters.E_events_only);
-    
+
+        [trialResults] = detect_PBE( V_m(network.E_indices,:)>= parameters.V_th, parameters);
+        if ithTest == 1 % append trialResults struct to network results struct
+            network_spike_sequences = trialResults;
+        else
+            network_spike_sequences = [network_spike_sequences, trialResults]; 
+        end
+        
         if parameters.plotResults
             plot_randnet_results(parameters, network, V_m, G_in, network_spike_sequences, ithTest, net_save_path)
         end
+        
         
     end % trial loop
     

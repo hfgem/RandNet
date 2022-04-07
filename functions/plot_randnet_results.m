@@ -14,28 +14,30 @@ spikes_V_m = V_m >= parameters.V_th;
 max_time = max(spikes_t);
 spiking_neurons = unique(spikes_x, 'stable');
 
-
 %% If there are any detected events, plot sorted rasters
 if isfield(network_spike_sequences(ithTest), 'events')
+    
     events = network_spike_sequences(ithTest).events;
 
     %Visualize re-ordered spike sequences
-    if any(strcmp('spike_order',fieldnames(network_spike_sequences)))
+    if ~isempty(events)
+        
         f = figure;
-        axes = [];
-        num_events = size(events, 1)
+        num_events = size(events, 1);
         for e_i = 1:num_events
 
-            spike_ranks = network_spike_sequences(ithTest).spike_ranks.(strcat('sequence_',string(e_i)));
-            if parameters.E_events_only
+            spike_ranks = network_spike_sequences(ithTest).ranks_vec{e_i};
+            if numel(spike_ranks)== (parameters.p_E*parameters.n) % ranks for only E cells
                 [~, Ie] = sort(spike_ranks);
                 eventSpikes = [spikes_V_m(network.E_indices(Ie),events(e_i,1):events(e_i,2)); ...
                     spikes_V_m(network.I_indices,events(e_i,1):events(e_i,2))];
-            else
+            elseif numel(spike_ranks)==parameters.n              % ranks for all cells
                 [~, Ie] = sort(spike_ranks(network.E_indices));
                 [~, Ii] = sort(spike_ranks(network.I_indices));
                 eventSpikes = [spikes_V_m(network.E_indices(Ie),events(e_i,1):events(e_i,2)); ...
                     spikes_V_m(network.I_indices(Ii),events(e_i,1):events(e_i,2))];
+            else
+                error('Unkonwn number of cells in spike_ranks')
             end
             subplot(1,num_events,e_i)
             plotSpikeRaster( eventSpikes, 'TimePerBin', parameters.dt, 'PlotType', 'scatter', 'MarkerFormat', MarkerFormat);
@@ -95,9 +97,10 @@ yline(mean(meanPopRate)+ 2*std(meanPopRate))
 
 %% Plot E and I cell population firing rate
 
-movmeanWindow = (1/parameters.dt) * 0.05;
-% meanEPopRate = movmean(mean(spikes_V_m(network.E_indices,:), 1)/parameters.dt, movmeanWindow);
-meanEPopRate = smoothdata(mean(spikes_V_m(network.E_indices,:), 1)/parameters.dt, 'gaussian', movmeanWindow);
+meanEPopRate = smoothdata(mean(spikes_V_m(network.E_indices,:), 1)/parameters.dt, 'gaussian', parameters.PBE_window);
+
+PBEthresh = max(mean(meanEPopRate)+(parameters.PBE_zscore*std(meanEPopRate)), parameters.PBE_min_Hz); % threshold rate for PBE detection
+
 
 figure; hold on
 if exist('events')==1 
@@ -107,7 +110,7 @@ if exist('events')==1
 end
 
 % meanIPopRate = movmean(mean(spikes_V_m(network.I_indices,:), 1)/parameters.dt, movmeanWindow);
-meanIPopRate = smoothdata(mean(spikes_V_m(network.I_indices,:), 1)/parameters.dt, 'gaussian', movmeanWindow);
+meanIPopRate = smoothdata(mean(spikes_V_m(network.I_indices,:), 1)/parameters.dt, 'gaussian', parameters.PBE_window);
 yyaxis right; 
 plot(t, meanIPopRate, ':')
 ylabel('I cell mean rate (Hz)'); 
@@ -118,6 +121,7 @@ ylabel('E cell mean rate (Hz)'); xlabel('Time (s)');
 yline(mean(meanEPopRate), 'g')
 yline(mean(meanEPopRate)+ std(meanEPopRate))
 yline(mean(meanEPopRate)+ 2*std(meanEPopRate))
+yline(PBEthresh, 'r');
 
 
 end

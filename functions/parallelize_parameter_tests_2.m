@@ -90,8 +90,10 @@ function [avg_mat, allResults] = parallelize_parameter_tests_2(parameters,num_ne
         network = create_clusters(parameters, 'seed', ithNet, 'include_all', parameters.include_all, 'global_inhib', parameters.global_inhib);
         
         mat = zeros(num_inits,4);
-        for j = 1:num_inits
-            seed = j;
+        network_spike_sequences = struct; 
+        network_cluster_sequences = struct;
+        for ithTest = 1:num_inits
+            seed = ithTest;
 
             %Create input conductance variable
             if parameters.usePoisson
@@ -115,31 +117,40 @@ function [avg_mat, allResults] = parallelize_parameter_tests_2(parameters,num_ne
             clear I_syn G_syn_I G_syn_E
 
             %Find spike profile
-            spikes_V_m = V_m >= parameters.V_th;
+            spikes_V_m = V_m(network.E_indices,:) >= parameters.V_th;
             [spikes_x,spikes_t] = find(spikes_V_m);
             spiking_neurons = unique(spikes_x, 'stable');
 
             % detect events and compute outputs
-            network_spike_sequences = struct; 
-            network_cluster_sequences = struct;
-            [network_spike_sequences, network_cluster_sequences, outputVec] = detect_events(parameters, network, V_m , j, network_spike_sequences, network_cluster_sequences);
+            % [network_spike_sequences, network_cluster_sequences, outputVec] = detect_events(parameters, network, V_m , j, network_spike_sequences, network_cluster_sequences);
 
+            [trialResults] = detect_PBE( V_m(network.E_indices,:)>= parameters.V_th, parameters);
+            if ithTest == 1 % append trialResults struct to network results struct
+                network_spike_sequences = trialResults;
+            else
+                network_spike_sequences = [network_spike_sequences, trialResults]; 
+            end
+            
             % Overall simulation statistics
-            allResults{ithNet}{j}.ithInit = j;
-            allResults{ithNet}{j}.numEvents = numel(network_spike_sequences(j).event_lengths); % number of detected events
-            allResults{ithNet}{j}.fracFire =  mean(sum(spikes_V_m, 2)>0); % Fraction of cells that fire at all during simulation
-            allResults{ithNet}{j}.meanRate = mean(sum(spikes_V_m, 2)/parameters.t_max); % mean over cells' average firing rate
-            allResults{ithNet}{j}.stdRate = std(sum(spikes_V_m, 2)/parameters.t_max); % STD over cells' average firing rate
+            allResults{ithNet}{ithTest}.ithInit = ithTest;
+            allResults{ithNet}{ithTest}.numEvents = numel(network_spike_sequences(ithTest).event_lengths); % number of detected events
+            allResults{ithNet}{ithTest}.fracFire =  mean(sum(spikes_V_m, 2)>0); % Fraction of cells that fire at all during simulation
+            allResults{ithNet}{ithTest}.frac_participation = {[network_spike_sequences(ithTest).frac_spike{:}]}; % mean fraction of cells firing per event
+            allResults{ithNet}{ithTest}.meanRate = mean(sum(spikes_V_m, 2)/parameters.t_max); % mean over cells' average firing rate
+            allResults{ithNet}{ithTest}.stdRate = std(sum(spikes_V_m, 2)/parameters.t_max); % STD over cells' average firing rate
 
             % Stats for each detected event
-            allResults{ithNet}{j}.eventLength = network_spike_sequences(j).event_lengths; % duration in seconds of all detected events
-            if ~isempty(network_spike_sequences(j).nonspiking_neurons)
-                allResults{ithNet}{j}.eventParticipation = structfun( @mean , network_spike_sequences(j).nonspiking_neurons )'; % fraction of cells that fired in each event
-            else
-                allResults{ithNet}{j}.eventParticipation = [];
-            end
+            allResults{ithNet}{ithTest}.eventLength = network_spike_sequences(ithTest).event_lengths; % duration in seconds of all detected events
+            allResults{ithNet}{ithTest}.eventParticipation = mean([network_spike_sequences(ithTest).frac_spike{:}]); % fraction of cells that fired in each event
+
+            
+            % Main output statistics
+            outputVec(1) = allResults{ithNet}{ithTest}.fracFire; % fraction of spiking neurons over entire simulation
+            outputVec(2) = allResults{ithNet}{ithTest}.meanRate ; %average firing rate
+            outputVec(3) = mean(allResults{ithNet}{ithTest}.eventLength); % Average event length
+            outputVec(4) = allResults{ithNet}{ithTest}.numEvents; % Number of events
                 
-            mat(j,:) = outputVec; 
+            mat(ithTest,:) = outputVec; 
             %allResults{ithNet}{j} = allTrialResults;
         end % trial loop
         mat(isnan(mat)) = 0;

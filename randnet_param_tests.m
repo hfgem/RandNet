@@ -27,7 +27,7 @@
 %% Save Path + Load Parameters
 addpath('functions')
 
-saveFlag = 1 % 1 to save simulation results
+saveFlag = 0 % 1 to save simulation results
 selectSavePath = 0; % 1 to select save destination, 0 to save in results dir
 selectLoadPath = 0; % 1 to select load source, 0 to load from results dir
 plotResults = 1; % 1 to plot basic simulation results
@@ -56,7 +56,7 @@ load(strcat(load_path,'/parameters.mat'))
 %% Parameters that are different from the loaded parameters
 
 % Analysis parameters
-assert(parameters.E_events_only==1)
+% assert(parameters.E_events_only==1)
 parameters.event_cutoff = 0;
 parameters.min_avg_fr = 0.001;
 parameters.max_avg_fr= inf;
@@ -65,7 +65,7 @@ parameters.max_avg_length = inf;
 
 % Simulation duration
 parameters.t_max = 10;
-%parameters.t_max = 2;
+parameters.t_max = 2;
 
 % __Necessary to override the loaded parameters__ %
 parameters.saveFlag = saveFlag;
@@ -90,9 +90,9 @@ test_n = 75; % Number of parameters to test (each)
 
 
 % % temp, for testing code
-% num_nets = 2;
-% num_inits = 1;
-% test_n = 10;
+num_nets = 2;
+num_inits = 1;
+test_n = 10;
 assert(parameters.usePoisson==1)
 % %
 
@@ -102,19 +102,19 @@ assert(parameters.usePoisson==1)
 % dependent parameter set in set_depedent_parameters
 
 parameters.W_gin = 6.5e-9;
-%variedParam(1).name = 'W_gin'; % 1st parameter to be varied. Must be a field in the parameter structure
-%variedParam(1).range = linspace(3.4*10^-9, 7.4*10^-9, test_n); % set of values to test param1 at
+variedParam(1).name = 'W_gin'; % 1st parameter to be varied. Must be a field in the parameter structure
+variedParam(1).range = linspace(3.4*10^-9, 7.4*10^-9, test_n); % set of values to test param1 at
 
 parameters.del_G_syn_E_E = 9e-9;
-%variedParam(2).name = 'del_G_syn_E_E'; % 2nd parameter to be varied
-%variedParam(2).range = linspace(7.0*10^(-9), 12.0*10^(-9), test_n); % set of values to test param2 at
+variedParam(2).name = 'del_G_syn_E_E'; % 2nd parameter to be varied
+variedParam(2).range = linspace(7.0*10^(-9), 12.0*10^(-9), test_n); % set of values to test param2 at
 
 
-variedParam(1).name = 'mnc'; % 2nd parameter to be varied
-variedParam(1).range = linspace(1, 21, 81); % set of values to test param2 at
+%variedParam(1).name = 'mnc'; % 2nd parameter to be varied
+%variedParam(1).range = linspace(1, 21, 81); % set of values to test param2 at
 
-variedParam(2).name = 'clusters'; % 2nd parameter to be varied
-variedParam(2).range = [2:1:21]; % set of values to test param2 at
+%variedParam(2).name = 'clusters'; % 2nd parameter to be varied
+%variedParam(2).range = [2:1:21]; % set of values to test param2 at
 
 
 parameters.del_G_syn_I_E = 1.3300e-08;

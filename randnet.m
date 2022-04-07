@@ -210,11 +210,3 @@ for ithNet = 1:parameters.nNets
     
 end % Network loop
 
-
-try % Print some simple simulation results
-    disp(network_spike_sequences(end).events); 
-    structfun(@sum, network_spike_sequences.nonspiking_neurons)
-catch
-    disp('No events detected');
-end
-

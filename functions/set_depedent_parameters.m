@@ -18,5 +18,6 @@ parameters.npairs = parameters.n*(parameters.n-1); %total number of possible neu
 parameters.nclusterpairs = parameters.cluster_n*(parameters.cluster_n - 1)*parameters.clusters; %total number of possible intra-cluster connections
 parameters.cluster_prob = min(parameters.conn_prob*parameters.npairs/parameters.nclusterpairs,1); %0.2041; %intra-cluster connection probability
 parameters.n_I = round((1-parameters.p_E)*parameters.n); %number of inhibitory neurons
+parameters.n_E = parameters.n-parameters.n_I; %number of excitatory neurons
 
 end

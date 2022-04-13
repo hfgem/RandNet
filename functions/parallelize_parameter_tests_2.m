@@ -142,7 +142,9 @@ function [avg_mat, allResults] = parallelize_parameter_tests_2(parameters,num_ne
             % Stats for each detected event
             allResults{ithNet}{ithTest}.eventLength = network_spike_sequences(ithTest).event_lengths; % duration in seconds of all detected events
             allResults{ithNet}{ithTest}.eventParticipation = mean([network_spike_sequences(ithTest).frac_spike{:}]); % fraction of cells that fired in each event
-
+                        
+            % Save ranks_vec
+            allResults{ithNet}{ithTest}.ranksVec = network_spike_sequences(ithTest).ranks_vec;
             
             % Main output statistics
             outputVec(1) = allResults{ithNet}{ithTest}.fracFire; % fraction of spiking neurons over entire simulation

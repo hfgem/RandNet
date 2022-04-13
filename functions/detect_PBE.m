@@ -77,6 +77,7 @@ function [network_spike_sequences] = detect_PBE(spikes, parameters, varargin)
         network_spike_sequences.event_lengths = [];
         network_spike_sequences.spike_order = [];
         network_spike_sequences.frac_spike = {};
+        network_spike_sequences.ranks_vec = [];
         %network_spike_sequences.ranks_vec = [];
         %network_spike_sequences.nonspiking_neurons = [];
         
@@ -99,7 +100,7 @@ function [network_spike_sequences] = detect_PBE(spikes, parameters, varargin)
                 n_ind = spike_order(k);
                 ranks_vec(1,n_ind) = k;
             end
-            network_spike_sequences.ranks_vec{ithEvent} = ranks_vec;
+            network_spike_sequences.ranks_vec(:,ithEvent) = ranks_vec;
             network_spike_sequences.frac_spike{ithEvent} = sum(~isnan(ranks_vec))/numel(ranks_vec);
         end
                 

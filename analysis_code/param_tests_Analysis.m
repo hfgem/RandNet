@@ -7,12 +7,13 @@
 % num_nets 
 % variedParam
 
-x = variedParam(1).range;
+xParamvec = variedParam(1).range;
 xName = variedParam(1).name;
-y = variedParam(2).range;
+yParamvec = variedParam(2).range;
 yName = variedParam(2).name;
 
-op = zeros(numel(x), numel(y));
+tic
+op = zeros(numel(xParamvec), numel(yParamvec));
 for ithParam1 = 1:size(resultsStruct, 1)
     
     for ithParam2 = 1:size(resultsStruct, 2)
@@ -43,13 +44,21 @@ for ithParam1 = 1:size(resultsStruct, 1)
                 end
 
                 % Dim. Red.
-                Y_tsne = tsne(rMat);   
+                Y_tsne = tsne(rMat);  
+                Y_tsne_norm = (Y_tsne- mean(Y_tsne)) ./ std(Y_tsne) ;
                 % figure; scatter(Y_tsne(:,1),Y_tsne(:,2))
-
-
-                [~,p,KSSTAT] = kstest(Y_tsne);
-                [BF, BC] = bimodalitycoeff(Y_tsne);
+                
+                if ~isempty(Y_tsne)
+                    % [~,p,KSSTAT] = kstest(Y_tsne_norm);
+                     [BF, BC] = bimodalitycoeff(Y_tsne_norm);
+                    % [BF, BC] = bimodalitycoeff(Y_tsne);
+                else
+                    p = nan; KSSTAT = nan;
+                    BF = nan; BC = nan;
+                end
+                
                 temp(ithNet) = nanmean(BC);
+
             
             else
                 temp(ithNet) = nan;
@@ -61,14 +70,23 @@ for ithParam1 = 1:size(resultsStruct, 1)
         
     end
 end
+runTime = toc;
+disp( datestr(datenum(0,0,0,0,0,runTime),'HH:MM:SS') )
+% disp( duration(0, 0, runTime) )
 
 figure; 
-imagesc(log(op), 'AlphaData', ~isnan(op))
+% imagesc(xParamvec, yParamvec, op, 'AlphaData', ~isnan(op))
+ imagesc(xParamvec, yParamvec, op', 'AlphaData', ~isnan(op'))
 set(gca,'YDir','normal')
 colorbar
 xlabel(xName)
 ylabel(yName)
 
+% set(gca,'ColorScale','log')
+
+%%
+              
+[BF, BC] = bimodalitycoeff(Y_tsne_norm)
 
 %%%%%%%%%%%%%%%
 %% Functions %%

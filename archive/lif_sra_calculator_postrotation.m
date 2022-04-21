@@ -119,9 +119,11 @@ function [V_m, G_sra, G_syn_I, G_syn_E, conns] = lif_sra_calculator_postrotation
     end
     
     G_in = parameters.G_coeff*randn(parameters.n,parameters.t_steps+1)*parameters.G_scale;
+    G_in(G_in < 0) = 0;
     parameters.('G_in') = G_in; %save for easy calculations
     
     conns = network.conns; %separately update a connectivity matrix
+    conns_copy = conns; %separately update a connectivity matrix
     
     %TO DEPRECATE LATER: In the case that the parameters file being used 
     %does not contain V_m_noise:
@@ -148,9 +150,16 @@ function [V_m, G_sra, G_syn_I, G_syn_E, conns] = lif_sra_calculator_postrotation
     %Variables for STDP
     t_spike = zeros(parameters.n,1); %vector to store the time of each neuron's last spike, for use in STDP
     t_stdp = round(parameters.tau_stdp/parameters.dt);
+    pre_spikes = zeros(parameters.n,1);
+    pre_strength = parameters.connectivity_gain;
+    post_spikes = zeros(parameters.n,1);
+    post_strength = parameters.connectivity_gain*2; %Depression should be greater than Potentiation
     
     %Run through each timestep and calculate
     for t = 1:parameters.t_steps
+        %update STDP storage values with exponential decay
+        pre_spikes = pre_spikes + (-pre_spikes/parameters.tau_stdp)*parameters.dt;
+        post_spikes = post_spikes + (-post_spikes/parameters.tau_stdp)*parameters.dt;
         %check for spiking neurons and postsynaptic and separate into E and I
         spikers = find(V_m(:,t) >= parameters.V_th);
         t_spike(spikers) = t;
@@ -180,15 +189,18 @@ function [V_m, G_sra, G_syn_I, G_syn_E, conns] = lif_sra_calculator_postrotation
         G_syn_E(:,t+1) = G_syn_E(:,t).*exp(-parameters.dt/parameters.tau_syn_E); %excitatory conductance update
         G_syn_I(:,t+1) = G_syn_I(:,t).*exp(-parameters.dt/parameters.tau_syn_I); %inhibitory conductance update
         %______________________________________
-        %Update connection strengths via STDP
-        pre_syn_n = sum(conns(:,spikers),2) > 0; %pre-synaptic neurons
-        post_syn_n = sum(conns(spikers,:),1) > 0; %post-synaptic neurons
-        pre_syn_t = t_spike.*pre_syn_n; %spike times of pre-synaptic neurons
-        post_syn_t = t_spike.*post_syn_n'; %spike times of post-synaptic neurons
-        t_diff_pre = t - pre_syn_t; %time diff between pre-synaptic and current
-        t_diff_post = t - post_syn_t; %time diff between post-synaptic and current
-        del_conn_pre = parameters.connectivity_gain*exp(-t_diff_pre/t_stdp);
-        del_conn_post = parameters.connectivity_gain*exp(-t_diff_post/t_stdp);
-        conns(:,spikers) = conns(:,spikers) + del_conn_pre - del_conn_post; %enhance connections of those neurons that just fired
+        %Update connection strengths via continuous STDP updates
+        pre_spikes(spikers,1) = pre_spikes(spikers,1) + 1;
+        post_spikes(spikers,1) = post_spikes(spikers,1) + 1;
+        conns(spikers,:) = conns(spikers,:) + pre_strength*pre_spikes'.*(conns(spikers,:) > 0);
+        conns(:,spikers) = conns(:,spikers) + post_strength*post_spikes.*(conns(:,spikers) > 0);
     end
+    %Added saturating term to prevent connections from blowing up too high
+    %max_conn = max(conns_copy,[],'all');
+    %conns(conns > max_conn) = max_conn;
+    
+    %Added homeostatic term to maintain overall amount of connectivity
+    total_sum = sum(conns_copy,'all');
+    new_sum = sum(conns,'all');
+    conns = conns.*(total_sum/new_sum);
 end

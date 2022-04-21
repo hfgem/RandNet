@@ -99,6 +99,11 @@ parameters.max_avg_length = 0.5;
 parameters = set_depedent_parameters(parameters);
 
 
+%Save to computer
+if saveFlag == 1
+    save(strcat(save_path,'/parameters.mat'),'parameters')
+end
+
 %% Create Networks and Check Spike Progression
 %Runs through a series of different random number generator seeds to change
 %the network connectivity and setup, and then automatically outputs

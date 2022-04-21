@@ -284,6 +284,49 @@ xlabel('Matching Index')
 ylabel('Number of Occurrences')
 title({'Short Sequence Matching Indices','Excluding Overlapping Nonspiking'})
 legend()
+%Z-Scores of MI Values
+full_MI_z_score = (full_matching_index_vec - mean(full_matching_index_vec))/std(full_matching_index_vec);
+full_MI_mod_z_score = (full_matching_index_mod_vec - mean(full_matching_index_mod_vec))/std(full_matching_index_mod_vec);
+short_MI_z_score = (short_matching_index_vec - mean(short_matching_index_vec))/std(short_matching_index_vec);
+short_MI_mod_z_score = (short_matching_index_mod_vec - mean(short_matching_index_mod_vec))/std(short_matching_index_mod_vec);
+shuffle_full_MI_z_score = (shuffle_full_matching_index_vec - mean(shuffle_full_matching_index_vec))/std(shuffle_full_matching_index_vec);
+shuffle_full_MI_mod_z_score = (shuffle_full_matching_index_mod_vec - mean(shuffle_full_matching_index_mod_vec))/std(shuffle_full_matching_index_mod_vec);
+shuffle_short_MI_z_score = (shuffle_short_matching_index_vec - mean(shuffle_short_matching_index_vec))/std(shuffle_short_matching_index_vec);
+shuffle_short_MI_mod_z_score = (shuffle_short_matching_index_mod_vec - mean(shuffle_short_matching_index_mod_vec))/std(shuffle_short_matching_index_mod_vec); 
+%Plot Histograms of Z Scores
+figure;
+subplot(2,2,1)
+histogram(shuffle_full_MI_z_score,'DisplayName','Shuffled')
+hold on
+histogram(full_MI_z_score,'DisplayName','Full Sequence')
+xlabel('Matching Index')
+ylabel('Number of Occurrences')
+title('Full Sequence Matching Index Z-Scores')
+legend()
+subplot(2,2,2)
+histogram(shuffle_short_MI_z_score,'DisplayName','Shuffled')
+hold on
+histogram(short_MI_z_score,'DisplayName','Short Sequence')
+xlabel('Matching Index')
+ylabel('Number of Occurrences')
+title('Short Sequence Matching Index Z-Scores')
+legend()
+subplot(2,2,3)
+histogram(shuffle_full_MI_mod_z_score,'DisplayName','Shuffled')
+hold on
+histogram(full_MI_mod_z_score,'DisplayName','Full Sequence')
+xlabel('Matching Index')
+ylabel('Number of Occurrences')
+title({'Full Sequence Matching Index Z-Scores','Excluding Overlapping Nonspiking'})
+legend()
+subplot(2,2,4)
+histogram(shuffle_short_MI_mod_z_score,'DisplayName','Shuffled')
+hold on
+histogram(short_MI_mod_z_score,'DisplayName','Short Sequence')
+xlabel('Matching Index')
+ylabel('Number of Occurrences')
+title({'Short Sequence Matching Index Z-Scores','Excluding Overlapping Nonspiking'})
+legend()
 
 %% Matching Index with 0 Rank Nonspiking
 
@@ -342,39 +385,91 @@ penalize_nonspike = 1;
     full_shuffle_nonspike, penalize_nonspike);
 [shuffle_short_0_matching_index, shuffle_short_0_matching_index_mod] = calculate_trajectory_similarity_mi2(short_shuffle_0_nonspike, ...
     short_shuffle_nonspike, penalize_nonspike);
+%Vectorized MI Values
+full_0_matching_index_vec = nonzeros(triu(full_0_matching_index,1));
+full_0_matching_index_mod_vec = nonzeros(triu(full_0_matching_index_mod,1));
+short_0_matching_index_vec = nonzeros(triu(short_0_matching_index,1));
+short_0_matching_index_mod_vec = nonzeros(triu(short_0_matching_index_mod,1));
+shuffle_full_0_matching_index_vec = nonzeros(triu(shuffle_full_0_matching_index,1));
+shuffle_full_0_matching_index_mod_vec = nonzeros(triu(shuffle_full_0_matching_index_mod,1));
+shuffle_short_0_matching_index_vec = nonzeros(triu(shuffle_short_0_matching_index,1));
+shuffle_short_0_matching_index_mod_vec = nonzeros(triu(shuffle_short_0_matching_index_mod,1));
 %Plot Histograms of MI Values
 figure;
 subplot(2,2,1)
-histogram(full_matching_index_vec,'DisplayName','Full Sequence Matching Index')
+histogram(shuffle_full_0_matching_index_vec,'DisplayName','Shuffled Full Sequence Matching Index')
 hold on
-histogram(shuffle_full_matching_index_vec,'DisplayName','Shuffled Full Sequence Matching Index')
+histogram(full_0_matching_index_vec,'DisplayName','Full Sequence Matching Index')
 xlabel('Matching Index')
 ylabel('Number of Occurrences')
 title('Full Sequence Matching Indices')
 legend()
 subplot(2,2,2)
-histogram(short_matching_index_vec,'DisplayName','Short Sequence Matching Index')
+histogram(shuffle_short_0_matching_index_vec,'DisplayName','Shuffled Short Sequence Matching Index')
 hold on
-histogram(shuffle_short_matching_index_vec,'DisplayName','Shuffled Short Sequence Matching Index')
+histogram(short_0_matching_index_vec,'DisplayName','Short Sequence Matching Index')
 xlabel('Matching Index')
 ylabel('Number of Occurrences')
 title('Short Sequence Matching Indices')
 legend()
 subplot(2,2,3)
-histogram(full_matching_index_mod_vec,'DisplayName','Full Sequence Matching Index')
+histogram(shuffle_full_0_matching_index_mod_vec,'DisplayName','Shuffled Full Sequence Matching Index')
 hold on
-histogram(shuffle_full_matching_index_mod_vec,'DisplayName','Shuffled Full Sequence Matching Index')
+histogram(full_0_matching_index_mod_vec,'DisplayName','Full Sequence Matching Index')
 xlabel('Matching Index')
 ylabel('Number of Occurrences')
 title({'Full Sequence Matching Indices','Excluding Overlapping Nonspiking'})
 legend()
 subplot(2,2,4)
-histogram(short_matching_index_mod_vec,'DisplayName','Short Sequence Matching Index')
+histogram(shuffle_short_0_matching_index_mod_vec,'DisplayName','Shuffled Short Sequence Matching Index')
 hold on
-histogram(shuffle_short_matching_index_mod_vec,'DisplayName','Shuffled Short Sequence Matching Index')
+histogram(short_0_matching_index_mod_vec,'DisplayName','Short Sequence Matching Index')
 xlabel('Matching Index')
 ylabel('Number of Occurrences')
 title({'Short Sequence Matching Indices','Excluding Overlapping Nonspiking'})
+legend()
+%Z-Scores of MI Values
+full_0_MI_z_score = (full_0_matching_index_vec - mean(full_0_matching_index_vec))/std(full_0_matching_index_vec);
+full_0_MI_mod_z_score = (full_0_matching_index_mod_vec - mean(full_0_matching_index_mod_vec))/std(full_0_matching_index_mod_vec);
+short_0_MI_z_score = (short_0_matching_index_vec - mean(short_0_matching_index_vec))/std(short_0_matching_index_vec);
+short_0_MI_mod_z_score = (short_0_matching_index_mod_vec - mean(short_0_matching_index_mod_vec))/std(short_0_matching_index_mod_vec);
+shuffle_full_0_MI_z_score = (shuffle_full_0_matching_index_vec - mean(shuffle_full_0_matching_index_vec))/std(shuffle_full_0_matching_index_vec);
+shuffle_full_0_MI_mod_z_score = (shuffle_full_0_matching_index_mod_vec - mean(shuffle_full_0_matching_index_mod_vec))/std(shuffle_full_0_matching_index_mod_vec);
+shuffle_short_0_MI_z_score = (shuffle_short_0_matching_index_vec - mean(shuffle_short_0_matching_index_vec))/std(shuffle_short_0_matching_index_vec);
+shuffle_short_0_MI_mod_z_score = (shuffle_short_0_matching_index_mod_vec - mean(shuffle_short_0_matching_index_mod_vec))/std(shuffle_short_0_matching_index_mod_vec); 
+%Plot Histograms of Z Scores
+figure;
+subplot(2,2,1)
+histogram(shuffle_full_0_MI_z_score,'DisplayName','Shuffled')
+hold on
+histogram(full_0_MI_z_score,'DisplayName','Full Sequence')
+xlabel('Matching Index')
+ylabel('Number of Occurrences')
+title('Full Sequence Matching Index Z-Scores')
+legend()
+subplot(2,2,2)
+histogram(shuffle_short_0_MI_z_score,'DisplayName','Shuffled')
+hold on
+histogram(short_0_MI_z_score,'DisplayName','Short Sequence')
+xlabel('Matching Index')
+ylabel('Number of Occurrences')
+title('Short Sequence Matching Index Z-Scores')
+legend()
+subplot(2,2,3)
+histogram(shuffle_full_0_MI_mod_z_score,'DisplayName','Shuffled')
+hold on
+histogram(full_0_MI_mod_z_score,'DisplayName','Full Sequence')
+xlabel('Matching Index')
+ylabel('Number of Occurrences')
+title({'Full Sequence Matching Index Z-Scores','Excluding Overlapping Nonspiking'})
+legend()
+subplot(2,2,4)
+histogram(shuffle_short_0_MI_mod_z_score,'DisplayName','Shuffled')
+hold on
+histogram(short_0_MI_mod_z_score,'DisplayName','Short Sequence')
+xlabel('Matching Index')
+ylabel('Number of Occurrences')
+title({'Short Sequence Matching Index Z-Scores','Excluding Overlapping Nonspiking'})
 legend()
 
 %% Investigating interesting results

@@ -26,7 +26,7 @@ if isfield(network_spike_sequences(ithTest), 'events')
         num_events = size(events, 1);
         for e_i = 1:num_events
 
-            spike_ranks = network_spike_sequences(ithTest).ranks_vec{e_i};
+            spike_ranks = network_spike_sequences(ithTest).ranks_vec(:,e_i);
             if numel(spike_ranks)== parameters.n_E % ranks for only E cells
                 [~, Ie] = sort(spike_ranks);
                 eventSpikes = [spikes_V_m(network.E_indices(Ie),events(e_i,1):events(e_i,2)); ...

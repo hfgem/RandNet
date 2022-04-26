@@ -30,7 +30,7 @@ function [network_spike_sequences] = detect_PBE(spikes, parameters, varargin)
     % figure; plotSpikeRaster(spikes, 'TimePerBin', parameters.dt, 'PlotType', 'scatter'); 
     
     
-    PBE_candidate = meanPopRate>PBEthresh; % binary vector of candidate PBE times
+    PBE_candidate = [0, meanPopRate>PBEthresh]; % binary vector of candidate PBE times
     % figure; plot(t, PBE_candidate)
     
     % combine candidate PBE that are close in time

@@ -147,7 +147,8 @@ function [avg_mat, allResults] = parallelize_parameter_tests_2(parameters,num_ne
             allResults{ithNet}{ithTest}.ranksVec = network_spike_sequences(ithTest).ranks_vec;
             
             % Main output statistics
-            outputVec(1) = allResults{ithNet}{ithTest}.fracFire; % fraction of spiking neurons over entire simulation
+            %outputVec(1) = allResults{ithNet}{ithTest}.fracFire; % fraction of spiking neurons over entire simulation
+            outputVec(1) = mean(allResults{ithNet}{ithTest}.frac_participation); % fraction of spiking neurons over identified events
             outputVec(2) = allResults{ithNet}{ithTest}.meanRate ; %average firing rate
             outputVec(3) = mean(allResults{ithNet}{ithTest}.eventLength); % Average event length
             outputVec(4) = allResults{ithNet}{ithTest}.numEvents; % Number of events

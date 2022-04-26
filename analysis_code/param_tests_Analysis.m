@@ -1,11 +1,20 @@
 
 
+addpath('C:\Users\Jordan\Box\Data\Replay project\RandNet\ParameterSweeps')
+
+% load('results_2022-04-13T19-46.mat') % mnc X nClusters
+% load('results_2022-04-15T01-42.mat') % Gin X Wee
+
+
+
 %% Analyze sequence properties from resultsStruct
 %
 % resultsStruct(param1Ind, param2Ind, ithNet)
 % 
 % num_nets 
 % variedParam
+
+correlationType = 'Pearson'; 
 
 xParamvec = variedParam(1).range;
 xName = variedParam(1).name;
@@ -26,13 +35,14 @@ for ithParam1 = 1:size(resultsStruct, 1)
             mat = resultsStruct(ithParam1, ithParam2, ithNet).results.ranksVec;
             x = mat./max(mat);
             catch
-                resultsStruct(ithParam1, ithParam2, ithNet).results
-            x = [];
+                % resultsStruct(ithParam1, ithParam2, ithNet).results
+                x = [];
             end
             
             if size(x, 2)>2
             
-                % Calulate sequence by sequence correlations
+                %{
+                % Sequence-by-sequence correlation analysis
                 correlationType = 'Pearson'; % Pearson, Kendall, Spearman
                 nSeq = size(x, 2); % number of sequences in x
                 rMat = zeros(nSeq, nSeq);
@@ -42,8 +52,40 @@ for ithParam1 = 1:size(resultsStruct, 1)
                         rMat(i, j) = r;
                     end
                 end
-
-                % Dim. Red.
+                temp_rMat = rMat;
+                temp_rMat(ismembertol(temp_rMat, 1, 10^-12))=nan;
+                overallMeanCorr = nanmean(temp_rMat, 'all');
+                temp(ithNet) = overallMeanCorr;
+                %}
+                
+                
+                % Shuffled sequence-by-sequence correlation analysis
+                nShuf = 1* size(x, 2);
+                x_shuff = zeros( size(x, 1), nShuf);
+                for i = 1:nShuf
+                    % randomly select from an actual sequence
+                    randSeq = x(:, randi(size(x, 2))); 
+                    firedInd = find(~isnan(randSeq));
+                    % Randomly permute only those cells that actually fired
+                    shufSeq = nan(size(randSeq));
+                    shufSeq(firedInd) = randSeq(firedInd(randperm(numel(firedInd))));
+                    x_shuff(:,i) = shufSeq;
+                end
+                shuffledRmat = zeros(nShuf, nShuf);
+                for i = 1:nShuf
+                    for j = 1:nShuf
+                        [r,p] = corr(x_shuff(:,i),x_shuff(:,j),'type',correlationType, 'rows','complete');
+                        shuffledRmat(i, j) = r;
+                    end
+                end
+                temp_rMat = shuffledRmat;
+                temp_rMat(ismembertol(temp_rMat, 1, 10^-12))=nan;
+                overallMeanCorr = nanmean(temp_rMat, 'all');
+                temp(ithNet) = overallMeanCorr;
+                
+                
+                %{
+                % Dim. Red. clustering analysis
                 Y_tsne = tsne(rMat);  
                 Y_tsne_norm = (Y_tsne- mean(Y_tsne)) ./ std(Y_tsne) ;
                 % figure; scatter(Y_tsne(:,1),Y_tsne(:,2))
@@ -56,8 +98,9 @@ for ithParam1 = 1:size(resultsStruct, 1)
                     p = nan; KSSTAT = nan;
                     BF = nan; BC = nan;
                 end
-                
                 temp(ithNet) = nanmean(BC);
+                %}
+                
 
             
             else
@@ -68,11 +111,14 @@ for ithParam1 = 1:size(resultsStruct, 1)
         
         op(ithParam1, ithParam2) = nanmean(temp);
         
+        
     end
 end
 runTime = toc;
 disp( datestr(datenum(0,0,0,0,0,runTime),'HH:MM:SS') )
 % disp( duration(0, 0, runTime) )
+
+analysisTitle = ' Shuffle: mean sequenceXsequence relative rank corr.';
 
 figure; 
 % imagesc(xParamvec, yParamvec, op, 'AlphaData', ~isnan(op))
@@ -81,16 +127,17 @@ set(gca,'YDir','normal')
 colorbar
 xlabel(xName)
 ylabel(yName)
+title(analysisTitle)
+
+caxis([prctile(op, 2.5, 'all'), prctile(op, 97.5, 'all')])
 
 % set(gca,'ColorScale','log')
 
-%%
-              
-[BF, BC] = bimodalitycoeff(Y_tsne_norm)
 
-%%%%%%%%%%%%%%%
-%% Functions %%
-%%%%%%%%%%%%%%%
+
+%% % %%%%%%%%%%%%
+% %% Functions %%
+ %%% %%%%%%%%%%%%
 
 function [BF, BC] = bimodalitycoeff(x)
 % check if x is vector and if it is - 

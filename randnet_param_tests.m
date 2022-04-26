@@ -179,7 +179,7 @@ end
 
 nSlices = repmat({':'},ndims(resultsMat)-1,1); % get n slices, ":", 
 
-num_spikers = resultsMat(nSlices{:},1);
+frac_partic = resultsMat(nSlices{:},1);
 avg_fr = resultsMat(nSlices{:},2);
 avg_event_length = resultsMat(nSlices{:},3);
 avg_n_events = resultsMat(nSlices{:},4);
@@ -208,7 +208,7 @@ if plotResults
 
     % paramPlot1 v paramPlot2
     
-    num_spikers = squeeze(mean(num_spikers,3))';
+    frac_partic = squeeze(mean(frac_partic,3))';
     avg_fr = squeeze(mean(avg_fr,3))';
     avg_event_length = squeeze(mean(avg_event_length,3))';
     avg_n_events = squeeze(mean(avg_n_events,3))';
@@ -217,7 +217,6 @@ if plotResults
     
     figure;
     subplot(2,2,1)
-    imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, num_spikers, 'AlphaData', ~isnan(num_spikers))
     set(gca,'YDir','normal')
     c1 = colorbar(); c1.Label.String = 'Fraction of neurons';
     title('Frac. firing (entire trial)'); xlabel(variedParam(paramPlot1).name,'Interpreter','none'); ylabel(variedParam(paramPlot2).name,'Interpreter','none')
@@ -244,6 +243,18 @@ if plotResults
 
     
 end
+
+%% Plot directly from resultsStruct
+
+paramPlot1 = 1;
+paramPlot2 = 2;
+% X = nanmean(arrayfun(@(x)mean(x.results.stdRate), resultsStruct), 3);
+X = nanmean(arrayfun(@(x)mean(x.results.frac_participation{1}), resultsStruct), 3);
+figure; imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, X', 'AlphaData', ~isnan(X'))
+set(gca,'YDir','normal')
+c2 = colorbar(); c2.Label.String = "Mean Frac participation";
+title('Additional plotting'); xlabel(variedParam(paramPlot1).name,'Interpreter','none'); ylabel(variedParam(paramPlot2).name,'Interpreter','none')
+
 
 %% Functions 
 function p = nUpdateWaitbar(data, h)

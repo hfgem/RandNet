@@ -124,4 +124,66 @@ yline(mean(meanEPopRate)+ 2*std(meanEPopRate))
 yline(PBEthresh, 'r');
 
 
+%% Main figure
+
+sortEcells = 2;
+
+if exist('myPlotSettings'); myPlotSettings(8.5, 5.5); end
+
+figure; 
+if ~isempty(events)==1 
+    sgtitle(['Frac partic: ', regexprep(num2str( round( mean(~isnan(network_spike_sequences.ranks_vec), 1),  2)),'\s+',',') ])  % num2str( mean(~isnan(network_spike_sequences.ranks_vec), 1))
+    
+    spike_ranks1 = network_spike_sequences.ranks_vec(:,1);
+    [~, Ie1] = sort(spike_ranks1);
+
+    
+    meanRelRank = nanmean(network_spike_sequences.ranks_vec./parameters.n_E, 2);
+    [~, IeRel] = sort(meanRelRank);
+
+else
+    sgtitle('No events detected')
+
+    Ie1 = ones(size(network.E_indices));
+end
+
+if sortEcells==1 & ~isempty(events)
+    reordered_spikes = [spikes_V_m(network.E_indices(Ie1),:); spikes_V_m(network.I_indices,:)];
+elseif sortEcells==2 & ~isempty(events) 
+    reordered_spikes = [spikes_V_m(network.E_indices(IeRel),:); spikes_V_m(network.I_indices,:)];
+else
+    reordered_spikes = [spikes_V_m(network.E_indices,:); spikes_V_m(network.I_indices,:)];
+end
+
+% Plot Raster
+ax1 = subplot(2,1,1); hold on
+if exist('events')==1 
+    for i = 1:size(events, 1)
+        fill([t(events(i,:)), fliplr(t(events(i,:)))], [0, 0, size(spikes_V_m, 1), size(spikes_V_m, 1)], 'k', 'FaceAlpha', 0.2, 'EdgeColor', 'none')
+    end
+end
+plotSpikeRaster( reordered_spikes, ...
+    'TimePerBin', parameters.dt, 'PlotType', 'scatter', 'MarkerFormat', MarkerFormat); % 
+ylabel('Cell');
+
+% Plot population firing rate
+ax2 = subplot(2,1,2); hold on
+meanEPopRate = smoothdata(mean(spikes_V_m(network.E_indices,:), 1)/parameters.dt, 'gaussian', parameters.PBE_window);
+PBEthresh = max(mean(meanEPopRate)+(parameters.PBE_zscore*std(meanEPopRate)), parameters.PBE_min_Hz); % threshold rate for PBE detection
+if exist('events')==1 
+    for i = 1:size(events, 1)
+        fill([t(events(i,:)), fliplr(t(events(i,:)))], [0, 0, ceil(max(meanEPopRate)), ceil(max(meanEPopRate))], 'k', 'FaceAlpha', 0.2, 'EdgeColor', 'none')
+    end
+end
+plot(t, meanEPopRate)
+ylabel('E cell mean rate (Hz)'); xlabel('Time (s)'); 
+yline(mean(meanEPopRate), 'g')
+yline(mean(meanEPopRate)+ std(meanEPopRate))
+yline(mean(meanEPopRate)+ 2*std(meanEPopRate))
+yline(PBEthresh, 'r');
+
+linkaxes([ax1, ax2], 'x')
+
+if exist('myPlotSettings'); myPlotSettings; end
+
 end

@@ -132,7 +132,8 @@ if exist('myPlotSettings'); myPlotSettings(8.5, 5.5); end
 
 figure; 
 if ~isempty(events)==1 
-    sgtitle(['Frac partic: ', regexprep(num2str( round( mean(~isnan(network_spike_sequences.ranks_vec), 1),  2)),'\s+',',') ])  % num2str( mean(~isnan(network_spike_sequences.ranks_vec), 1))
+    sgtitle({['Frac partic: ', regexprep(num2str( round( mean(~isnan(network_spike_sequences.ranks_vec), 1),  2)),'\s+',',') ], ...
+        ['Event dur. (ms): ', regexprep(num2str( round( network_spike_sequences.event_lengths'*1000,  0)),'\s+',',') ] } )  % num2str( mean(~isnan(network_spike_sequences.ranks_vec), 1))
     
     spike_ranks1 = network_spike_sequences.ranks_vec(:,1);
     [~, Ie1] = sort(spike_ranks1);

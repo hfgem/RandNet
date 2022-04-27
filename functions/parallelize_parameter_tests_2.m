@@ -135,20 +135,20 @@ function [avg_mat, allResults] = parallelize_parameter_tests_2(parameters,num_ne
             allResults{ithNet}{ithTest}.ithInit = ithTest;
             allResults{ithNet}{ithTest}.numEvents = numel(network_spike_sequences(ithTest).event_lengths); % number of detected events
             allResults{ithNet}{ithTest}.fracFire =  mean(sum(spikes_V_m, 2)>0); % Fraction of cells that fire at all during simulation
-            allResults{ithNet}{ithTest}.frac_participation = {[network_spike_sequences(ithTest).frac_spike{:}]}; % mean fraction of cells firing per event
+            allResults{ithNet}{ithTest}.frac_participation = mean([network_spike_sequences(ithTest).frac_spike{:}]); % mean fraction of cells firing per event
             allResults{ithNet}{ithTest}.meanRate = mean(sum(spikes_V_m, 2)/parameters.t_max); % mean over cells' average firing rate
             allResults{ithNet}{ithTest}.stdRate = std(sum(spikes_V_m, 2)/parameters.t_max); % STD over cells' average firing rate
 
             % Stats for each detected event
             allResults{ithNet}{ithTest}.eventLength = network_spike_sequences(ithTest).event_lengths; % duration in seconds of all detected events
-            allResults{ithNet}{ithTest}.eventParticipation = mean([network_spike_sequences(ithTest).frac_spike{:}]); % fraction of cells that fired in each event
+            allResults{ithNet}{ithTest}.eventParticipation = [network_spike_sequences(ithTest).frac_spike{:}]; % fraction of cells that fired in each event
                         
             % Save ranks_vec
             allResults{ithNet}{ithTest}.ranksVec = network_spike_sequences(ithTest).ranks_vec;
             
             % Main output statistics
             %outputVec(1) = allResults{ithNet}{ithTest}.fracFire; % fraction of spiking neurons over entire simulation
-            outputVec(1) = mean(allResults{ithNet}{ithTest}.frac_participation); % fraction of spiking neurons over identified events
+            outputVec(1) = allResults{ithNet}{ithTest}.frac_participation; % fraction of spiking neurons over identified events
             outputVec(2) = allResults{ithNet}{ithTest}.meanRate ; %average firing rate
             outputVec(3) = mean(allResults{ithNet}{ithTest}.eventLength); % Average event length
             outputVec(4) = allResults{ithNet}{ithTest}.numEvents; % Number of events

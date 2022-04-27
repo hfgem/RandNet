@@ -83,7 +83,26 @@ parameters.del_G_syn_E_E = 675*10^(-12); %synaptic conductance step following sp
 parameters.del_G_syn_I_I = 0; %1.4*del_G_syn_E_E; %synaptic conductance step following spike (S)
 parameters.del_G_syn_E_I = 450*10^(-12); %synaptic conductance step following spike (S)
 parameters.del_G_syn_I_E = 450*10^(-12); %synaptic conductance step following spike (S)
-parameters.del_G_sra = 100e-09; %spike rate adaptation conductance step following spike %ranges from 1-200 *10^(-9) (S)
+parameters.del_G_sra = 100e-09; % or 50nA spike rate adaptation conductance step following spike %ranges from 1-200 *10^(-9) (S)
+%}
+
+%{
+% Attempt with lower dSRA
+parameters.del_G_syn_E_E = 575*10^(-12); %synaptic conductance step following spike (S)
+parameters.del_G_syn_I_I = 0; %1.4*del_G_syn_E_E; %synaptic conductance step following spike (S)
+parameters.del_G_syn_E_I = 325*10^(-12); %synaptic conductance step following spike (S)
+parameters.del_G_syn_I_E = 325*10^(-12); %synaptic conductance step following spike (S)
+parameters.del_G_sra = 10e-09; %spike rate adaptation conductance step following spike %ranges from 1-200 *10^(-9) (S)
+%}
+
+%{
+% Attempt with lower rG
+parameters.rG = 250; % input spiking rate, if using poisson inputs
+parameters.W_gin = 2300*10^-12; % increase in conductance, if using poisson inputs
+parameters.del_G_syn_E_E = 1200*10^(-12); %synaptic conductance step following spike (S)
+parameters.del_G_syn_I_I = 0; %1.4*del_G_syn_E_E; %synaptic conductance step following spike (S)
+parameters.del_G_syn_E_I = 550*10^(-12); %synaptic conductance step following spike (S)
+parameters.del_G_syn_I_E = 550*10^(-12); %synaptic conductance step following spike (S)
 %}
 
 

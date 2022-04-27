@@ -29,7 +29,7 @@ addpath('functions')
 
 saveFlag = 1 % 1 to save simulation results
 selectSavePath = 0; % 1 to select save destination, 0 to save in results dir
-selectLoadPath = 0; % 1 to select load source, 0 to load from results dir
+selectLoadPath = 1; % 1 to select load source, 0 to load from results dir
 plotResults = 1; % 1 to plot basic simulation results
 scriptFolder = '/param_tests'; % sub-folder so save analysis results to
 
@@ -66,7 +66,7 @@ parameters.max_avg_length = inf;
 %}
 
 % Simulation duration
-parameters.t_max = 10;
+%parameters.t_max = 10;
 parameters.t_max = 100;
 
 % __Necessary to override the loaded parameters__ %
@@ -88,15 +88,15 @@ end
 num_nets = 10;
 % num_nets = 4;
 num_inits = 1;
-test_n = 50; % Number of parameters to test (each)
+test_n = 25; % Number of parameters to test (each)
 
 
 % % temp, for testing code
-
+%{
 num_nets = 2;
 num_inits = 1;
-test_n = 5;
-
+test_n = 4;
+%}
 % %
 assert(parameters.usePoisson==1)
 
@@ -104,25 +104,27 @@ assert(parameters.usePoisson==1)
 % Parameters must be a field in the parameter structure, and cannot be a
 % dependent parameter set in set_depedent_parameters
 
-parameters.W_gin = 6.5e-9;
-%variedParam(1).name = 'W_gin'; % 1st parameter to be varied. Must be a field in the parameter structure
-%variedParam(1).range = linspace(3.4*10^-9, 7.4*10^-9, test_n); % set of values to test param1 at
+parameters.W_gin = 750*10^(-12);
+variedParam(1).name = 'W_gin'; % 1st parameter to be varied. Must be a field in the parameter structure
+variedParam(1).range = linspace(550*10^(-12), 950*10^(-12), test_n); % set of values to test param1 at
 
-parameters.del_G_syn_E_E = 9e-9;
-%variedParam(2).name = 'del_G_syn_E_E'; % 2nd parameter to be varied
-%variedParam(2).range = linspace(7.0*10^(-9), 12.0*10^(-9), test_n); % set of values to test param2 at
-
-
-variedParam(1).name = 'mnc'; % 2nd parameter to be varied
-variedParam(1).range = linspace(1, 21, 81); % set of values to test param2 at
-variedParam(1).range = linspace(1, 6, 6); % set of values to test param2 at
-
-variedParam(2).name = 'clusters'; % 2nd parameter to be varied
-variedParam(2).range = [2:1:21]; % set of values to test param2 at
-variedParam(2).range = [2:1:6]; % set of values to test param2 at
+parameters.del_G_syn_E_E = 750*10^(-12);
+variedParam(2).name = 'del_G_syn_E_E'; % 2nd parameter to be varied
+variedParam(2).range = linspace(550*10^(-12), 950*10^(-12), test_n); % set of values to test param2 at
 
 
-parameters.del_G_syn_I_E = 1.3300e-08;
+%variedParam(1).name = 'mnc'; % 2nd parameter to be varied
+%variedParam(1).range = linspace(1, 21, 81); % set of values to test param2 at
+%variedParam(1).range = linspace(1, 12, 24); % set of values to test param2 at
+
+%variedParam(2).name = 'clusters'; % 2nd parameter to be varied
+%variedParam(2).range = [2:1:21]; % set of values to test param2 at
+%variedParam(2).range = [2:1:12]; % set of values to test param2 at
+
+
+parameters.del_G_syn_E_I = 500*10^(-12);
+parameters.del_G_syn_I_E = 500*10^(-12);
+
 % variedParam(3).name = 'del_G_syn_I_E'; % 2nd parameter to be varied
 % variedParam(3).range =  linspace(1.3300e-08, 1.3300e-08, 1); % set of values to test param2 at
 
@@ -208,34 +210,37 @@ if plotResults
 
     % paramPlot1 v paramPlot2
     
+
+    %{
     frac_partic = squeeze(mean(frac_partic,3))';
     avg_fr = squeeze(mean(avg_fr,3))';
     avg_event_length = squeeze(mean(avg_event_length,3))';
     avg_n_events = squeeze(mean(avg_n_events,3))';
-    
+    %}
     % avg_n_events = resultsMat(nSlices{:},4);
     
     figure;
     subplot(2,2,1)
+    imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, frac_partic', 'AlphaData', ~isnan(frac_partic'))
     set(gca,'YDir','normal')
     c1 = colorbar(); c1.Label.String = 'Fraction of neurons';
     title('Frac. firing (entire trial)'); xlabel(variedParam(paramPlot1).name,'Interpreter','none'); ylabel(variedParam(paramPlot2).name,'Interpreter','none')
     
     subplot(2,2,2)
-    imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, avg_fr, 'AlphaData', ~isnan(avg_fr))
+    imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, avg_fr', 'AlphaData', ~isnan(avg_fr'))
     set(gca,'YDir','normal')
     c2 = colorbar(); c2.Label.String = "Hz";
     title('Mean Firing Rate  (entire trial)'); xlabel(variedParam(paramPlot1).name,'Interpreter','none'); ylabel(variedParam(paramPlot2).name,'Interpreter','none')
     
     subplot(2,2,3)
-    imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, avg_event_length, 'AlphaData', ~isnan(avg_event_length))
+    imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, avg_event_length', 'AlphaData', ~isnan(avg_event_length'))
     set(gca,'YDir','normal')
     c3 = colorbar(); c3.Label.String = "Seconds";
     title('Mean Event Length'); xlabel(variedParam(paramPlot1).name,'Interpreter','none'); ylabel(variedParam(paramPlot2).name,'Interpreter','none')
     clear c1 c2 c3
     
     subplot(2,2,4)
-    imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, avg_n_events/parameters.t_max, 'AlphaData', ~isnan(avg_n_events))
+    imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, avg_n_events'/parameters.t_max, 'AlphaData', ~isnan(avg_n_events'))
     set(gca,'YDir','normal')
     c3 = colorbar(); c3.Label.String = "nEvents / s";
     title('Mean event frequency'); xlabel(variedParam(paramPlot1).name,'Interpreter','none'); ylabel(variedParam(paramPlot2).name,'Interpreter','none')
@@ -245,7 +250,7 @@ if plotResults
 end
 
 %% Plot directly from resultsStruct
-
+%{
 paramPlot1 = 1;
 paramPlot2 = 2;
 % X = nanmean(arrayfun(@(x)mean(x.results.stdRate), resultsStruct), 3);
@@ -254,7 +259,7 @@ figure; imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, X'
 set(gca,'YDir','normal')
 c2 = colorbar(); c2.Label.String = "Mean Frac participation";
 title('Additional plotting'); xlabel(variedParam(paramPlot1).name,'Interpreter','none'); ylabel(variedParam(paramPlot2).name,'Interpreter','none')
-
+%}
 
 %% Functions 
 function p = nUpdateWaitbar(data, h)

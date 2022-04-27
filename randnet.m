@@ -6,13 +6,13 @@
 clear all
 
 parameters.saveFlag = 0; % 1 to save simulation results
-parameters.selectPath = 0; % 1 to select save destination, 0 to save in current dir
+parameters.selectPath = 1; % 1 to select save destination, 0 to save in current dir
 parameters.plotResults = 1; % 1 to plot basic simulation results
 
-if parameters.selectPath
+if parameters.saveFlag & parameters.selectPath
     save_path = uigetdir('/Users/hannahgermaine/Documents/PhD/','Select Save Folder'); %Have user input where they'd like the output stored
 else
-    save_path = [pwd, '/results'];
+    save_path = [pwd, '/results/randnet'];
 end
 addpath('functions')
 

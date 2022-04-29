@@ -4,7 +4,8 @@
 % load('results_2022-04-13T19-46.mat') % mnc X nClusters
 % load('results_2022-04-15T01-42.mat') % Gin X Wee
 
-
+% load('results_2022-04-28T19-37.mat')
+% load('results_2022-04-28T23-08.mat')
 
 %% Analyze sequence properties from resultsStruct
 %
@@ -39,8 +40,21 @@ for ithParam1 = 1:size(resultsStruct, 1)
             end
             
             if size(x, 2)>2
-            
-                
+
+                %keyboard
+                analysisTitle = 'Mean rel. rank corr.';
+                [vals, inds] = sort(nanmean(x, 2), 'ascend');
+                indsRep = repmat(inds, 1, size(x, 2));
+                xSort = x(inds,:);
+                xVals = x(inds,:);
+                yVals = repmat(1:size(x,1), 1, size(x,2));
+                % figure; scatter(xVals(:), yVals(:))
+                mdl = fitlm(xVals(:), yVals(:)); % fieldnames(mdl)
+                temp(ithNet) = mdl.Rsquared.adjusted; % mdl.Rsquared.adjusted, mdl.LogLikelihood, mdl.Coefficients.pValue(2)
+                 %[rho,pval] = corr(vals(~isnan(vals)),inds(~isnan(vals)));
+                 %temp(ithNet) = pval; % mdl.Rsquared.adjusted, mdl.LogLikelihood, mdl.Coefficients.pValue(2)
+
+                %{
                 % Sequence-by-sequence correlation analysis
                 correlationType = 'Pearson'; % Pearson, Kendall, Spearman
                 nSeq = size(x, 2); % number of sequences in x
@@ -55,8 +69,7 @@ for ithParam1 = 1:size(resultsStruct, 1)
                 temp_rMat(ismembertol(temp_rMat, 1, 10^-12))=nan;
                 overallMeanCorr = nanmean(temp_rMat, 'all');
                 temp(ithNet) = overallMeanCorr;
-                
-                
+                %}
                 
                 % Shuffled sequence-by-sequence correlation analysis
                 %{
@@ -100,10 +113,7 @@ for ithParam1 = 1:size(resultsStruct, 1)
                 end
                 temp(ithNet) = nanmean(BC);
                 %}
-                
-                temp(ithNet) = nanmean(p);
 
-            
             else
                 temp(ithNet) = nan;
             end
@@ -119,8 +129,6 @@ runTime = toc;
 disp([ 'Runtime: ', datestr(datenum(0,0,0,0,0,runTime),'HH:MM:SS') ])
 % disp( duration(0, 0, runTime) )
 
-analysisTitle = ' Shuffle: mean sequenceXsequence relative rank corr.';
-
 figure; 
 imagesc(xParamvec, yParamvec, op', 'AlphaData', ~isnan(op'))
 set(gca,'YDir','normal')
@@ -129,7 +137,7 @@ xlabel(xName)
 ylabel(yName)
 title(analysisTitle)
 
-caxis([prctile(op, 2.5, 'all'), prctile(op, 97.5, 'all')])
+% caxis([prctile(op, 2.5, 'all'), prctile(op, 97.5, 'all')])
 
 % set(gca,'ColorScale','log')
 

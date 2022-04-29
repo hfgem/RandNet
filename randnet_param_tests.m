@@ -67,7 +67,7 @@ parameters.max_avg_length = inf;
 
 % Simulation duration
 %parameters.t_max = 10;
-parameters.t_max = 100;
+parameters.t_max = 20;
 
 % __Necessary to override the loaded parameters__ %
 parameters.saveFlag = saveFlag;
@@ -105,21 +105,21 @@ assert(parameters.usePoisson==1)
 % dependent parameter set in set_depedent_parameters
 
 parameters.W_gin = 750*10^(-12);
-variedParam(1).name = 'W_gin'; % 1st parameter to be varied. Must be a field in the parameter structure
-variedParam(1).range = linspace(550*10^(-12), 950*10^(-12), test_n); % set of values to test param1 at
+%variedParam(1).name = 'W_gin'; % 1st parameter to be varied. Must be a field in the parameter structure
+%variedParam(1).range = linspace(550*10^(-12), 950*10^(-12), test_n); % set of values to test param1 at
 
 parameters.del_G_syn_E_E = 750*10^(-12);
-variedParam(2).name = 'del_G_syn_E_E'; % 2nd parameter to be varied
-variedParam(2).range = linspace(550*10^(-12), 950*10^(-12), test_n); % set of values to test param2 at
+%variedParam(2).name = 'del_G_syn_E_E'; % 2nd parameter to be varied
+%variedParam(2).range = linspace(550*10^(-12), 950*10^(-12), test_n); % set of values to test param2 at
 
 
-%variedParam(1).name = 'mnc'; % 2nd parameter to be varied
+variedParam(1).name = 'mnc'; % 2nd parameter to be varied
 %variedParam(1).range = linspace(1, 21, 81); % set of values to test param2 at
-%variedParam(1).range = linspace(1, 12, 24); % set of values to test param2 at
+variedParam(1).range = linspace(1, 6, 21); % set of values to test param2 at
 
-%variedParam(2).name = 'clusters'; % 2nd parameter to be varied
+variedParam(2).name = 'clusters'; % 2nd parameter to be varied
 %variedParam(2).range = [2:1:21]; % set of values to test param2 at
-%variedParam(2).range = [2:1:12]; % set of values to test param2 at
+variedParam(2).range = [2:2:42]; % set of values to test param2 at
 
 
 parameters.del_G_syn_E_I = 500*10^(-12);
@@ -224,13 +224,13 @@ if plotResults
     imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, frac_partic', 'AlphaData', ~isnan(frac_partic'))
     set(gca,'YDir','normal')
     c1 = colorbar(); c1.Label.String = 'Fraction of neurons';
-    title('Frac. firing (entire trial)'); xlabel(variedParam(paramPlot1).name,'Interpreter','none'); ylabel(variedParam(paramPlot2).name,'Interpreter','none')
+    title('Frac. firing (event)'); xlabel(variedParam(paramPlot1).name,'Interpreter','none'); ylabel(variedParam(paramPlot2).name,'Interpreter','none')
     
     subplot(2,2,2)
     imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, avg_fr', 'AlphaData', ~isnan(avg_fr'))
     set(gca,'YDir','normal')
     c2 = colorbar(); c2.Label.String = "Hz";
-    title('Mean Firing Rate  (entire trial)'); xlabel(variedParam(paramPlot1).name,'Interpreter','none'); ylabel(variedParam(paramPlot2).name,'Interpreter','none')
+    title('Mean spike rate (trial)'); xlabel(variedParam(paramPlot1).name,'Interpreter','none'); ylabel(variedParam(paramPlot2).name,'Interpreter','none')
     
     subplot(2,2,3)
     imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, avg_event_length', 'AlphaData', ~isnan(avg_event_length'))

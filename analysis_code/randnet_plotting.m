@@ -9,7 +9,8 @@ E_spikes_V_m = V_m(network.E_indices,:) >= parameters.V_th;
 spikes_V_m = V_m >= parameters.V_th;
 t = [0:parameters.dt:parameters.t_max];
 
-PFpeaksSequence = [1:parameters.n_E]'; % dummy data, for testing
+rng(1)
+PFpeaksSequence = randperm(parameters.n_E)'; % dummy data, for testing
 
 %% Main plots
 plot_randnet_results(parameters, network, V_m, G_in, network_spike_sequences, ithTest, net_save_path)
@@ -41,14 +42,13 @@ plot_clusterRates(E_spikes_V_m, parameters, network, 'smoothWindow', smoothWindo
 
 %% Pearson correlation for sequence-sequence comparisons
 % Requires place fields
-tic
 if exist('PFpeaksSequence')
     correlationType = 'Pearson'; % Pearson, Kendall, Spearman
     [network_spike_sequences] = detect_PBE(E_spikes_V_m, parameters);
     ranks_vec = network_spike_sequences(ithTrial).ranks_vec; % ranks for each detected PBE
     plot_PF_seq_corr(ranks_vec, PFpeaksSequence, 'correlationType', correlationType);
 end
-toc
+
 
 %% Mean relative rank vs place field rank
 % Requires place fields

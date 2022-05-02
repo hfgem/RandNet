@@ -9,7 +9,6 @@ E_spikes_V_m = V_m(network.E_indices,:) >= parameters.V_th;
 spikes_V_m = V_m >= parameters.V_th;
 t = [0:parameters.dt:parameters.t_max];
 
-
 %% Main plots
 plot_randnet_results(parameters, network, V_m, G_in, network_spike_sequences, ithTest, net_save_path)
 
@@ -29,14 +28,13 @@ plot_dimRedNet(network, dimRedInput, 'seed', seed, 'E_only', E_only, 'scatterSiz
 
 %% Plot cluster-wise activation, for each event
 [network_spike_sequences] = detect_PBE(E_spikes_V_m, parameters);
-plotIDs = [1]; % indexes of the sequences to plot
-plot_sequence_clusterRates(network_spike_sequences, plotIDs, E_spikes_V_m, parameters, network);
+plotIDs = [1, 2]; % indexes of the sequences to plot
+plot_sequence_clusterRates(network_spike_sequences, plotIDs, spikes_V_m, parameters, network);
 
 
 %% Plot cluster-wise spike rate over entire simulation
-E_only = 1; % Average over only E cells
 smoothWindow = 100 * (1/parameters.dt * 1/1000); %gaussian kernel width for smoothing firing rate curves
-plot_clusterRates(spikes_V_m, parameters, network, 'smoothWindow', smoothWindow);
+plot_clusterRates(E_spikes_V_m, parameters, network, 'smoothWindow', smoothWindow);
 
 
 %% Pearson correlation for sequence-sequence comparisons
@@ -44,7 +42,7 @@ plot_clusterRates(spikes_V_m, parameters, network, 'smoothWindow', smoothWindow)
 
 if exist('PFpeaksSequence')
     correlationType = 'Pearson'; % Pearson, Kendall, Spearman
-    [network_spike_sequences] = detect_PBE(spikes_V_m(network.E_indices,:), parameters);
+    [network_spike_sequences] = detect_PBE(E_spikes_V_m, parameters);
     ranks_vec = network_spike_sequences(ithTrial).ranks_vec; % ranks for each detected PBE
 
     plot_PF_seq_corr(ranks_vec, PFpeaksSequence, 'correlationType', correlationType)
@@ -55,7 +53,7 @@ end
 
 if exist('PFpeaksSequence')
     minPartic = 1; % minimum number of sequences a cell needs to participate in
-    [network_spike_sequences] = detect_PBE(spikes_V_m(network.E_indices,:), parameters);
+    [network_spike_sequences] = detect_PBE(E_spikes_V_m, parameters);
     ranks_vec = network_spike_sequences(ithTrial).ranks_vec;
     plot_meanRelRank(ranks_vec, PFpeaksSequence)
 end
@@ -64,5 +62,5 @@ end
 % Requires place fields
 
 if exist('PFpeaksSequence')
-    plot_pairwise_spikeProb(spikes_V_m(network.E_indices,:), PFpeaksSequence)
+    plot_pairwise_spikeProb(E_spikes_V_m, PFpeaksSequence)
 end

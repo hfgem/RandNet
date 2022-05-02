@@ -96,13 +96,11 @@ for e_i = plotIDs
     y = zeros(parameters.clusters, size(event_spikes, 2)); % num spikes each cluster fired each time step
     for iCluster = 1:parameters.clusters
         clusterMember = network.cluster_mat(iCluster,network.E_indices);
-        if size(event_spikes,1)==size(spike_ranks,1)
+        if size(event_spikes,1)==parameters.n_E
             eCellSpikes = event_spikes;
         else
             eCellSpikes = event_spikes(network.E_indices,:);
         end
-        size(clusterMember)
-        size(eCellSpikes)
         y(iCluster,:) = clusterMember*eCellSpikes;
     end
     

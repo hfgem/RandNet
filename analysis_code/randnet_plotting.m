@@ -40,7 +40,20 @@ smoothWindow = 100 * (1/parameters.dt * 1/1000); %gaussian kernel width for smoo
 plot_clusterRates(E_spikes_V_m, parameters, network, 'smoothWindow', smoothWindow);
 
 
-%% Pearson correlation for sequence-sequence comparisons
+%% Plots sequence-sequence correlation analysis
+seed = 1;
+ithTrial = 1;
+correlationType = 'Pearson'; % Pearson, Kendall, Spearman
+usRelRank = 1;
+maxNClust = 4;
+
+[network_spike_sequences] = detect_PBE(E_spikes_V_m, parameters);
+ranks_vec = network_spike_sequences.ranks_vec;
+
+plot_seq_seq_corr(ranks_vec, 'correlationType', correlationType);
+
+
+%% Pearson correlation for sequence-PF comparisons
 % Requires place fields
 if exist('PFpeaksSequence')
     correlationType = 'Pearson'; % Pearson, Kendall, Spearman

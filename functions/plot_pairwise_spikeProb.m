@@ -1,7 +1,7 @@
 function plot_pairwise_spikeProb(spikes_V_m, PFpeaksSequence, varargin)
 % Calculates and then plots data on the pairwaise spike probability--given
 % a spike from one neuron, what is the probability that the subsequent spike
-% will come from each of the other neurons
+% will come from each of the other neurons?
 % 
 % spikes_V_m: binary spike matrix from one trial
 % PFpeaksSequence: sequence of place field peaks
@@ -34,11 +34,8 @@ for i=1:2:length(varargin)
 end
 
 
-%%
-
-
+%% Main:
 [spikes_x,spikes_t] = find(spikes_V_m);
-
 
 % For each cell, what is the probability that its spike is followed by a spike from each other cell
 op = zeros(size(spikes_V_m, 1), size(spikes_V_m, 1)); 
@@ -46,14 +43,12 @@ for ithSpike = 1:(numel(spikes_t)-1)
     op(spikes_x(ithSpike), spikes_x(ithSpike+1) ) = op(spikes_x(ithSpike), spikes_x(ithSpike+1) ) + 1;
 end
 
-
 normOP = op./sum(op); normOP(isnan(normOP))=0;
 
 figure; imagesc(normOP); colorbar
 xlabel('next spike is from cell j'); ylabel('given spike from cell i'); title('Normalized probability')
 figure; histogram(normOP); set(gca, 'YScale', 'log')
 xlabel('Probability'); ylabel('Count (cell pair)'); title('Normalized probability')
-
 
 figure; imagesc(op);
 xlabel('next spike is from cell j'); ylabel('given spike from cell i'); title('Raw counts')
@@ -71,14 +66,12 @@ xlabel('Follower cell (sorted)'); ylabel('Spike pair count'); title('Mean (and v
 figure; errorbar(mean(B), var(B),'k-o', 'MarkerEdgeColor','r', 'MarkerSize', 3, 'CapSize',0); ylim([0, inf])
 xlabel('Follower cell (sorted)'); ylabel('Spike pair probability'); title('Mean (and var) over cells')
 
-
 % Compare spike probability to PF rank order
 x = PFpeaksSequence; PFpdist = squareform(pdist(x))./size(x, 1);
 %PFpdist(isnan(PFpdist)) = 0;
 figure; scatter( normOP(:), PFpdist(:))
 xlabel('Probability of subsequent spike'); ylabel('Relative PF rank distance'); title('All cell pairs')
 mdl = fitlm( normOP(:), PFpdist(:))
-
 
 x = PFpeaksSequence; PFpdist = squareform(pdist(x))./size(x, 1);
 %PFpdist(isnan(PFpdist)) = 0;

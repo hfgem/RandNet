@@ -15,10 +15,9 @@ t = [0:parameters.dt:parameters.t_max];
 plot_randnet_results(parameters, network, V_m, G_in, network_spike_sequences, ithTest, net_save_path)
 
 %% Plot multiple sequences with different sortings
-[network_spike_sequences] = detect_PBE(spikes_V_m, parameters);
+[network_spike_sequences] = detect_PBE(E_spikes_V_m, parameters);
 plotIDs = [1, 2]; % indexes of the sequences to plot
-separate_EI = 1; % if 1 , separate E and I cells on raster
-plot_ixj_sequences(network_spike_sequences, plotIDs, spikes_V_m, parameters, network, 'separate_EI', separate_EI);
+plot_ixj_sequences(network_spike_sequences, plotIDs, spikes_V_m, parameters, network);
 
 
 %% Use dimensionality reduction techniques to plot network structure

@@ -3,17 +3,17 @@ function [figHandleSubplots, figHandleSingle] = plot_dimRedNet(network, dimRedIn
 % the network structure
 %
 % newtork: network structure
-% dimRedInput: the input to the dimensionality reduction algorithms
-%   W: just the connection matrix
-%   WW: the connection matrix and its transpose [W, W']
-%   clust: for each neuron, the numer of connections it has to neurons in
+% dimRedInput: option for the input to the dimensionality reduction algorithms
+%   'W': just the connection matrix
+%   'WW': the connection matrix and its transpose [W, W']
+%   'clust': for each neuron, the numer of connections it has to neurons in
 %   each of the clustesr
-%   normClust: a neuron-wise normalization of clust
+%   'normClust': a neuron-wise normalization of clust
 % Optional inputs:
 %   seed: rng seed
 %   E_only: if 1, only plot E-E connections
 %   scatterSize: scatterSize(1) is the minimum size of the scatter points,
-%   scattersize(2) is the scale for increaseing the size of the scatter
+%   scattersize(2) is the scale for increasing the size of the scatter
 %   points with cluster membership
 %
 % output: figure handles

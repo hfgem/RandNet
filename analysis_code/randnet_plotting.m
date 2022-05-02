@@ -11,8 +11,8 @@ t = [0:parameters.dt:parameters.t_max];
 
 
 %% Main plots
-
 plot_randnet_results(parameters, network, V_m, G_in, network_spike_sequences, ithTest, net_save_path)
+
 
 %% Plot multiple sequences with different sortings
 [network_spike_sequences] = detect_PBE(E_spikes_V_m, parameters);
@@ -28,9 +28,9 @@ plot_dimRedNet(network, dimRedInput, 'seed', seed, 'E_only', E_only, 'scatterSiz
 
 
 %% Plot cluster-wise activation, for each event
-[network_spike_sequences] = detect_PBE(spikes_V_m, parameters);
-plotIDs = [1,2]; % indexes of the sequences to plot
-plot_sequence_clusterRates(network_spike_sequences, plotIDs, spikes_V_m, parameters, network);
+[network_spike_sequences] = detect_PBE(E_spikes_V_m, parameters);
+plotIDs = [1]; % indexes of the sequences to plot
+plot_sequence_clusterRates(network_spike_sequences, plotIDs, E_spikes_V_m, parameters, network);
 
 
 %% Plot cluster-wise spike rate over entire simulation

@@ -4,13 +4,18 @@ function plot_sequence_clusterRates(network_spike_sequences, plotIDs, spikes_V_m
 % 
 % network_spike_sequences: the structure created by detect_PBE
 % plotIDs: vector of the sequence IDs to plot
-% spikes_V_m: binary spike matrix from one trial
+% spikes_V_m: binary spike matrix from one trial. Can be either E-cell only
+%     or E and I cells together, even if detect_PBE network_spike_sequences 
+%     is only E-cells.
 % parameters: the parameter structure for the simulation
 % network: the network structure
+% ithTrial: specifices the index of network_spike_sequences(ithTrial) to use
+%     if spikes_V_m does not correspond to network_spike_sequences(1).
+%     Optional input parameter.
 %
 % Example usage, after running a simulation from randnet.m:
 % [network_spike_sequences] = detect_PBE(spikes_V_m, parameters);
-% plotIDs = [1, 3, 4]; % indexes of the sequences to plot
+% plotIDs = [1, 2, 4]; % indices of the sequences to plot
 % plot_sequence_clusterRates(network_spike_sequences, plotIDs, spikes_V_m, parameters, network);
 
 
@@ -19,6 +24,7 @@ ithTrial = 1;
 E_only = 1; % if 1, only include E-cells
 legend_flag = 0; % if 1, include cluster legend
 smoothWindow = 5 * (1/parameters.dt * 1/1000); %gaussian kernel width for smoothing firing rate curves
+
 
 %% Read in optional parameters, to overwrite above defaults
 for i=1:2:length(varargin)
@@ -36,7 +42,10 @@ for i=1:2:length(varargin)
     end
 end
 
-%%
+
+%% Main:
+
+E_only = [size(network_spike_sequences.ranks_vec,1)==parameters.n_E]; % if true, detect_PBE only used E-cells
 
 events = network_spike_sequences.events;
 num_events = size(events, 1);
@@ -46,18 +55,35 @@ assert([num_events>=max(plotIDs)], 'largest plotIDs is larger than the number of
 for e_i = plotIDs
     
     spike_ranks = network_spike_sequences(ithTrial).ranks_vec(:,e_i);
+    if E_only 
+        [~, Ie] = sort(spike_ranks);
+        if [size(spikes_V_m,1)==size(network_spike_sequences.ranks_vec,1)]
+            I_outer = Ie; 
+        else
+            I_outer = [network.E_indices(Ie), network.I_indices];
+        end
+    else
+        [~, Ie] = sort(spike_ranks(network.E_indices));
+        [~, Ii] = sort(spike_ranks(network.I_indices));
+        I_outer = [network.E_indices(Ie), network.I_indices(Ii)];
+    end
+    reordered_spikes = [spikes_V_m(I_outer,events(e_i,1):events(e_i,2))];
+    event_spikes = spikes_V_m(:,events(e_i,1):events(e_i,2));
+
+    %{
+    spike_ranks = network_spike_sequences(ithTrial).ranks_vec(:,e_i);
     [~, spike_order] = sort(spike_ranks);
     [~, Ie] = sort(spike_ranks(network.E_indices));
     [~, Ii] = sort(spike_ranks(network.I_indices));
     
     event_spikes = spikes_V_m(:,events(e_i,1):events(e_i,2));
-    
     if ~E_only
         reordered_spikes = event_spikes(spike_order,:);
     else
         reordered_spikes = [spikes_V_m(network.E_indices(Ie),events(e_i,1):events(e_i,2)); ...
                         spikes_V_m(network.I_indices(Ii),events(e_i,1):events(e_i,2))];
     end
+    %}
             
     figure;
     sgtitle(['Event ' num2str(e_i)])
@@ -70,7 +96,13 @@ for e_i = plotIDs
     y = zeros(parameters.clusters, size(event_spikes, 2)); % num spikes each cluster fired each time step
     for iCluster = 1:parameters.clusters
         clusterMember = network.cluster_mat(iCluster,network.E_indices);
-        eCellSpikes = event_spikes(network.E_indices,:);
+        if size(event_spikes,1)==size(spike_ranks,1)
+            eCellSpikes = event_spikes;
+        else
+            eCellSpikes = event_spikes(network.E_indices,:);
+        end
+        size(clusterMember)
+        size(eCellSpikes)
         y(iCluster,:) = clusterMember*eCellSpikes;
     end
     

@@ -65,7 +65,6 @@ for k = plotIDs
 
     for e_i = plotIDs
         
-        event_spikes = spikes_V_m(:,events(e_i,1):events(e_i,2));
         reordered_spikes = [spikes_V_m(I_outer,events(e_i,1):events(e_i,2))];
         
         subplot(numel(plotIDs),numel(plotIDs),ithSubPlot); 

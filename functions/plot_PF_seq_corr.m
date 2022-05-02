@@ -1,4 +1,4 @@
-function plot_PF_seq_corr(ranks_vec, PFpeaksSequence, varargin)
+function [f1Handle, f2Handle, f3Handle] = plot_PF_seq_corr(ranks_vec, PFpeaksSequence, varargin)
 % Calculates correlation of sequences in network_spike_sequences to the
 % Place field sequence in PFpeaksSequence
 % Also calculates shuffle sequence correlations to PFpeakSequence
@@ -19,6 +19,7 @@ correlationType = 'Pearson'; % Pearson, Kendall, Spearman
 usRelRank = 1;
 nShuffles=1000;
 
+
 %% Read in optional parameters, to overwrite above defaults
 for i=1:2:length(varargin)
     switch varargin{i}
@@ -38,7 +39,7 @@ for i=1:2:length(varargin)
 end
 
 
-%%
+%% Main:
 
 rng(seed)
 
@@ -47,28 +48,32 @@ if usRelRank
 end
 y = PFpeaksSequence;
 
-n = size(ranks_vec, 2);
-r_actual=zeros(1, n);
-p_actual=zeros(1, n);
-for i=1:n
-    [r_actual(i),p_actual(i)] = corr(ranks_vec(:,i),y,'type',correlationType, 'rows','complete');
+[r_actual,p_actual] = corr(ranks_vec, y, 'type', correlationType, 'rows', 'pairwise');
+
+x_shuff = zeros( size(ranks_vec, 1), nShuffles); 
+for i = 1:nShuffles
+    % randomly select from an actual sequence
+    randSeq = ranks_vec(:, randi(size(ranks_vec, 2))); 
+    firedInd = find(~isnan(randSeq));
+    
+    % Randomly permute only those cells that actually fired
+    shufSeq = nan(size(randSeq));
+    shufSeq(firedInd) = randSeq(firedInd(randperm(numel(firedInd))));
+    x_shuff(:,i) = shufSeq;
 end
 
-r_shuff=zeros(1, nShuffles);
-p_shuff=zeros(1, nShuffles);
-for i=1:nShuffles
-    x_shuff = ranks_vec( randperm(size(ranks_vec, 1)) , randi(size(ranks_vec, 2)) );
-    %shuffID = randi(size(x, 2)); x_shuff = x( randperm(size(x, 1)) , shuffID)./sum(~isnan(x(:,shuffID)), 1);
-    [r_shuff(i),p_shuff(i)] = corr(x_shuff,y,'type',correlationType, 'rows','complete');
-end
+[r_shuff,p_shuff] = corr(x_shuff,y,'type',correlationType, 'rows', 'pairwise');
 
-figure; histogram(p_shuff, 10); title('Actual sequences')
+
+f2Handle = figure; 
+histogram(p_shuff, 10); title('Shuffled sequences')
 xlabel('Correlation to PF (p-val)'); ylabel('Sequence (count)');
 
-figure; histogram(p_actual, 10); title('Shuffled sequences')
+f3Handle = figure; 
+histogram(p_actual, 10); title('Actual sequences')
 xlabel('Correlation to PF (p-val)'); ylabel('Sequence (count)');
 
-f = figure; hold on
+f1Handle = figure; hold on
 histogram(r_shuff,  'BinWidth', 0.01, 'Normalization','probability', 'DisplayName','Shuffle')
 histogram(r_actual, 'BinWidth', 0.01, 'Normalization','probability', 'DisplayName','Actual')
 xlabel('Correlation to PF (r)')

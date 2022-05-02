@@ -1,5 +1,4 @@
 %% Plot various analyses from results of RandNet simulation
-% TODO: Need to switch all functions to accepting detect_PBE(E_spikes_V_m, parameters)
 %
 
 seed = 1;
@@ -49,7 +48,6 @@ maxNClust = 4;
 
 [network_spike_sequences] = detect_PBE(E_spikes_V_m, parameters);
 ranks_vec = network_spike_sequences.ranks_vec;
-
 plot_seq_seq_corr(ranks_vec, 'correlationType', correlationType);
 
 

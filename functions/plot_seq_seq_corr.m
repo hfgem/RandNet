@@ -1,23 +1,21 @@
 function plot_seq_seq_corr(ranks_vec, varargin)
-% Calculates correlation of sequences in network_spike_sequences to the
-% Place field sequence in PFpeaksSequence
-% Also calculates shuffle sequence correlations to PFpeakSequence
+% Calculates sequence to sequences correlations of the ranks_vec produced by 
+% detect_PBE.
+% For both actual and shuffled data, sequences are clustered and plotted.
 % 
 % ranks_vec: the nNeurons x kSequence matrix from network_spike_sequences
-% PFpeaksSequence: sequence of Place field peaks
 %
 % Example usage, after running a simulation from randnet.m:
-% [network_spike_sequences] = detect_PBE(spikes_V_m(network.E_indices,:), parameters);
-% ranks_vec = network_spike_sequences(ithTrial).ranks_vec; % ranks for each detected PBE
-% plot_PF_seq_corr(ranks_vec, PFpeaksSequence, network);
+% [network_spike_sequences] = detect_PBE(E_spikes_V_m, parameters);
+% ranks_vec = network_spike_sequences.ranks_vec;
+% plot_seq_seq_corr(ranks_vec, 'correlationType', correlationType);
 
 
 %% Default parameters:
 seed = randi(10^6);
-ithTrial = 1;
 correlationType = 'Pearson'; % Pearson, Kendall, Spearman
 usRelRank = 1;
-nShuffles= min(2*size(ranks_vec, 2), 100);
+nShuffles= max(2*size(ranks_vec, 2), 100);
 maxNClust = round(sqrt( size(ranks_vec, 2) ));
 
 
@@ -26,8 +24,6 @@ for i=1:2:length(varargin)
     switch varargin{i}
         case 'seed'
             seed = varargin{i+1};
-        case 'ithTrial'
-            ithTrial = varargin{i+1};
         case 'correlationType'
             correlationType = varargin{i+1};
         case 'usRelRank'
@@ -41,131 +37,143 @@ for i=1:2:length(varargin)
     end
 end
 
-keyboard
+
 %% Main:
 rng(seed)
 
+% Actual ranks and correlations
 if usRelRank
     x_actual = ranks_vec./max(ranks_vec, [], 1);
 else
     x_actual = ranks_vec;
 end
-
 actualRmat = corr(x_actual, 'type', correlationType, 'rows','pairwise');
 
-% Plot sequence ranks
-figure; imagesc(x_actual, 'AlphaData', ~isnan(x_actual)); colorbar
-title('Sequence ranks'); xlabel('i^{th} sequence'); ylabel('Neuron');
-set(gca,'Color','k')
+% Shuffle ranks and correlations
+x_shuff = zeros( size(x_actual, 1), nShuffles);
+for i = 1:nShuffles
+    % randomly select from an actual sequence
+    randSeq = x_actual(:, randi(size(x_actual, 2))); 
+    firedInd = find(~isnan(randSeq));
+    % Randomly permute only those cells that actually fired
+    shufSeq = nan(size(randSeq));
+    shufSeq(firedInd) = randSeq(firedInd(randperm(numel(firedInd))));
+    x_shuff(:,i) = shufSeq;
+end
+shuffledRmat = corr(x_shuff, 'type', correlationType, 'rows','pairwise');
 
-% Plot clustered sequence ranks
-square_pdist = squareform(pdist(actualRmat)); l = linkage(square_pdist); clustIDs = cluster(l, 'Maxclust',maxNClust); [~, I] = sort(clustIDs);
-% figure; imagesc(x_actual(:,I)); colorbar
-figure; imagesc(x_actual(:,I), 'AlphaData', ~isnan(x_actual(:,I))); colorbar
-title('clustered rel. ranks'); xlabel('i^{th} sequence'); ylabel('Neuron');
-set(gca,'Color','k')
+% Combined cross-correlation matrix
+combinedRmat = corr([x_actual, x_shuff], 'type', correlationType, 'rows','pairwise');
 
-% Plot clustered sorted (by one cluster) sequence ranks
-[~, largestClustInd] = max(histcounts(clustIDs,'BinMethod','integers'));
-meanRankLargestClust = nanmean(x_actual(:,clustIDs==largestClustInd), 2);
-[a, cellRankCluster] = sort(meanRankLargestClust);
-% figure; imagesc(x_actual(cellRankCluster,I)); colorbar
-figure; imagesc(x_actual(cellRankCluster,I), 'AlphaData', ~isnan(x_actual(cellRankCluster,I))); colorbar
-title('clustered, sorted rel. ranks'); xlabel('i^{th} sequence'); ylabel('Neuron');
-set(gca,'Color','k')
+%% Clustering and Plotting
 
-% Plot sorted (neurons) sequence ranks
-meanRankLargestClust = nanmean(x_actual, 2);
-[a, cellRank] = sort(meanRankLargestClust);
+% Actual data: 
+% Create clusters
+square_pdist = squareform(pdist(actualRmat)); l = linkage(square_pdist); clustIDs = cluster(l, 'Maxclust',maxNClust); [~, clustSort_Actual] = sort(clustIDs);
+
+% Plot relative ranks, neurons sorted by mean rank, sequences clusterd
+meanRelRank_actual = nanmean(x_actual, 2);
+[a, cellRank_actual] = sort(meanRelRank_actual);
 % figure; imagesc(x_actual(cellRank,:)); colorbar
-figure; imagesc(x_actual(cellRank,:), 'AlphaData', ~isnan(x_actual(cellRank,:))); colorbar
-title('sorted (neurons) rel. ranks'); xlabel('i^{th} sequence'); ylabel('Neuron');
+figure; imagesc(x_actual(cellRank_actual,clustSort_Actual), 'AlphaData', ~isnan(x_actual(cellRank_actual,clustSort_Actual))); colorbar
+title('Clustered, sorted rel. ranks'); xlabel('i^{th} sequence'); ylabel('Neuron');
 set(gca,'Color','k')
-
-% Plot sorted (neurons) sorted (ranks) sequence ranks
-meanRankLargestClust = nanmean(x_actual, 2);
-[a, cellRank] = sort(meanRankLargestClust);
-sequenceMeanCorr = zeros(size(x_actual, 2), 1);
-for i = 1:numel(sequenceMeanCorr)
-    x_temp = x_actual;
-    %x_temp(x_actual==0) = nan;
-    [~, eventSequence] = sort(x_temp(:,i));
-    sequenceMeanCorr(i) = corr(eventSequence, cellRank, 'rows','complete');
-end
-[~, sequenceRank] = sort(sequenceMeanCorr);
-% figure; imagesc(x_actual(cellRank,sequenceRank)); colorbar
-figure; imagesc(x_actual(cellRank,sequenceRank), 'AlphaData', ~isnan(x_actual(cellRank,sequenceRank))); colorbar
-title('sorted (neurons) sorted rel. ranks'); xlabel('i^{th} sequence'); ylabel('Neuron');
-set(gca,'Color','k')
-
-
-% perform dim. red. on relative ranks
-ranks_vec(isnan(ranks_vec))=0;
-Y_tsne = tsne(ranks_vec);
-try
-    Y_mds = mdscale( pdist(ranks_vec), 2); % this fails if any x_shuffle is identical to any x_actual
-catch
-    Y_mds = mdscale( pdist(ranks_vec), 2, 'start', 'random');
-end
-[~,Y_PCA,~] = pca(ranks_vec);
-
-c = cellstr(num2str([1:size(ranks_vec, 1)]'));
-c(3:end) = {''};
-dx = 0.05; dy = 0.05; % displacement so the text does not overlay the data points
-dx = 0.0; dy = 0.0; % displacement so the text does not overlay the data points
-
-figure; sgtitle('relative rank dim. red.')
-subplot(1,3,1); hold on; scatter(Y_tsne(:,1),Y_tsne(:,2)); text(Y_tsne(:,1)+dx, Y_tsne(:,2)+dy, c); title('tsne');
-subplot(1,3,2); hold on; scatter(Y_mds(:,1),Y_mds(:,2)); text(Y_mds(:,1)+dx, Y_mds(:,2)+dy, c); title('mds');
-subplot(1,3,3); hold on; scatter(Y_PCA(:,1),Y_PCA(:,2)); text(Y_PCA(:,1)+dx, Y_PCA(:,2)+dy, c); title('PCA');
-% subplot(1,3,3); hold on; scatter(Y_PCA(:,2),Y_PCA(:,3)); text(Y_PCA(:,2)+dx, Y_PCA(:,3)+dy, c); title('PCA');
-
 
 % Plot sorted be each cluster
 figure
 subplotCounter = 1;
 nActualClusters = numel(unique(clustIDs));
 for i = 1:nActualClusters
+    meanRelRank_actual = nanmean(x_actual(:,clustIDs==i), 2);
+    [a, cellRankCluster] = sort(meanRelRank_actual);
     
-    meanRankLargestClust = nanmean(x_actual(:,clustIDs==i), 2);
-    [a, cellRankCluster] = sort(meanRankLargestClust);
-    
-    % figure; imagesc(x_actual(cellRankCluster,I)); colorbar
     subplot(1,nActualClusters,subplotCounter); 
-    imagesc(x_actual(cellRankCluster,I), 'AlphaData', ~isnan(x_actual(cellRankCluster,I))); 
-    % colorbar
-    %title('clustered, sorted rel. ranks'); xlabel('i^{th} sequence'); ylabel('Neuron');
+    imagesc(x_actual(cellRankCluster,clustSort_Actual), 'AlphaData', ~isnan(x_actual(cellRankCluster,clustSort_Actual))); 
     set(gca,'Color','k')
 
     subplotCounter = subplotCounter + 1;
 end
+sgtitle('Clustered sequences, neurons sorted by each cluster')
 
 
-% Plot ithClustxithClust sortings
+% Shuffled data: 
+% Create clusters
+square_pdist = squareform(pdist(shuffledRmat)); l = linkage(square_pdist); clustIDs_shuff = cluster(l, 'Maxclust',maxNClust); [~, clustSort_shuff] = sort(clustIDs_shuff);
+
+% Plot relative ranks, neurons sorted by mean rank, sequences clusterd
+meanRelRank_shuffle = nanmean(x_shuff, 2);
+[a, cellRank_shuffle] = sort(meanRelRank_shuffle);
+% figure; imagesc(x_actual(cellRank,:)); colorbar
+figure; imagesc(x_shuff(cellRank_shuffle,clustSort_shuff), 'AlphaData', ~isnan(x_shuff(cellRank_shuffle,clustSort_shuff))); colorbar
+title('Shuf: Clustered, sorted rel. ranks'); xlabel('i^{th} sequence'); ylabel('Neuron');
+set(gca,'Color','k')
+
+% Plot sorted be each cluster
 figure
 subplotCounter = 1;
-nActualClusters = numel(unique(clustIDs));
+nActualClusters = numel(unique(clustIDs_shuff));
 for i = 1:nActualClusters
+    meanRelRank_shuffle = nanmean(x_shuff(:,clustIDs_shuff==i), 2);
+    [a, cellRankCluster] = sort(meanRelRank_shuffle);
     
-    meanRankLargestClust = nanmean(x_actual(:,clustIDs==i), 2);
-    [a, cellRankCluster] = sort(meanRankLargestClust);
-    
-    for j = 1:nActualClusters
-        
-        % figure; imagesc(x_actual(cellRankCluster,I)); colorbar
-        subplot(nActualClusters,nActualClusters,subplotCounter); 
-        imagesc(x_actual(cellRankCluster,clustIDs==j), 'AlphaData', ~isnan(x_actual(cellRankCluster,clustIDs==j))); 
-        % colorbar
-        % title('clustered, sorted rel. ranks'); xlabel('i^{th} sequence'); ylabel('Neuron');
-        set(gca,'Color','k')
-        
-        subplotCounter = subplotCounter + 1;
-    end
+    subplot(1,nActualClusters,subplotCounter); 
+    imagesc(x_shuff(cellRankCluster,clustSort_shuff), 'AlphaData', ~isnan(x_shuff(cellRankCluster,clustSort_shuff))); 
+    set(gca,'Color','k')
+
+    subplotCounter = subplotCounter + 1;
 end
+sgtitle('Shuf: Clustered rel. ranks, cluster-sorted')
 
 
-%% Calculate inter-cluster correlations
+x = actualRmat; p = squareform(pdist(x)); l = linkage(p); c = cluster(l, 'Maxclust',maxNClust); [~, I] = sort(c);
+figure; imagesc(x(I,I)); colorbar
+title('Clustered ixj Pearson Corr.'); xlabel('i^{th} sequence'); ylabel('j^{th} sequence');
 
+x = shuffledRmat; p = squareform(pdist(x)); l = linkage(p); c = cluster(l, 'Maxclust',maxNClust); [~, I] = sort(c);
+figure; imagesc(x(I,I)); colorbar
+title('Shuf: Clustered ixj Pearson Corr.'); xlabel('i^{th} sequence'); ylabel('j^{th} sequence');
+
+
+%% Plot Dimensionality reduction:
+
+% Relative ranks:
+dimRedData = [x_actual, x_shuff]';
+dimRedData(isnan(dimRedData))=0;
+Y_tsne = tsne(dimRedData);
+try
+    Y_mds = mdscale( pdist(dimRedData), 2); % this fails if any x_shuffle is identical to any x_actual
+catch
+    Y_mds = mdscale( pdist(dimRedData), 2, 'start', 'random');
+end
+[~,Y_PCA,~] = pca(dimRedData);
+
+clr = [repmat([0 0 0], size(x_actual, 2), 1); repmat([1 0 0], size(x_shuff, 2), 1) ];
+figure; sgtitle('relative rank dim. red. (red=shuf.)')
+subplot(1,3,1); hold on; scatter(Y_tsne(:,1),Y_tsne(:,2), [], clr); title('t-sne');
+subplot(1,3,2); hold on; scatter(Y_mds(:,1),Y_mds(:,2), [], clr); title('MDS');
+subplot(1,3,3); hold on; scatter(Y_PCA(:,1),Y_PCA(:,2), [], clr); title('PCA');
+
+
+% Sequence correlations:
+dimRedData = [combinedRmat];
+Y_tsne = tsne(dimRedData);
+try
+    Y_mds = mdscale( pdist(dimRedData), 2); % this fails if any x_shuffle is identical to any x_actual
+catch
+    Y_mds = mdscale( pdist(dimRedData), 2, 'start', 'random');
+end
+[~,Y_PCA,~] = pca(dimRedData);
+
+clr = [repmat([0 0 0], size(x_actual, 2), 1); repmat([1 0 0], size(x_shuff, 2), 1) ]  ; size(clr)
+figure; sgtitle('Sequence correlations dim. red. (red=shuf.)')
+subplot(1,3,1); hold on; scatter(Y_tsne(:,1),Y_tsne(:,2), [], clr); title('t-sne');
+subplot(1,3,2); hold on; scatter(Y_mds(:,1),Y_mds(:,2), [], clr); title('MDS');
+subplot(1,3,3); hold on; scatter(Y_PCA(:,1),Y_PCA(:,2), [], clr); title('PCA');
+
+
+%% Mean overal and inter-cluster correlations
+
+% Actual:
 nClusts = numel(unique(clustIDs));
 op = zeros(numel(unique(clustIDs)), 1);
 for i = 1:nClusts
@@ -173,7 +181,7 @@ for i = 1:nClusts
     clustCorrs(clustCorrs==1)=nan;
     op(i) = nanmean(clustCorrs, 'all');
 end
-histcounts(clustIDs,'BinMethod','integers')
+clusterCounts_actual = histcounts(clustIDs,'BinMethod','integers')
 intraClustCorrs = op'
 
 temp = actualRmat;
@@ -181,23 +189,7 @@ temp(ismembertol(temp, 1, 10^-12))=nan; % remove self-correlations before nanmea
 meanCorr = nanmean(temp, 'all')
 
 
-%% Same as above, but for a shuffle
-x_shuff = zeros( size(x_actual, 1), nShuffles);
-for i = 1:nShuffles
-    
-    % randomly select from an actual sequence
-    randSeq = x_actual(:, randi(size(x_actual, 2))); 
-    firedInd = find(~isnan(randSeq));
-    
-    % Randomly permute only those cells that actually fired
-    shufSeq = nan(size(randSeq));
-    shufSeq(firedInd) = randSeq(firedInd(randperm(numel(firedInd))));
-    
-    x_shuff(:,i) = shufSeq;
-end
-shuffledRmat = corr(x_shuff, 'type', correlationType, 'rows','pairwise');
-
-square_pdist = squareform(pdist(shuffledRmat)); l = linkage(square_pdist); clustIDs_shuff = cluster(l, 'Maxclust',maxNClust); [~, I] = sort(clustIDs_shuff);
+% Shuffle:
 nClusts = numel(unique(clustIDs_shuff));
 shuffop = zeros(numel(unique(clustIDs_shuff)), 1);
 for i = 1:nClusts
@@ -205,22 +197,12 @@ for i = 1:nClusts
     clustCorrs(ismembertol(clustCorrs, 1, 10^-12))=nan;
     shuffop(i) = nanmean(clustCorrs, 'all');
 end
-histcounts(clustIDs_shuff,'BinMethod','integers')
+clusterCounts_shuffle = histcounts(clustIDs_shuff,'BinMethod','integers')
 intraClustCorrs_shuff = shuffop'
 
 temp = shuffledRmat;
 temp(ismembertol(temp, 1, 10^-12))=nan;
 overallMeanCorr_shuff = nanmean(temp, 'all')
-
-
-% Plot clustered sorted (by one cluster) sequence ranks
-[~, largestClustInd] = max(histcounts(clustIDs_shuff,'BinMethod','integers'));
-meanRankLargestClust = nanmean(x_shuff(:,clustIDs_shuff==largestClustInd), 2);
-[a, cellRankCluster] = sort(meanRankLargestClust);
-% figure; imagesc(x_actual(cellRankCluster,I)); colorbar
-figure; imagesc(x_shuff(cellRankCluster,I), 'AlphaData', ~isnan(x_shuff(cellRankCluster,I))); colorbar
-title('clustered, sorted rel. ranks'); xlabel('i^{th} sequence'); ylabel('Neuron');
-set(gca,'Color','k')
 
 
 end

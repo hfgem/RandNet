@@ -24,12 +24,13 @@ function [network] = create_clusters(parameters, varargin)
     %_________
 
         
-    % Defaults for optional parameters
+    %% Defaults for optional parameters
     seed =  randi(10^6); % rng seed, to replicate network construction
     include_all = 1;    % if 1, all neurons are included in at least 1 cluster by reducing high participating cells
     global_inhib = 1;   % if 1, I-cells have widespread, unclustered connectivity
+   
     
-    % Read in optional parameters, to overwrite above defaults
+    %% Read in optional parameters, to overwrite above defaults
     for i=1:2:length(varargin)
         switch varargin{i}
             case 'seed'
@@ -42,9 +43,10 @@ function [network] = create_clusters(parameters, varargin)
                 error('create_clusters: Unknown input')
         end
     end
+
     
+    %% Main:
     rng(seed)
-    
     
     %Decide which neurons are inhib and excit 
     all_indices = [1:parameters.n];
@@ -91,12 +93,17 @@ function [network] = create_clusters(parameters, varargin)
         conns(i,i) = 0;
     end
     
-
-    % If global_inhib, overwrite all inhibitory outputs
+    % If global_inhib, overwrite all inhibitory outputs+inputs
     if global_inhib
         conns(I_indices,:) = (rand([parameters.n*(1-parameters.p_E), parameters.n]) < parameters.p_I);
         conns(:,I_indices) = (rand(parameters.n, [parameters.n*(1-parameters.p_E)]) < parameters.p_I);
     end
+    
+    % Input strengths
+    input1 = lognrnd(log(parameters.W_gin), parameters.cueSigma, parameters.n, 1); % location cue 1 strengths
+	input2 = lognrnd(log(parameters.W_gin), parameters.cueSigma, parameters.n, 1); % location cue 2 strengths
+    contextInput = lognrnd(log(parameters.W_gin), parameters.cueSigma, parameters.n, 1); % context cue strength
+    
     
     %SAVE NETWORK STRUCTURE
     network = struct;
@@ -110,5 +117,9 @@ function [network] = create_clusters(parameters, varargin)
     network.all_indices = all_indices;
     network.I_indices = I_indices;
     network.E_indices = E_indices;
+    
+    network.spatialInput{1} = input1;
+    network.spatialInput{2} = input2;
+    network.contextInput = contextInput;
     
 end

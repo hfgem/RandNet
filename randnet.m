@@ -61,6 +61,7 @@ parameters.connectivity_gain = 0; %0.005; %amount to increase or decrease connec
 parameters.usePoisson = 1; % 1 to use poisson spike inputs, 0 for randn() input
 parameters.rG = 1000; % input spiking rate, if using poisson inputs
 parameters.W_gin = 750*10^-12; % increase in conductance, if using poisson inputs
+parameters.cueSigma = 0; % temp value, to produce identical values
 % Conductance input
 parameters.G_std = -19*10^-9; % STD of the input conductance G_in, if using randn()
 parameters.G_mean = 0* 10^-12; % mean of the input conductance G_in, if using randn()
@@ -192,7 +193,7 @@ for ithNet = 1:parameters.nNets
             G_in = zeros(parameters.n, parameters.t_steps+1);
             for k = 2:(parameters.t_steps+1)
                 G_in(:,k) = G_in(:,k-1)*exp(-parameters.dt/parameters.tau_syn_E);
-                G_in(:,k) = G_in(:,k) + parameters.W_gin * [rand(parameters.n, 1) < (parameters.dt*parameters.rG)];
+                G_in(:,k) = G_in(:,k) + network.contextInput .* [rand(parameters.n, 1) < (parameters.dt*parameters.rG)];
             end
         else
             G_in = (parameters.G_std*randn(parameters.n,parameters.t_steps+1))+parameters.G_mean;

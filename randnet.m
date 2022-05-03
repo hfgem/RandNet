@@ -5,8 +5,8 @@
 
 clear all
 
-parameters.saveFlag = 0; % 1 to save simulation results
-parameters.selectPath = 1; % 1 to select save destination, 0 to save in current dir
+parameters.saveFlag = 1; % 1 to save simulation results
+parameters.selectPath = 0; % 1 to select save destination, 0 to save in current dir
 parameters.plotResults = 1; % 1 to plot basic simulation results
 
 if parameters.saveFlag & parameters.selectPath
@@ -138,7 +138,7 @@ parameters = set_depedent_parameters(parameters);
 
 
 %Save to computer
-if saveFlag == 1
+if parameters.saveFlag == 1
     save(strcat(save_path,'/parameters.mat'),'parameters')
 end
 
@@ -217,6 +217,11 @@ for ithNet = 1:parameters.nNets
         G_var(ithTest).G_syn_I_I = G_syn_I_I;
         G_var(ithTest).G_syn_E_I = G_syn_E_I;
         
+        %{
+        [V_m, conns] = ...
+                randnet_calculator_memOpt(parameters, seed, network, V_m);
+        V_m_var(ithTest).V_m = V_m;
+        %}
 
         [trialResults] = detect_PBE( V_m(network.E_indices,:)>= parameters.V_th, parameters);
         if ithTest == 1 % append trialResults struct to network results struct

@@ -97,7 +97,7 @@ function [avg_mat, allResults] = parallelize_parameter_tests_2(parameters,num_ne
 
             %Create input conductance variable
             if parameters.usePoisson
-                G_in = zeros(parameters.n, parameters.t_steps+1);
+                G_in = single(zeros(parameters.n, parameters.t_steps+1));
                 for k = 2:(parameters.t_steps+1)
                     G_in(:,k) = G_in(:,k-1)*exp(-parameters.dt/parameters.tau_syn_E);
                     G_in(:,k) = G_in(:,k) + parameters.W_gin * [rand(parameters.n, 1) < (parameters.dt*parameters.rG)];
@@ -109,17 +109,18 @@ function [avg_mat, allResults] = parallelize_parameter_tests_2(parameters,num_ne
             parameters.('G_in') = G_in;
             clear G_in
             
-            %Create Storage Variables
-            V_m = zeros(parameters.n,parameters.t_steps+1); %membrane potential for each neuron at each timestep
-            V_m(:,1) = parameters.V_reset + randn([parameters.n,1])*parameters.V_m_noise; %set all neurons to baseline reset membrane potential with added noise
-            
             %Run model
-            [V_m, ~, ~, ~, ~] = randnet_calculator(parameters, seed, network, V_m);
-
-            %Find spike profile
-            E_spikes_V_m = sparse(V_m(network.E_indices,:) >= parameters.V_th);
-            %[spikes_x,spikes_t] = find(E_spikes_V_m);
-            %spiking_neurons = unique(spikes_x, 'stable');
+            
+            %Create Storage Variables
+            % V_m = zeros(parameters.n,parameters.t_steps+1); %membrane potential for each neuron at each timestep
+            % V_m(:,1) = parameters.V_reset + randn([parameters.n,1])*parameters.V_m_noise; %set all neurons to baseline reset membrane potential with added noise
+            % [V_m, ~, ~, ~, ~] = randnet_calculator(parameters, seed, network, V_m);
+            % E_spikes_V_m = sparse(V_m(network.E_indices,:) >= parameters.V_th);
+            V_m = parameters.V_reset + randn([parameters.n,1])*parameters.V_m_noise; %set all neurons to baseline reset membrane potential with added noise
+            spikeMat = randnet_calculator_memOpt(parameters, seed, network, V_m);
+            rmfield(parameters, 'G_in')
+            E_spikes_V_m = spikeMat(network.E_indices,:); clear spikeMat
+            
 
             % detect events and compute outputs
             % [network_spike_sequences, network_cluster_sequences, outputVec] = detect_events(parameters, network, V_m , j, network_spike_sequences, network_cluster_sequences);

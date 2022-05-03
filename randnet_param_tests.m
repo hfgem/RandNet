@@ -27,7 +27,7 @@
 %% Save Path + Load Parameters
 addpath('functions')
 
-saveFlag = 1 % 1 to save simulation results
+saveFlag = 0 % 1 to save simulation results
 selectSavePath = 0; % 1 to select save destination, 0 to save in results dir
 selectLoadPath = 1; % 1 to select load source, 0 to load from results dir
 plotResults = 1; % 1 to plot basic simulation results
@@ -67,7 +67,7 @@ parameters.max_avg_length = inf;
 
 % Simulation duration
 %parameters.t_max = 10;
-parameters.t_max = 20;
+parameters.t_max = 60;
 
 % __Necessary to override the loaded parameters__ %
 parameters.saveFlag = saveFlag;
@@ -85,7 +85,7 @@ end
 %% Set Up Grid Search Parameters
 
 %Test parameters
-num_nets = 10;
+num_nets = 4;
 % num_nets = 4;
 num_inits = 1;
 test_n = 25; % Number of parameters to test (each)

@@ -20,25 +20,26 @@ function [matching_index, matching_index_mod] = calculate_trajectory_similarity_
     [n, num_seq] = size(X);
     
     %======MATCHING INDICES - INCLUDING NONSPIKING======
-    matching_index = zeros(num_seq, num_seq);
-    for s1 = 1:num_seq %for each pair of sequences calculate MI
-        seq1 = X(:,s1);
-        for s2 = 1:num_seq
-            seq2 = X(:,s2);
+    matching_index = ones(num_seq, num_seq);
+    for sequence1 = 1:num_seq %for each pair of sequences calculate MI
+        seq1 = X(:,sequence1);
+        for sequence2 = (sequence1+1):num_seq
+            seq2 = X(:,sequence2);
             match = 0;
             non_match = 0;
-            for i = 1:n %first neuron index
-                s1_i = seq1(i);
-                s2_i = seq2(i);
-                s1_i_n = X_n(i,s1);
-                s2_i_n = X_n(i,s2);
-                for j = 1:n %second neuron index
-                    s1_j = seq1(j);
-                    s2_j = seq2(j);
-                    s1_j_n = X_n(j,s1);
-                    s2_j_n = X_n(j,s2);
-                    %now compare order
-                    try
+            for ithNeuron = 1:n %first neuron index
+                s1_i = seq1(ithNeuron);
+                s2_i = seq2(ithNeuron);
+                s1_i_n = X_n(ithNeuron,sequence1);
+                s2_i_n = X_n(ithNeuron,sequence2);
+                for jthNeuron = 1:n %second neuron index
+                    s1_j = seq1(jthNeuron);
+                    s2_j = seq2(jthNeuron);
+                    s1_j_n = X_n(jthNeuron,sequence1);
+                    s2_j_n = X_n(jthNeuron,sequence2);
+                    
+                    % Now compare order
+                    %try
                         o1 = s1_i > s1_j;
                         o2 = s2_i > s2_j;
                         if penalize_nonspike == 1
@@ -58,26 +59,27 @@ function [matching_index, matching_index_mod] = calculate_trajectory_similarity_
                                 non_match = non_match + 1;
                             end
                         end
-                    catch
-                        non_match = non_match + 1;
-                    end    
+                    %catch
+                    %    non_match = non_match + 1;
+                    %end   
+                    
                 end
             end
             MI = (match - non_match)/(match + non_match);
-            matching_index(s1,s2) = MI;
-            matching_index(s2,s1) = MI;
+            matching_index(sequence1,sequence2) = MI;
+            matching_index(sequence2,sequence1) = MI;
         end
     end
     
     
     %======MATCHING INDICES - NOT INCLUDING NONSPIKING======
     matching_index_mod = zeros(num_seq, num_seq);
-    for s1 = 1:num_seq %for each pair of sequences calculate MI
-        seq1 = X(:,s1);
-        seq1_nonspike = X_n(:,s1);
-        for s2 = 1:num_seq
-            seq2 = X(:,s2);
-            seq2_nonspike = X_n(:,s2);
+    for sequence1 = 1:num_seq %for each pair of sequences calculate MI
+        seq1 = X(:,sequence1);
+        seq1_nonspike = X_n(:,sequence1);
+        for sequence2 = 1:num_seq
+            seq2 = X(:,sequence2);
+            seq2_nonspike = X_n(:,sequence2);
             %binary vector forms of nonspiking neurons
             overlap_nonspike = seq1_nonspike.*seq2_nonspike;
             nonspiking_total = (seq1_nonspike + seq2_nonspike) > 0;
@@ -89,20 +91,20 @@ function [matching_index, matching_index_mod] = calculate_trajectory_similarity_
             %comparisons will give a value of 1x0 logical. This 1x0 logical
             %compared with anything, including a 1x0 logical, will result
             %in non_match + 1;
-            for i = 1:n %first neuron index ranks
-                s1_i = seq1(i);
-                s2_i = seq2(i);
-                for j = 1:n %second neuron index ranks
-                    if j ~= i
-                        s1_j = seq1(j);
-                        s2_j = seq2(j);
+            for ithNeuron = 1:n %first neuron index ranks
+                s1_i = seq1(ithNeuron);
+                s2_i = seq2(ithNeuron);
+                for jthNeuron = 1:n %second neuron index ranks
+                    if jthNeuron ~= ithNeuron
+                        s1_j = seq1(jthNeuron);
+                        s2_j = seq2(jthNeuron);
                         %now compare order
                         try
                             o1 = s1_i > s1_j;
                             o2 = s2_i > s2_j;
                             if penalize_nonspike == 1 %Excludes overlapping nonspiking neurons across both sequences
-                                i_n = overlap_nonspike(i);
-                                j_n = overlap_nonspike(j);
+                                i_n = overlap_nonspike(ithNeuron);
+                                j_n = overlap_nonspike(jthNeuron);
                                 if i_n == 0 && j_n == 0 %both are not in the overlapping population
                                     if o1 == o2
                                         match = match + 1;
@@ -111,8 +113,8 @@ function [matching_index, matching_index_mod] = calculate_trajectory_similarity_
                                     end
                                 end
                             else %Excludes all nonspiking neurons across both sequences
-                                i_n = nonspiking_total(i);
-                                j_n = nonspiking_total(j);
+                                i_n = nonspiking_total(ithNeuron);
+                                j_n = nonspiking_total(jthNeuron);
                                 if i_n == 0 && j_n == 0 %both are not nonspiking
                                     if o1 == o2
                                         match = match + 1;
@@ -128,8 +130,8 @@ function [matching_index, matching_index_mod] = calculate_trajectory_similarity_
                 end
             end
             MI = (match - non_match)/(match + non_match);
-            matching_index_mod(s1,s2) = MI;
-            matching_index_mod(s2,s1) = MI;
+            matching_index_mod(sequence1,sequence2) = MI;
+            matching_index_mod(sequence2,sequence1) = MI;
         end
     end
     

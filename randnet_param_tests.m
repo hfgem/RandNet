@@ -29,7 +29,7 @@ addpath('functions')
 
 saveFlag = 1 % 1 to save simulation results
 selectSavePath = 0; % 1 to select save destination, 0 to save in results dir
-selectLoadPath = 0; % 1 to select load source, 0 to load from results dir
+selectLoadPath = 1; % 1 to select load source, 0 to load from results dir
 plotResults = 1; % 1 to plot basic simulation results
 scriptFolder = '/param_tests'; % sub-folder so save analysis results to
 
@@ -56,16 +56,18 @@ load(strcat(load_path,'/parameters.mat'))
 %% Parameters that are different from the loaded parameters
 
 % Analysis parameters
-assert(parameters.E_events_only==1)
+%{
+{assert(parameters.E_events_only==1)
 parameters.event_cutoff = 0;
 parameters.min_avg_fr = 0.001;
 parameters.max_avg_fr= inf;
 parameters.min_avg_length = 0;
 parameters.max_avg_length = inf;
+%}
 
 % Simulation duration
-parameters.t_max = 10;
-%parameters.t_max = 2;
+%parameters.t_max = 10;
+parameters.t_max = 20;
 
 % __Necessary to override the loaded parameters__ %
 parameters.saveFlag = saveFlag;
@@ -86,38 +88,43 @@ end
 num_nets = 10;
 % num_nets = 4;
 num_inits = 1;
-test_n = 75; % Number of parameters to test (each)
+test_n = 25; % Number of parameters to test (each)
 
 
 % % temp, for testing code
-% num_nets = 2;
-% num_inits = 1;
-% test_n = 10;
-assert(parameters.usePoisson==1)
+%{
+num_nets = 2;
+num_inits = 1;
+test_n = 4;
+%}
 % %
-
+assert(parameters.usePoisson==1)
 
 
 % Parameters must be a field in the parameter structure, and cannot be a
 % dependent parameter set in set_depedent_parameters
 
-parameters.W_gin = 6.5e-9;
+parameters.W_gin = 750*10^(-12);
 %variedParam(1).name = 'W_gin'; % 1st parameter to be varied. Must be a field in the parameter structure
-%variedParam(1).range = linspace(3.4*10^-9, 7.4*10^-9, test_n); % set of values to test param1 at
+%variedParam(1).range = linspace(550*10^(-12), 950*10^(-12), test_n); % set of values to test param1 at
 
-parameters.del_G_syn_E_E = 9e-9;
+parameters.del_G_syn_E_E = 750*10^(-12);
 %variedParam(2).name = 'del_G_syn_E_E'; % 2nd parameter to be varied
-%variedParam(2).range = linspace(7.0*10^(-9), 12.0*10^(-9), test_n); % set of values to test param2 at
+%variedParam(2).range = linspace(550*10^(-12), 950*10^(-12), test_n); % set of values to test param2 at
 
 
 variedParam(1).name = 'mnc'; % 2nd parameter to be varied
-variedParam(1).range = linspace(1, 21, 81); % set of values to test param2 at
+%variedParam(1).range = linspace(1, 21, 81); % set of values to test param2 at
+variedParam(1).range = linspace(1, 6, 21); % set of values to test param2 at
 
 variedParam(2).name = 'clusters'; % 2nd parameter to be varied
-variedParam(2).range = [2:1:21]; % set of values to test param2 at
+%variedParam(2).range = [2:1:21]; % set of values to test param2 at
+variedParam(2).range = [2:2:42]; % set of values to test param2 at
 
 
-parameters.del_G_syn_I_E = 1.3300e-08;
+parameters.del_G_syn_E_I = 500*10^(-12);
+parameters.del_G_syn_I_E = 500*10^(-12);
+
 % variedParam(3).name = 'del_G_syn_I_E'; % 2nd parameter to be varied
 % variedParam(3).range =  linspace(1.3300e-08, 1.3300e-08, 1); % set of values to test param2 at
 
@@ -174,10 +181,10 @@ end
 
 nSlices = repmat({':'},ndims(resultsMat)-1,1); % get n slices, ":", 
 
-num_spikers = resultsMat(nSlices{:},1);
+frac_partic = resultsMat(nSlices{:},1);
 avg_fr = resultsMat(nSlices{:},2);
 avg_event_length = resultsMat(nSlices{:},3);
-nEvents = resultsMat(nSlices{:},4);
+avg_n_events = resultsMat(nSlices{:},4);
 
 
 if saveFlag
@@ -202,40 +209,57 @@ if plotResults
     paramPlot2 = 2;
 
     % paramPlot1 v paramPlot2
-    num_spikers = squeeze(mean(num_spikers,3))';
+    
+
+    %{
+    frac_partic = squeeze(mean(frac_partic,3))';
     avg_fr = squeeze(mean(avg_fr,3))';
     avg_event_length = squeeze(mean(avg_event_length,3))';
-    avg_n_events = squeeze(mean(nEvents,3))';
+    avg_n_events = squeeze(mean(avg_n_events,3))';
+    %}
+    % avg_n_events = resultsMat(nSlices{:},4);
     
     figure;
     subplot(2,2,1)
-    imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, num_spikers, 'AlphaData', ~isnan(num_spikers))
+    imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, frac_partic', 'AlphaData', ~isnan(frac_partic'))
     set(gca,'YDir','normal')
-    c1 = colorbar(); c1.Label.String = 'Number of Neurons';
-    title('Number of Spiking Neurons'); xlabel(variedParam(paramPlot1).name); ylabel(variedParam(paramPlot2).name)
+    c1 = colorbar(); c1.Label.String = 'Fraction of neurons';
+    title('Frac. firing (event)'); xlabel(variedParam(paramPlot1).name,'Interpreter','none'); ylabel(variedParam(paramPlot2).name,'Interpreter','none')
     
     subplot(2,2,2)
-    imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, avg_fr, 'AlphaData', ~isnan(avg_fr))
+    imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, avg_fr', 'AlphaData', ~isnan(avg_fr'))
     set(gca,'YDir','normal')
     c2 = colorbar(); c2.Label.String = "Hz";
-    title('Average Firing Rate'); xlabel(variedParam(paramPlot1).name); ylabel(variedParam(paramPlot2).name)
+    title('Mean spike rate (trial)'); xlabel(variedParam(paramPlot1).name,'Interpreter','none'); ylabel(variedParam(paramPlot2).name,'Interpreter','none')
     
     subplot(2,2,3)
-    imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, avg_event_length, 'AlphaData', ~isnan(avg_event_length))
+    imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, avg_event_length', 'AlphaData', ~isnan(avg_event_length'))
     set(gca,'YDir','normal')
     c3 = colorbar(); c3.Label.String = "Seconds";
-    title('Average Event Length'); xlabel(variedParam(paramPlot1).name); ylabel(variedParam(paramPlot2).name)
+    title('Mean Event Length'); xlabel(variedParam(paramPlot1).name,'Interpreter','none'); ylabel(variedParam(paramPlot2).name,'Interpreter','none')
     clear c1 c2 c3
     
     subplot(2,2,4)
-    imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, avg_n_events, 'AlphaData', ~isnan(avg_n_events))
+    imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, avg_n_events'/parameters.t_max, 'AlphaData', ~isnan(avg_n_events'))
     set(gca,'YDir','normal')
-    c3 = colorbar(); c3.Label.String = "Event count";
-    title('Average number of events'); xlabel(variedParam(paramPlot1).name); ylabel(variedParam(paramPlot2).name)
+    c3 = colorbar(); c3.Label.String = "nEvents / s";
+    title('Mean event frequency'); xlabel(variedParam(paramPlot1).name,'Interpreter','none'); ylabel(variedParam(paramPlot2).name,'Interpreter','none')
     clear c1 c2 c3
 
     
 end
+
+%% Plot directly from resultsStruct
+%{
+paramPlot1 = 1;
+paramPlot2 = 2;
+% X = nanmean(arrayfun(@(x)mean(x.results.stdRate), resultsStruct), 3);
+X = nanmean(arrayfun(@(x)mean(x.results.frac_participation{1}), resultsStruct), 3);
+figure; imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, X', 'AlphaData', ~isnan(X'))
+set(gca,'YDir','normal')
+c2 = colorbar(); c2.Label.String = "Mean Frac participation";
+title('Additional plotting'); xlabel(variedParam(paramPlot1).name,'Interpreter','none'); ylabel(variedParam(paramPlot2).name,'Interpreter','none')
+%}
 
 %% Functions 
 function p = nUpdateWaitbar(data, h)

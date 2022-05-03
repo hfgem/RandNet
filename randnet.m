@@ -6,32 +6,32 @@
 clear all
 
 parameters.saveFlag = 0; % 1 to save simulation results
-parameters.selectPath = 0; % 1 to select save destination, 0 to save in current dir
+parameters.selectPath = 1; % 1 to select save destination, 0 to save in current dir
 parameters.plotResults = 1; % 1 to plot basic simulation results
 
-if parameters.selectPath
+if parameters.saveFlag & parameters.selectPath
     save_path = uigetdir('/Users/hannahgermaine/Documents/PhD/','Select Save Folder'); %Have user input where they'd like the output stored
 else
-    save_path = [pwd, '/results'];
+    save_path = [pwd, '/results/randnet'];
 end
 addpath('functions')
 
 %% Initialize parameters
 
 % Network structure parameters
-parameters.n = 200; %number of neurons
+parameters.n = 500; %number of neurons
 parameters.clusters = 10; % Number of clusters in the network
 parameters.mnc = 2; % mean number of clusters each neuron is a member of
 
 % Time
-parameters.t_max = 2; %maximum amount of time (s)
+parameters.t_max = 3; %maximum amount of time (s)
 parameters.dt = 0.1*10^(-3); %timestep (s)
 
 % Basic model parameters
 % tau_E ~= 10 ms from direct data, DOI: 10.1126/science.aaf1836
-parameters.tau_syn_E = 2*10^(-3); % Exc. synaptic decay time constant (s) PF19=50ms, HF18=10ms for figs 7-8 and longer for earlier figs
+parameters.tau_syn_E = 10*10^(-3); % Exc. synaptic decay time constant (s) PF19=50ms, HF18=10ms for figs 7-8 and longer for earlier figs
 % tau_I ~= 1.2-8 ms from direct data, https://doi.org/10.1073/pnas.192233099
-parameters.tau_syn_I = 5*10^(-3);  % Inh. synaptic decay time constant (s) PF19=5ms,  HF18=10ms for figs 7-8 and for earlier figs
+parameters.tau_syn_I = 2*10^(-3);  % Inh. synaptic decay time constant (s) PF19=5ms,  HF18=10ms for figs 7-8 and for earlier figs
 parameters.tau_stdp = 5*10^(-3); %STDP time constant (s)                 
 parameters.E_K = -80*10^(-3); %potassium reversal potential (V) %-75 or -80 mV
 parameters.E_L = -70*10^(-3); %leak reversal potential (V) %-60 - -70 mV range
@@ -44,10 +44,10 @@ parameters.V_syn_E = 0; %synaptic reversal potential (excitatory)
 parameters.V_syn_I = -70*10^(-3); %synaptic reversal potential (inhibitory) %generally -70 pr -80 mV
 
 % Recurrent connection strengths
-parameters.del_G_syn_E_E = 9.5*10^(-9); %synaptic conductance step following spike (S)
+parameters.del_G_syn_E_E = 750*10^(-12); %synaptic conductance step following spike (S)
 parameters.del_G_syn_I_I = 0; %1.4*del_G_syn_E_E; %synaptic conductance step following spike (S)
-parameters.del_G_syn_E_I = parameters.del_G_syn_E_E; %synaptic conductance step following spike (S)
-parameters.del_G_syn_I_E = 1.4*parameters.del_G_syn_E_E; %synaptic conductance step following spike (S)
+parameters.del_G_syn_E_I = 500*10^(-12); %synaptic conductance step following spike (S)
+parameters.del_G_syn_I_E = 500*10^(-12); %synaptic conductance step following spike (S)
 
 % SRA parameters
 parameters.del_G_sra = 330e-09; %spike rate adaptation conductance step following spike %ranges from 1-200 *10^(-9) (S)
@@ -59,8 +59,8 @@ parameters.connectivity_gain = 0; %0.005; %amount to increase or decrease connec
 % Input parameters:
 % Poisson input
 parameters.usePoisson = 1; % 1 to use poisson spike inputs, 0 for randn() input
-parameters.rG = 500; % input spiking rate, if using poisson inputs
-parameters.W_gin = 5.4*10^-9; % increase in conductance, if using poisson inputs
+parameters.rG = 1000; % input spiking rate, if using poisson inputs
+parameters.W_gin = 750*10^-12; % increase in conductance, if using poisson inputs
 % Conductance input
 parameters.G_std = -19*10^-9; % STD of the input conductance G_in, if using randn()
 parameters.G_mean = 0* 10^-12; % mean of the input conductance G_in, if using randn()
@@ -77,8 +77,38 @@ parameters.nTrials = 1; % How many tests of different initializations to run
 parameters.nNets = 1; % How many networks to run
 
 
+%{
+% Alternative working parameter set
+parameters.del_G_syn_E_E = 675*10^(-12); %synaptic conductance step following spike (S)
+parameters.del_G_syn_I_I = 0; %1.4*del_G_syn_E_E; %synaptic conductance step following spike (S)
+parameters.del_G_syn_E_I = 450*10^(-12); %synaptic conductance step following spike (S)
+parameters.del_G_syn_I_E = 450*10^(-12); %synaptic conductance step following spike (S)
+parameters.del_G_sra = 100e-09; % or 50nA spike rate adaptation conductance step following spike %ranges from 1-200 *10^(-9) (S)
+%}
+
+%{
+% Attempt with lower dSRA
+parameters.del_G_syn_E_E = 575*10^(-12); %synaptic conductance step following spike (S)
+parameters.del_G_syn_I_I = 0; %1.4*del_G_syn_E_E; %synaptic conductance step following spike (S)
+parameters.del_G_syn_E_I = 325*10^(-12); %synaptic conductance step following spike (S)
+parameters.del_G_syn_I_E = 325*10^(-12); %synaptic conductance step following spike (S)
+parameters.del_G_sra = 10e-09; %spike rate adaptation conductance step following spike %ranges from 1-200 *10^(-9) (S)
+%}
+
+%{
+% Attempt with lower rG
+parameters.rG = 250; % input spiking rate, if using poisson inputs
+parameters.W_gin = 2300*10^-12; % increase in conductance, if using poisson inputs
+parameters.del_G_syn_E_E = 1200*10^(-12); %synaptic conductance step following spike (S)
+parameters.del_G_syn_I_I = 0; %1.4*del_G_syn_E_E; %synaptic conductance step following spike (S)
+parameters.del_G_syn_E_I = 550*10^(-12); %synaptic conductance step following spike (S)
+parameters.del_G_syn_I_E = 550*10^(-12); %synaptic conductance step following spike (S)
+%}
+
+
 %% Parameters for sequence analysis
 
+%{
 parameters.E_events_only = 1; % if 1, only consider E-cells for detect_events
 parameters.IEI = 0.02; %inter-event-interval (s) the elapsed time between spikes to count separate events
 parameters.bin_width = 5*10^(-3); %5 ms bin
@@ -93,6 +123,14 @@ parameters.max_avg_fr = 3.0;
 % TEST 3: The sequence(s) of firing is(are) within reasonable lengths
 parameters.min_avg_length = 0.01;
 parameters.max_avg_length = 0.5;
+%}
+
+% Analysis parameters for PBE detection
+parameters.PBE_min_Hz = 0.5; % minimum population mean rate during PBE
+parameters.PBE_zscore = 1.0; % minimum stds above mean rate to detect PBE
+parameters.PBE_min_dur = 30 * (1/1000); % minimum duration of a PBE
+parameters.PBE_window =  10 * (1/1000) *(1/parameters.dt); % width of gaussian kernel used to calculate mean pop activity rate
+parameters.PBE_max_combine = 10 * (1/1000); % Combine adjacent PBEs separaeted by less than this duration
 
 
 %% __set/update Dependent Parameters__ %%
@@ -179,12 +217,18 @@ for ithNet = 1:parameters.nNets
         G_var(ithTest).G_syn_I_I = G_syn_I_I;
         G_var(ithTest).G_syn_E_I = G_syn_E_I;
         
-        [network_spike_sequences, network_cluster_sequences] = detect_events(parameters, network, V_m , ithTest,...
-            network_spike_sequences, network_cluster_sequences, 'E_events_only', parameters.E_events_only);
-    
+
+        [trialResults] = detect_PBE( V_m(network.E_indices,:)>= parameters.V_th, parameters);
+        if ithTest == 1 % append trialResults struct to network results struct
+            network_spike_sequences = trialResults;
+        else
+            network_spike_sequences = [network_spike_sequences, trialResults]; 
+        end
+        
         if parameters.plotResults
             plot_randnet_results(parameters, network, V_m, G_in, network_spike_sequences, ithTest, net_save_path)
         end
+        
         
     end % trial loop
     
@@ -199,12 +243,4 @@ for ithNet = 1:parameters.nNets
     end
     
 end % Network loop
-
-
-try % Print some simple simulation results
-    disp(network_spike_sequences(end).events); 
-    structfun(@sum, network_spike_sequences.nonspiking_neurons)
-catch
-    disp('No events detected');
-end
 

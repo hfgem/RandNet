@@ -51,6 +51,17 @@ ranks_vec = network_spike_sequences.ranks_vec;
 plot_seq_seq_corr(ranks_vec, 'correlationType', correlationType);
 
 
+%% Matching index for sequence-sequence comparisons
+seed = randi(10^6);
+nShuffles= 100;
+maxNClust = 5;
+penalize_nonspike = 0;
+
+[network_spike_sequences] = detect_PBE(E_spikes_V_m, parameters);
+ranks_vec = network_spike_sequences(ithTrial).ranks_vec;
+plot_seq_seq_MI(ranks_vec)
+
+
 %% Pearson correlation for sequence-PF comparisons
 % Requires place fields
 if exist('PFpeaksSequence')

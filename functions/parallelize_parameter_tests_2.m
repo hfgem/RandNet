@@ -118,7 +118,7 @@ function [avg_mat, allResults] = parallelize_parameter_tests_2(parameters,num_ne
             % E_spikes_V_m = sparse(V_m(network.E_indices,:) >= parameters.V_th);
             V_m = parameters.V_reset + randn([parameters.n,1])*parameters.V_m_noise; %set all neurons to baseline reset membrane potential with added noise
             spikeMat = randnet_calculator_memOpt(parameters, seed, network, V_m);
-            rmfield(parameters, 'G_in')
+            parameters = rmfield(parameters, 'G_in');
             E_spikes_V_m = spikeMat(network.E_indices,:); clear spikeMat
             
 

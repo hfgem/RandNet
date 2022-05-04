@@ -148,13 +148,28 @@ end
 
 
 %% Place field simulation parameters
+
+% Copy preplay parameters as defaults
 pfsim = parameters; 
 
+% Add PF specific parameters and PF specific values
 pfsim.nEnvironments = 1;
 pfsim.nTrials = 5;
-
 pfsim.t_max = 2;
 pfsim.t = 0:parameters.dt:pfsim.t_max;
+
+pfsim.xPos = 0:parameters.dt/pfsim.t_max:1;
+pfsim.trackWidth = 1; % maximum value
+pfsim.spatialBin = 2/100; % 2 cm bins for localizing position
+pfsim.linFieldGaussSD = 0.04;% Standard deviation of PF gaussian kernel
+pfsim.winScale = 5; % window is 5x the STDev
+pfsim.gridxvals = pfsim.spatialBin:pfsim.spatialBin:pfsim.trackWidth;          % Grid-points in the x-direction
+
+pfsim.gaussFOLower = [10, 0, 0]; % [peak amplitude, position of peak on track, standard deviation of peak]
+pfsim.gaussFOUpper = [30, max(pfsim.gridxvals)*100, sqrt(max(pfsim.gridxvals)*100)]; 
+pfsim.peakTarget = 15; % Hz, Target peak rate for linfieldsScore
+
+% set depedendent parameters for PF sim
 pfsim = set_depedent_parameters(pfsim);
 
 
@@ -203,7 +218,7 @@ for ithNet = 1:parameters.nNets
             for i = 2:numel(pfsim.t)
                     % Exponential decay from last time step
                     G_in_PFs(:,i,ithEnv,ithTrial) = G_in_PFs(:,i-1,ithEnv,ithTrial)*exp(-parameters.dt/parameters.tau_syn_E);
-
+                    % Add spikes from each input source
                     G_in_PFs(:,i,ithEnv,ithTrial) = G_in_PFs(:,i,ithEnv,ithTrial) + ...
                             network.spatialInput{1} .* [rand(parameters.n, 1) < (parameters.dt* (parameters.rG * (i/numel(pfsim.t)) ))] + ...
                             network.spatialInput{2} .* [rand(parameters.n, 1) < (parameters.dt* ( parameters.rG * ((numel(pfsim.t)-i)/numel(pfsim.t)) ) )] + ...
@@ -229,19 +244,52 @@ for ithNet = 1:parameters.nNets
         end
     end
     % keyboard
-    %{
+    
     % Calculate Place fields and PF-objective score
-    for i = 1:sim.nEnvironments
-        [allScores(i), linfields(i)] = PFopt_ObjFun(opS(:,:,i,:), parameters, sim, track, network);
+    for i = 1:pfsim.nEnvironments
+        linfields = calculate_linfields(opS, pfsim, pfsim);
+        allScores(i) = calculate_linfieldsScore(linfields, pfsim, pfsim, network);
         disp(['Env: ', num2str(i), ', Score: ', num2str(allScores(i))])
+        
+        % Plot place fields:
+        day = 1; epoch = 1; tetrode = 1; tr = 1;
+        op = [];
+        for epoch = 1:pfsim.nEnvironments
+            opTemp = [];
+            for ithCell = 1:parameters.n
+                PF = linfields{day}{epoch}{tetrode}{ithCell}{tr}(:,5);
+                %if sum(PF>0)
+                    opTemp= [opTemp;PF'];
+                %end
+            end
+            op(epoch,:,:) = opTemp(network.E_indices,:);
+        end
+        normRates = 1
+        row_all_zeros1 = find(all( squeeze(op(1,:,:))==0, 2)) ;
+        row_n_all_zeros1 = find(~all( squeeze(op(1,:,:))==0, 2)) ;
+        [peakRate,peakRateLocation] = max(squeeze(op(1,row_n_all_zeros1,:)), [], 2);
+        [B,sortedCellIndsbyPeakRateLocation] = sort(peakRateLocation, 'descend');
+        I1 = [row_n_all_zeros1(sortedCellIndsbyPeakRateLocation); row_all_zeros1];
+        if normRates
+            rateDenom1 = squeeze(max(op(1,I1,:), [], 3))';
+            caxmax = 1;
+        else
+            rateDenom1 = 1;
+            caxmax = max(op, [], 'all');
+        end
+        figure; imagesc(squeeze(op(1,I1,:))./rateDenom1); title('Env1, sort Env1'); colorbar; caxis([0, caxmax])
+        xlabel('Position (2 cm bin)'); ylabel('Cell (sorted))');
+
     end
     score = mean(allScores);
     disp(['Mean score: ', num2str(score)])
-    PF_sameNet_plottingv1_0
+    PF_sameNet_plottingv1_0 % script to plot 
 	
+    
     % Extract place field order from linfields struct
+    day = 1; epoch = 1; tetrode = 1; tr = 1;
     op = [];
-    for epoch = 1:sim.nEnvironments
+    for epoch = 1:pfsim.nEnvironments
         opTemp = [];
         for ithCell = 1:parameters.n
             PF = linfields{day}{epoch}{tetrode}{ithCell}{tr}(:,5);
@@ -260,8 +308,8 @@ for ithNet = 1:parameters.nNets
     rateDenom1 = squeeze(max(op(1,PFpeaksSequence,:), [], 3))';
     minPeakRate = 3;
     PFpeaksSequence(rateDenom1<minPeakRate) = nan;
-    %}
-        
+    
+    keyboard
         
     %% Preplay simulation:
     %Run through every cluster initialization and store relevant data and

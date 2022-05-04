@@ -27,7 +27,7 @@
 %% Save Path + Load Parameters
 addpath('functions')
 
-saveFlag = 0 % 1 to save simulation results
+saveFlag = 1 % 1 to save simulation results
 selectSavePath = 0; % 1 to select save destination, 0 to save in results dir
 selectLoadPath = 1; % 1 to select load source, 0 to load from results dir
 plotResults = 1; % 1 to plot basic simulation results
@@ -85,7 +85,7 @@ end
 %% Set Up Grid Search Parameters
 
 %Test parameters
-num_nets = 4;
+num_nets = 3;
 % num_nets = 4;
 num_inits = 1;
 test_n = 25; % Number of parameters to test (each)
@@ -119,7 +119,7 @@ variedParam(1).range = linspace(1, 6, 21); % set of values to test param2 at
 
 variedParam(2).name = 'clusters'; % 2nd parameter to be varied
 %variedParam(2).range = [2:1:21]; % set of values to test param2 at
-variedParam(2).range = [2:2:42]; % set of values to test param2 at
+variedParam(2).range = [2:2:36]; % set of values to test param2 at
 
 
 parameters.del_G_syn_E_I = 500*10^(-12);

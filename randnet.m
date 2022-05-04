@@ -165,7 +165,7 @@ end
 
 for ithNet = 1:parameters.nNets
     
-    % Create ith networks savepath
+    %CREATE NETWORK SAVE PATH
     net_save_path = strcat(save_path,'/network_',string(ithNet));
     if parameters.saveFlag & ~isfolder(net_save_path)
         mkdir(net_save_path);
@@ -177,85 +177,18 @@ for ithNet = 1:parameters.nNets
         save(strcat(net_save_path,'/network.mat'),'network');
     end
     
-    
-    %% Place field simulation:
-    
-    G_in_PFs = zeros(parameters.n, numel(sim.t), sim.nEnvironments_PFs, sim.nTrials_PFs);
-    for ithTrial = 1:sim.nTrials
-        G_in_PFs(:,1,ithEnv,ithTrial) = 1/10* dI(:,ithEnv) * 2*parameters.rGmax * parameters.tau_syn_E + sqrt(1/2*parameters.tau_syn_E*dI(:,ithEnv).^2*2*parameters.rGmax).*randn(parameters.n, 1) ; % ... and match variance
-
-        for i = 2:numel(sim.t)
-                % Exponential decay from last time step
-                G_in_PFs(:,i,ithEnv,ithTrial) = G_in_PFs(:,i-1,ithEnv,ithTrial)*exp(-parameters.dt/parameters.tau_syn_E);
-
-                G_in_PFs(:,i,ithEnv,ithTrial) = G_in_PFs(:,i,ithEnv,ithTrial) + ...
-                        Wsig1 .* [rand(parameters.n, 1) < (parameters.dt* (parameters.rG * (i/numel(sim.t)) ))] + ...
-                        Wsig2 .* [rand(parameters.n, 1) < (parameters.dt* ( parameters.rG * ((numel(sim.t)-i)/numel(sim.t)) ) )] + ...
-                        WsigContext(:,ithEnv) .* [rand(parameters.n, 1) < (parameters.dt*parameters.rG)]  ;
-            end
-    end
-    opV = zeros(parameters.n, numel(sim.t), sim.nEnvironments, sim.nTrials); % Voltage from all sims
-    opS = zeros(parameters.n, numel(sim.t), sim.nEnvironments, sim.nTrials); % Spikes from all sims
-    for ithEnv = 1:sim.nEnvironments
-        for i = 1:sim.nTrials_PFs
-
-            %Create Storage Variables
-            I_syn = zeros(parameters.n,numel(sim.t)); %synaptic current emitted by each neuron at each timestep (A)
-            %synaptic conductances for each neuron at each timestep
-            V_m = zeros(parameters.n,numel(sim.t)); %membrane potential for each neuron at each timestep
-            V_m(:,1) = -60e-3 + 1e-3*randn([parameters.n,1]); %set all neurons to baseline reset membrane potential with added noise
-            parameters.G_in = G_in_PFs(:,:,ithEnv,ithTrial); 
-            trialSeed = randi(10^6);
-            
-            [V_m, G_sra, G_syn_E_E, G_syn_I_E, G_syn_E_I, G_syn_I_I, conns] = randnet_calculator(parameters, trialSeed, network, V_m);
-            opV(:,:,ithEnv,i) = V_m;
-            opS(:,:,ithEnv,i) = V_m>parameters.V_th;
-        end
-    end
-    
-    % Calculate PF objective score
-    for i = 1:sim.nEnvironments
-        [allScores(i), linfields] = PFopt_ObjFun(opS(:,:,i,:), parameters, sim, track, network);
-        disp(['Env: ', num2str(i), ', Score: ', num2str(allScores(i))])
-    end
-    score = mean(allScores);
-    disp(['Mean score: ', num2str(score)])
-    PF_sameNet_plottingv1_0
-
-    % Extract place field order from linfields struct
-    op = [];
-    for epoch = 1:sim.nEnvironments
-        opTemp = [];
-        for ithCell = 1:parameters.n
-            PF = linfields{day}{epoch}{tetrode}{ithCell}{tr}(:,5);
-            %if sum(PF>0)
-                opTemp= [opTemp;PF'];
-            %end
-        end
-        op(epoch,:,:) = opTemp(network.E_indices,:);
-    end
-    row_all_zeros1 = find(all( squeeze(op(1,:,:))==0, 2)) ;
-    row_n_all_zeros1 = find(~all( squeeze(op(1,:,:))==0, 2)) ;
-
-    [peakRate,peakRateLocation] = max(squeeze(op(1,row_n_all_zeros1,:)), [], 2);
-    [B,sortedCellIndsbyPeakRateLocation] = sort(peakRateLocation, 'descend');
-    PFpeaksSequence = [row_n_all_zeros1(sortedCellIndsbyPeakRateLocation); row_all_zeros1];
-    rateDenom1 = squeeze(max(op(1,PFpeaksSequence,:), [], 3))';
-    minPeakRate = 3;
-    PFpeaksSequence(rateDenom1<minPeakRate) = nan;
-
-        
-    %% Preplay simulation
+    %RUN MODEL AND CALCULATE
     %Run through every cluster initialization and store relevant data and
     %calculations
     V_m_var = struct;
     G_var = struct;
     I_var = struct;
     network_spike_sequences = struct;
+    network_cluster_sequences = struct; 
     
     for ithTest = 1:parameters.nTrials       
-               
-        % Create input conductance variable
+        
+        %Create input conductance variable
         if parameters.usePoisson
             G_in = zeros(parameters.n, parameters.t_steps+1);
             for k = 2:(parameters.t_steps+1)
@@ -291,11 +224,8 @@ for ithNet = 1:parameters.nNets
         V_m_var(ithTest).V_m = V_m;
         %}
 
-        % Detect PBEs from E-cell spikes
         [trialResults] = detect_PBE( V_m(network.E_indices,:)>= parameters.V_th, parameters);
-        
-        % Append trialResults struct to network results struct
-        if ithTest == 1 
+        if ithTest == 1 % append trialResults struct to network results struct
             network_spike_sequences = trialResults;
         else
             network_spike_sequences = [network_spike_sequences, trialResults]; 
@@ -315,6 +245,7 @@ for ithNet = 1:parameters.nNets
         save(strcat(net_save_path,'/G_var.mat'),'G_var','-v7.3')
         save(strcat(net_save_path,'/I_var.mat'),'I_var','-v7.3')
         save(strcat(net_save_path,'/network_spike_sequences.mat'),'network_spike_sequences','-v7.3')
+        save(strcat(net_save_path,'/network_cluster_sequences.mat'),'network_cluster_sequences','-v7.3')
     end
     
 end % Network loop

@@ -190,6 +190,7 @@ for ithNet = 1:parameters.nNets
     for ithTest = 1:parameters.nTrials       
         
         %Create input conductance variable
+        rng(ithTest)
         if parameters.usePoisson
             G_in = zeros(parameters.n, parameters.t_steps+1);
             for k = 2:(parameters.t_steps+1)

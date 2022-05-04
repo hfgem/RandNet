@@ -186,7 +186,6 @@ for ithNet = 1:parameters.nNets
     network_spike_sequences = struct;
     network_cluster_sequences = struct; 
     
-    %% Simulate Preplay
     for ithTest = 1:parameters.nTrials       
         
         %Create input conductance variable

@@ -1,5 +1,8 @@
 %RandNet Project - random networks with global inhibition and their ability
-%to produce sequences
+%to produce sequences.
+%
+% randnet_PF is the same as randnet.m, but includes simulation of place
+% fields for each network.
 
 %% Simulation options and save path
 
@@ -143,6 +146,18 @@ if parameters.saveFlag == 1
     save(strcat(save_path,'/parameters.mat'),'parameters')
 end
 
+
+%% Place field simulation parameters
+pfsim = parameters; 
+
+pfsim.nEnvironments = 1;
+pfsim.nTrials = 5;
+
+pfsim.t_max = 2;
+pfsim.t = 0:parameters.dt:pfsim.t_max;
+pfsim = set_depedent_parameters(pfsim);
+
+
 %% Create Networks and Check Spike Progression
 %Runs through a series of different random number generator seeds to change
 %the network connectivity and setup, and then automatically outputs
@@ -177,7 +192,78 @@ for ithNet = 1:parameters.nNets
         save(strcat(net_save_path,'/network.mat'),'network');
     end
     
-    %RUN MODEL AND CALCULATE
+    
+    %% Place field simulation:
+    
+    G_in_PFs = zeros(parameters.n, numel(pfsim.t), pfsim.nEnvironments, pfsim.nTrials);
+    for ithEnv = 1:pfsim.nEnvironments
+        for ithTrial = 1:pfsim.nTrials
+            % G_in_PFs(:,1,ithEnv,ithTrial) = 1/10* dI(:,ithEnv) * 2*parameters.rGmax * parameters.tau_syn_E + sqrt(1/2*parameters.tau_syn_E*dI(:,ithEnv).^2*2*parameters.rGmax).*randn(parameters.n, 1) ; 
+            G_in_PFs(:,1,ithEnv,ithTrial) = zeros(parameters.n, 1) ; 
+            for i = 2:numel(pfsim.t)
+                    % Exponential decay from last time step
+                    G_in_PFs(:,i,ithEnv,ithTrial) = G_in_PFs(:,i-1,ithEnv,ithTrial)*exp(-parameters.dt/parameters.tau_syn_E);
+
+                    G_in_PFs(:,i,ithEnv,ithTrial) = G_in_PFs(:,i,ithEnv,ithTrial) + ...
+                            network.spatialInput{1} .* [rand(parameters.n, 1) < (parameters.dt* (parameters.rG * (i/numel(pfsim.t)) ))] + ...
+                            network.spatialInput{2} .* [rand(parameters.n, 1) < (parameters.dt* ( parameters.rG * ((numel(pfsim.t)-i)/numel(pfsim.t)) ) )] + ...
+                            network.contextInput(:,ithEnv) .* [rand(parameters.n, 1) < (parameters.dt*parameters.rG)]  ;
+                end
+        end
+        opV = zeros(parameters.n, numel(pfsim.t), pfsim.nEnvironments, pfsim.nTrials); % Voltage from all sims
+        opS = zeros(parameters.n, numel(pfsim.t), pfsim.nEnvironments, pfsim.nTrials); % Spikes from all sims
+        for ithEnv = 1:pfsim.nEnvironments
+            for i = 1:pfsim.nTrials
+
+                % Set up for simulation
+                V_m = zeros(parameters.n,numel(pfsim.t)); %membrane potential for each neuron at each timestep
+                V_m(:,1) = -60e-3 + 1e-3*randn([parameters.n,1]); %set all neurons to baseline reset membrane potential with added noise
+                pfsim.G_in = G_in_PFs(:,:,ithEnv,ithTrial); 
+                trialSeed = randi(10^6);
+
+                % PF Simulation
+                [V_m, G_sra, G_syn_E_E, G_syn_I_E, G_syn_E_I, G_syn_I_I, conns] = randnet_calculator(pfsim, trialSeed, network, V_m);
+                opV(:,:,ithEnv,i) = V_m;
+                opS(:,:,ithEnv,i) = V_m>parameters.V_th;
+            end
+        end
+    end
+    % keyboard
+    %{
+    % Calculate Place fields and PF-objective score
+    for i = 1:sim.nEnvironments
+        [allScores(i), linfields(i)] = PFopt_ObjFun(opS(:,:,i,:), parameters, sim, track, network);
+        disp(['Env: ', num2str(i), ', Score: ', num2str(allScores(i))])
+    end
+    score = mean(allScores);
+    disp(['Mean score: ', num2str(score)])
+    PF_sameNet_plottingv1_0
+	
+    % Extract place field order from linfields struct
+    op = [];
+    for epoch = 1:sim.nEnvironments
+        opTemp = [];
+        for ithCell = 1:parameters.n
+            PF = linfields{day}{epoch}{tetrode}{ithCell}{tr}(:,5);
+            %if sum(PF>0)
+                opTemp= [opTemp;PF'];
+            %end
+        end
+        op(epoch,:,:) = opTemp(network.E_indices,:);
+    end
+    row_all_zeros1 = find(all( squeeze(op(1,:,:))==0, 2)) ;
+    row_n_all_zeros1 = find(~all( squeeze(op(1,:,:))==0, 2)) ;
+
+    [peakRate,peakRateLocation] = max(squeeze(op(1,row_n_all_zeros1,:)), [], 2);
+    [B,sortedCellIndsbyPeakRateLocation] = sort(peakRateLocation, 'descend');
+    PFpeaksSequence = [row_n_all_zeros1(sortedCellIndsbyPeakRateLocation); row_all_zeros1];
+    rateDenom1 = squeeze(max(op(1,PFpeaksSequence,:), [], 3))';
+    minPeakRate = 3;
+    PFpeaksSequence(rateDenom1<minPeakRate) = nan;
+    %}
+        
+        
+    %% Preplay simulation:
     %Run through every cluster initialization and store relevant data and
     %calculations
     V_m_var = struct;
@@ -189,6 +275,7 @@ for ithNet = 1:parameters.nNets
     for ithTest = 1:parameters.nTrials       
         
         %Create input conductance variable
+        rng(ithTest)
         if parameters.usePoisson
             G_in = zeros(parameters.n, parameters.t_steps+1);
             for k = 2:(parameters.t_steps+1)

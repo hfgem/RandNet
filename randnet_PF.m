@@ -47,7 +47,7 @@ parameters.V_syn_I = -70*10^(-3); %synaptic reversal potential (inhibitory) %gen
 parameters.del_G_syn_E_E = 750*10^(-12); %synaptic conductance step following spike (S)
 parameters.del_G_syn_I_I = 0; %1.4*del_G_syn_E_E; %synaptic conductance step following spike (S)
 parameters.del_G_syn_E_I = 500*10^(-12); %synaptic conductance step following spike (S)
-parameters.del_G_syn_I_E = nan; %synaptic conductance step following spike (S)
+parameters.del_G_syn_I_E = 500*10^(-12); %synaptic conductance step following spike (S)
 
 % SRA parameters
 parameters.del_G_sra = 330e-09; %spike rate adaptation conductance step following spike %ranges from 1-200 *10^(-9) (S)
@@ -186,7 +186,6 @@ for ithNet = 1:parameters.nNets
     network_spike_sequences = struct;
     network_cluster_sequences = struct; 
     
-    %% Simulate Preplay
     for ithTest = 1:parameters.nTrials       
         
         %Create input conductance variable

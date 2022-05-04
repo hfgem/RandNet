@@ -250,6 +250,7 @@ title(analysisTitle)
 
 % set(gca,'ColorScale','log')
 
+% hold on; plot(variedParam(1).range, exp(variedParam(1).range/1.1)-1); plot(variedParam(1).range, exp((variedParam(1).range-1)*5)+15);
 
 
 %% % %%%%%%%%%%%%

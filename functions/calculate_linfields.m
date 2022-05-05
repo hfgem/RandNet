@@ -1,4 +1,4 @@
-function linfields = calculate_linfields(opS, parameters, sim)
+function [linfields, PFpeaksSequence] = calculate_linfields(opS, parameters, sim, network, plotPFs)
 % Calculate linear place fields, based on Jadhav lab methods
 %
 % Adapted from ReplayNet code, with assumption of simulating a single
@@ -79,5 +79,44 @@ for ithCell = 1:parameters.n %increment through cells
     %}
 
 end
+
+
+% Extract place field order from linfields struct
+opTemp = [];
+for ithCell = 1:parameters.n
+    PF = linfields{day}{epoch}{tetrode}{ithCell}{tr}(:,5);
+    %if sum(PF>0)
+        opTemp= [opTemp;PF'];
+    %end
+end
+PFmat_E = opTemp(network.E_indices,:);
+
+row_all_zeros1 = find(all( PFmat_E==0, 2)) ;
+row_n_all_zeros1 = find(~all( PFmat_E==0, 2)) ;
+
+[peakRate,peakRateLocation] = max(squeeze(PFmat_E(row_n_all_zeros1,:)), [], 2);
+[B,sortedCellIndsbyPeakRateLocation] = sort(peakRateLocation, 'descend');
+PFpeaksSequence = [row_n_all_zeros1(sortedCellIndsbyPeakRateLocation); row_all_zeros1];
+
+
+
+normRates = 1;
+if normRates
+    rateDenom1 = max(PFmat_E(PFpeaksSequence,:), [], 2);
+    caxmax = 1;
+else
+    rateDenom1 = 1;
+    caxmax = max(PFmat_E, [], 'all');
+end
+if plotPFs
+    figure; imagesc( PFmat_E(PFpeaksSequence,:)./rateDenom1 ); title('Env1, sort Env1'); colorbar; caxis([0, caxmax])
+    xlabel('Position (2 cm bin)'); ylabel('Cell (sorted))');
+    
+    figure; histogram(rateDenom1); 
+    xlabel('Peak PF rate (Hz)'); ylabel('E cells (count)');
+end
+
+peakRate = max(PFmat_E(PFpeaksSequence,:), [], 2);
+PFpeaksSequence(peakRate<sim.minPeakRate) = nan;
 
 end

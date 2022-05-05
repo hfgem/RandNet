@@ -109,25 +109,22 @@ parameters.del_G_syn_E_I = 550*10^(-12); %synaptic conductance step following sp
 parameters.del_G_syn_I_E = 550*10^(-12); %synaptic conductance step following spike (S)
 %}
 
+Win_mean = 625*10^-12;
+Win_var = (200e-12)^2;
+parameters.W_gin = log(Win_mean^2 / sqrt(Win_var+Win_mean^2)); % increase in conductance, if using poisson inputs
+parameters.cueSigma = sqrt(log(Win_var/Win_mean^2 + 1)); % temp value, to produce identical values
+parameters.PFcontextScale = 0.1;
+
+Win_mean = 600*10^-12;
+Win_var = (200e-12)^2;
+parameters.W_gin = log(Win_mean^2 / sqrt(Win_var+Win_mean^2)); % increase in conductance, if using poisson inputs
+parameters.cueSigma = sqrt(log(Win_var/Win_mean^2 + 1)); % temp value, to produce identical values
+
+parameters.del_G_syn_E_E = 950*10^(-12); %synaptic conductance step following spike (S)
+
+% X = lognrnd(parameters.W_gin, parameters.cueSigma, 100 ); figure; histogram(X)
 
 %% Parameters for sequence analysis
-
-%{
-parameters.E_events_only = 1; % if 1, only consider E-cells for detect_events
-parameters.IEI = 0.02; %inter-event-interval (s) the elapsed time between spikes to count separate events
-parameters.bin_width = 5*10^(-3); %5 ms bin
-
-%TEST 1: The number of neurons participating in a sequence must pass a threshold:
-parameters.event_cutoff = 0.10; %0.25; %fraction of neurons that have to be involved to constitute a successful event
-
-%TEST 2: The firing rate must fall within a realistic range
-parameters.min_avg_fr = 0.01;
-parameters.max_avg_fr = 3.0;
-
-% TEST 3: The sequence(s) of firing is(are) within reasonable lengths
-parameters.min_avg_length = 0.01;
-parameters.max_avg_length = 0.5;
-%}
 
 % Analysis parameters for PBE detection
 parameters.PBE_min_Hz = 0.5; % minimum population mean rate during PBE
@@ -139,7 +136,6 @@ parameters.PBE_max_combine = 10 * (1/1000); % Combine adjacent PBEs separaeted b
 
 %% __set/update Dependent Parameters__ %%
 parameters = set_depedent_parameters(parameters);
-
 
 %Save to computer
 if parameters.saveFlag == 1
@@ -165,9 +161,12 @@ pfsim.linFieldGaussSD = 0.04;% Standard deviation of PF gaussian kernel
 pfsim.winScale = 5; % window is 5x the STDev
 pfsim.gridxvals = pfsim.spatialBin:pfsim.spatialBin:pfsim.trackWidth;          % Grid-points in the x-direction
 
+% PF Gaussian fit parameters
 pfsim.gaussFOLower = [10, 0, 0]; % [peak amplitude, position of peak on track, standard deviation of peak]
 pfsim.gaussFOUpper = [30, max(pfsim.gridxvals)*100, sqrt(max(pfsim.gridxvals)*100)]; 
 pfsim.peakTarget = 15; % Hz, Target peak rate for linfieldsScore
+
+pfsim.minPeakRate = 3; % minimum PF peak rate to consider a cell a place cell
 
 % set depedendent parameters for PF sim
 pfsim = set_depedent_parameters(pfsim);
@@ -209,7 +208,7 @@ for ithNet = 1:parameters.nNets
     
     
     %% Place field simulation:
-    
+    %{
     G_in_PFs = zeros(parameters.n, numel(pfsim.t), pfsim.nEnvironments, pfsim.nTrials);
     for ithEnv = 1:pfsim.nEnvironments
         for ithTrial = 1:pfsim.nTrials
@@ -222,9 +221,10 @@ for ithNet = 1:parameters.nNets
                     G_in_PFs(:,i,ithEnv,ithTrial) = G_in_PFs(:,i,ithEnv,ithTrial) + ...
                             network.spatialInput{1} .* [rand(parameters.n, 1) < (parameters.dt* (parameters.rG * (i/numel(pfsim.t)) ))] + ...
                             network.spatialInput{2} .* [rand(parameters.n, 1) < (parameters.dt* ( parameters.rG * ((numel(pfsim.t)-i)/numel(pfsim.t)) ) )] + ...
-                            network.contextInput(:,ithEnv) .* [rand(parameters.n, 1) < (parameters.dt*parameters.rG)]  ;
+                            network.contextInput(:,ithEnv) .* parameters.PFcontextScale .* [rand(parameters.n, 1) < (parameters.dt*parameters.rG)]  ;
                 end
         end
+        tic
         opV = zeros(parameters.n, numel(pfsim.t), pfsim.nEnvironments, pfsim.nTrials); % Voltage from all sims
         opS = zeros(parameters.n, numel(pfsim.t), pfsim.nEnvironments, pfsim.nTrials); % Spikes from all sims
         for ithEnv = 1:pfsim.nEnvironments
@@ -247,69 +247,14 @@ for ithNet = 1:parameters.nNets
     
     % Calculate Place fields and PF-objective score
     for i = 1:pfsim.nEnvironments
-        linfields = calculate_linfields(opS, pfsim, pfsim);
+        [linfields, PFpeaksSequence] = calculate_linfields(opS, pfsim, pfsim, network, true);
         allScores(i) = calculate_linfieldsScore(linfields, pfsim, pfsim, network);
         disp(['Env: ', num2str(i), ', Score: ', num2str(allScores(i))])
-        
-        % Plot place fields:
-        day = 1; epoch = 1; tetrode = 1; tr = 1;
-        op = [];
-        for epoch = 1:pfsim.nEnvironments
-            opTemp = [];
-            for ithCell = 1:parameters.n
-                PF = linfields{day}{epoch}{tetrode}{ithCell}{tr}(:,5);
-                %if sum(PF>0)
-                    opTemp= [opTemp;PF'];
-                %end
-            end
-            op(epoch,:,:) = opTemp(network.E_indices,:);
-        end
-        normRates = 1
-        row_all_zeros1 = find(all( squeeze(op(1,:,:))==0, 2)) ;
-        row_n_all_zeros1 = find(~all( squeeze(op(1,:,:))==0, 2)) ;
-        [peakRate,peakRateLocation] = max(squeeze(op(1,row_n_all_zeros1,:)), [], 2);
-        [B,sortedCellIndsbyPeakRateLocation] = sort(peakRateLocation, 'descend');
-        I1 = [row_n_all_zeros1(sortedCellIndsbyPeakRateLocation); row_all_zeros1];
-        if normRates
-            rateDenom1 = squeeze(max(op(1,I1,:), [], 3))';
-            caxmax = 1;
-        else
-            rateDenom1 = 1;
-            caxmax = max(op, [], 'all');
-        end
-        figure; imagesc(squeeze(op(1,I1,:))./rateDenom1); title('Env1, sort Env1'); colorbar; caxis([0, caxmax])
-        xlabel('Position (2 cm bin)'); ylabel('Cell (sorted))');
-
     end
     score = mean(allScores);
     disp(['Mean score: ', num2str(score)])
-    PF_sameNet_plottingv1_0 % script to plot 
-	
-    
-    % Extract place field order from linfields struct
-    day = 1; epoch = 1; tetrode = 1; tr = 1;
-    op = [];
-    for epoch = 1:pfsim.nEnvironments
-        opTemp = [];
-        for ithCell = 1:parameters.n
-            PF = linfields{day}{epoch}{tetrode}{ithCell}{tr}(:,5);
-            %if sum(PF>0)
-                opTemp= [opTemp;PF'];
-            %end
-        end
-        op(epoch,:,:) = opTemp(network.E_indices,:);
-    end
-    row_all_zeros1 = find(all( squeeze(op(1,:,:))==0, 2)) ;
-    row_n_all_zeros1 = find(~all( squeeze(op(1,:,:))==0, 2)) ;
-
-    [peakRate,peakRateLocation] = max(squeeze(op(1,row_n_all_zeros1,:)), [], 2);
-    [B,sortedCellIndsbyPeakRateLocation] = sort(peakRateLocation, 'descend');
-    PFpeaksSequence = [row_n_all_zeros1(sortedCellIndsbyPeakRateLocation); row_all_zeros1];
-    rateDenom1 = squeeze(max(op(1,PFpeaksSequence,:), [], 3))';
-    minPeakRate = 3;
-    PFpeaksSequence(rateDenom1<minPeakRate) = nan;
-    
-    keyboard
+    PFruntime = toc
+    %}
         
     %% Preplay simulation:
     %Run through every cluster initialization and store relevant data and

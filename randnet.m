@@ -5,7 +5,7 @@
 
 clear all
 
-parameters.saveFlag = 1; % 1 to save simulation results
+parameters.saveFlag = 0; % 1 to save simulation results
 parameters.selectPath = 0; % 1 to select save destination, 0 to save in current dir
 parameters.plotResults = 1; % 1 to plot basic simulation results
 
@@ -47,7 +47,7 @@ parameters.V_syn_I = -70*10^(-3); %synaptic reversal potential (inhibitory) %gen
 parameters.del_G_syn_E_E = 750*10^(-12); %synaptic conductance step following spike (S)
 parameters.del_G_syn_I_I = 0; %1.4*del_G_syn_E_E; %synaptic conductance step following spike (S)
 parameters.del_G_syn_E_I = 500*10^(-12); %synaptic conductance step following spike (S)
-parameters.del_G_syn_I_E = 500*10^(-12); %synaptic conductance step following spike (S)
+parameters.del_G_syn_I_E = nan; %synaptic conductance step following spike (S)
 
 % SRA parameters
 parameters.del_G_sra = 330e-09; %spike rate adaptation conductance step following spike %ranges from 1-200 *10^(-9) (S)

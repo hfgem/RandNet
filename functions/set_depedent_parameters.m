@@ -11,6 +11,15 @@ if isfield(parameters, 'IEI')
     parameters.IES = ceil(parameters.IEI/parameters.dt); %inter-event-steps = the number of steps to elapse between spikes
 end
 
+% To make Wei and Wie equal, set one to nan before calling set_dependent_parameters
+if isnan(parameters.del_G_syn_I_E) & ~isnan(parameters.del_G_syn_E_I)
+    parameters.del_G_syn_I_E = parameters.del_G_syn_E_I;
+elseif isnan(parameters.del_G_syn_E_I) & ~isnan(parameters.del_G_syn_I_E)
+    parameters.del_G_syn_E_I = parameters.del_G_syn_I_E;
+elseif isnan(parameters.del_G_syn_E_I) & isnan(parameters.del_G_syn_I_E)
+    error('Wei and Wie are both nan')
+end
+
 %Calculate connection probabilites
 % parameters.cluster_n = min(parameters.n*2/parameters.clusters,parameters.n); %number of neurons in a cluster (for small n round(n/3), for large n round(n/5)) 
 parameters.cluster_n = round((parameters.mnc*parameters.n) / parameters.clusters) ; % Rather than above method, explicitly declare mnc as a parameter

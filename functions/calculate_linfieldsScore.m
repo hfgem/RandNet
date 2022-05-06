@@ -18,54 +18,29 @@ day = 1; epoch = 1; tetrode = 1; tr = 1;
 %sim.mainSeed
 %sim.gaussFO.Method
 
-gaussFO = fitoptions('Method','NonlinearLeastSquares',...
-               'Lower',sim.gaussFOLower,...
-               'Upper',sim.gaussFOUpper...
-               ); % [peak amplitude, position of peak on track, standard deviation of peak]
+% Defaults for TolFun and TolX are 1e-6
+gaussFO = fitoptions('Method','NonlinearLeastSquares', ...
+                    'Lower',sim.gaussFOLower, ...
+                    'Upper',sim.gaussFOUpper, ...
+                    'TolFun', 1e-3, ...
+                    'TolX', 1e-3 ...
+                    ); % [peak amplitude, position of peak on track, standard deviation of peak]
 
            
 posBins = linfields{day}{epoch}{tetrode}{1}{tr}(:,1);
     
-KSop = []; % Quantify similarity to gaussian
-maxFR = [];
-sparsity = [];
-minFR = [];
-spatialInfo = [];
-allPFs = [];
-gaussRsqrs = [];
-for ithCell = 1:parameters.n
+maxFR = nan(1, parameters.n);
+allPFs = nan(numel(posBins), parameters.n);
+gaussRsqrs = nan(1, parameters.n);
+for ithCell = network.E_indices
     PF = linfields{day}{epoch}{tetrode}{ithCell}{tr}(:,5);
-    
-    if std(PF)~=0
-        [h,p,ksstat,cv] = kstest((PF-mean(PF))/std(PF));
-    else % cell is silent
-        ksstat = 0;
-    end
-    
-    KSop(ithCell) = ksstat;
-    maxFR(ithCell) = max(PF);
-    minFR(ithCell) = min(PF);
-    sparsity(ithCell) = mean(PF<=(0.25*max(PF)));
-    
-    if mean(PF)==0
-        spatialInfo(ithCell) = 0;
-    else
-        spatialInfo(ithCell) = mean( [PF/mean(PF)].*log((PF+eps)/mean(PF)) );
-        %figure; plot(PF); title(num2str(spatialInfo(ithCell)))
-    end
     allPFs(:,ithCell)= PF;
+    maxFR(ithCell) = max(PF);
     
-    [fitobject,gof,output] = fit(posBins, PF, 'gauss1', gaussFO); % up to gauss8, for sum of 8 gaussians
-    
-    gaussRsqrs(ithCell) = gof.rsquare;
+	[~,gof,~] = fit(posBins, PF, 'gauss1', gaussFO); % up to gauss8, for sum of 8 gaussians
+	gaussRsqrs(ithCell) = gof.rsquare;
         
 end
-
-% figure; imagesc(allPFs)
-% figure; scatter(KSop, sparsity)
-% figure; histogram(KSop); title('Distribition of KS-statistics')
-% figure; scatter(KSop, dipOP); xlabel('KS-statitic'); ylabel('dip statistic')
-
 
 
 %% Calculate objective score, based on PF similarities to Gaussian
@@ -82,7 +57,7 @@ PFScore = 0;
 for i = 1:numel(posBins)
     eCellInds = ismember(network.all_indices, network.E_indices);
     Inds = logical( ismember(network.all_indices, network.E_indices).* [allPFs(i,:)==maxFR] ); % get index of cells whose peak is at spatial bin i 
-
+    
     locMax = max(gaussRsqrs(logical(Inds))); % Determine best gaussian correlation of out of Inds cells
 
     if ~isempty(locMax)
@@ -92,6 +67,6 @@ for i = 1:numel(posBins)
 
 end
 PFScore = PFScore/numel(posBins);
-% keyboard
+
 
 end

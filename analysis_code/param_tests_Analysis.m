@@ -30,20 +30,21 @@ yParamvec = variedParam(2).range;
 yName = variedParam(2).name;
 
 tic
-op = nan(numel(xParamvec), numel(yParamvec));
+op = nan(2, numel(xParamvec), numel(yParamvec));
 
 figure(515); hold on
-imagesc(xParamvec, yParamvec, op', 'AlphaData', ~isnan(op')); drawnow
+imagesc(xParamvec, yParamvec, squeeze(op(1,:,:))', 'AlphaData', ~isnan(squeeze(op(1,:,:))')); drawnow
 set(gca,'YDir','normal')
 cb = colorbar();
 xlabel(xName,'Interpreter','none')
 ylabel(yName,'Interpreter','none')
 
+rng(1)
 for ithParam1 = 1:size(resultsStruct, 1)
     
     for ithParam2 = 1:size(resultsStruct, 2)
         
-        temp = nan(num_nets, 1);
+        temp = nan(2, num_nets);
         for ithNet = 1:size(resultsStruct, 3)
             % keyboard
             
@@ -59,7 +60,8 @@ for ithParam1 = 1:size(resultsStruct, 1)
 
                 
                 % Sequence-by-sequence correlation analysis
-                cbLabel = 'p-val';
+                cbLabel1 = 'p-val';
+                cbLabel2 = 'KS-stat';
                 analysisTitle = 'KS-test, against shuffle';
                 
                 correlationType = 'Pearson'; % Pearson, Kendall, Spearman
@@ -115,8 +117,9 @@ for ithParam1 = 1:size(resultsStruct, 1)
                     p_kstest = nan;
                     KSSTAT = nan;
                 end
-                temp(ithNet) = p_kstest;
-                
+                temp(1, ithNet) = p_kstest;
+                temp(2, ithNet) = KSSTAT;
+
                 %{               
                 % Mean Rel Rank linear correlation
                 analysisTitle = 'Mean rel. rank corr.';
@@ -221,17 +224,18 @@ for ithParam1 = 1:size(resultsStruct, 1)
                 %}
 
             else
-                temp(ithNet) = nan;
+                temp(1, ithNet) = nan;
+                temp(2, ithNet) = nan;
             end
             
         end
         
-        op(ithParam1, ithParam2) = nanmean(temp);
-  
+        op(1, ithParam1, ithParam2) = nanmean(temp(1,:));
+        op(2, ithParam1, ithParam2) = nanmean(temp(2,:));
     end
     
     figure(515)
-    imagesc(xParamvec, yParamvec, op', 'AlphaData', ~isnan(op')); drawnow
+    imagesc(xParamvec, yParamvec, squeeze(op(1,:,:))', 'AlphaData', ~isnan(squeeze(op(1,:,:))')); drawnow
     
 end
 runTime = toc;
@@ -239,12 +243,21 @@ disp([ 'Runtime: ', datestr(datenum(0,0,0,0,0,runTime),'HH:MM:SS') ])
 % disp( duration(0, 0, runTime) )
 
 figure; 
-imagesc(xParamvec, yParamvec, op', 'AlphaData', ~isnan(op'))
+imagesc(xParamvec, yParamvec, squeeze(op(1,:,:))', 'AlphaData', ~isnan(squeeze(op(1,:,:))'))
 set(gca,'YDir','normal')
-cb = colorbar(); cb.Label.String = cbLabel;
+cb = colorbar(); cb.Label.String = cbLabel1;
 xlabel(xName,'Interpreter','none')
 ylabel(yName,'Interpreter','none')
 title(analysisTitle)
+
+figure; 
+imagesc(xParamvec, yParamvec, squeeze(op(2,:,:))', 'AlphaData', ~isnan(squeeze(op(2,:,:))'))
+set(gca,'YDir','normal')
+cb = colorbar(); cb.Label.String = cbLabel2;
+xlabel(xName,'Interpreter','none')
+ylabel(yName,'Interpreter','none')
+title(analysisTitle)
+
 
 % caxis([prctile(op, 2.5, 'all'), prctile(op, 97.5, 'all')])
 

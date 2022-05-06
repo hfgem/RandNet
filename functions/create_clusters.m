@@ -102,7 +102,8 @@ function [network] = create_clusters(parameters, varargin)
     % Input strengths
     input1 = lognrnd(parameters.W_gin, parameters.cueSigma, parameters.n, 1); % location cue 1 strengths
 	input2 = lognrnd(parameters.W_gin, parameters.cueSigma, parameters.n, 1); % location cue 2 strengths
-    contextInput = lognrnd(parameters.W_gin, parameters.cueSigma, parameters.n, 1); % context cue strength
+    contextInput = lognrnd(parameters.W_gin, parameters.cueSigma/4, parameters.n, 1); % context cue strength
+    % contextInput = parameters.Win_mean+(sqrt(parameters.Win_var)*randn(parameters.n, 1)); % context cue strength
     %contextInput = lognrnd(log(parameters.W_gin), parameters.cueSigma, parameters.n, pfsim.nEnvironments);
     
     %SAVE NETWORK STRUCTURE

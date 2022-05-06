@@ -9,7 +9,7 @@ spikes_V_m = V_m >= parameters.V_th;
 t = [0:parameters.dt:parameters.t_max];
 
 rng(1)
-PFpeaksSequence = randperm(parameters.n_E)'; % dummy data, for testing
+% PFpeaksSequence = randperm(parameters.n_E)'; % dummy data, for testing
 
 %% Main plots
 plot_randnet_results(parameters, network, V_m, G_in, network_spike_sequences, ithTest, net_save_path)

@@ -34,7 +34,7 @@ parameters.dt = 0.1*10^(-3); %timestep (s)
 % tau_E ~= 10 ms from direct data, DOI: 10.1126/science.aaf1836
 parameters.tau_syn_E = 10*10^(-3); % Exc. synaptic decay time constant (s) PF19=50ms, HF18=10ms for figs 7-8 and longer for earlier figs
 % tau_I ~= 1.2-8 ms from direct data, https://doi.org/10.1073/pnas.192233099
-parameters.tau_syn_I = 2*10^(-3);  % Inh. synaptic decay time constant (s) PF19=5ms,  HF18=10ms for figs 7-8 and for earlier figs
+parameters.tau_syn_I = 3*10^(-3);  % Inh. synaptic decay time constant (s) PF19=5ms,  HF18=10ms for figs 7-8 and for earlier figs
 parameters.tau_stdp = 5*10^(-3); %STDP time constant (s)                 
 parameters.E_K = -80*10^(-3); %potassium reversal potential (V) %-75 or -80 mV
 parameters.E_L = -70*10^(-3); %leak reversal potential (V) %-60 - -70 mV range
@@ -50,7 +50,7 @@ parameters.V_syn_I = -70*10^(-3); %synaptic reversal potential (inhibitory) %gen
 parameters.del_G_syn_E_E = 750*10^(-12); %synaptic conductance step following spike (S)
 parameters.del_G_syn_I_I = 0; %1.4*del_G_syn_E_E; %synaptic conductance step following spike (S)
 parameters.del_G_syn_E_I = 500*10^(-12); %synaptic conductance step following spike (S)
-parameters.del_G_syn_I_E = 500*10^(-12); %synaptic conductance step following spike (S)
+parameters.del_G_syn_I_E = nan; %synaptic conductance step following spike (S)
 
 % SRA parameters
 parameters.del_G_sra = 330e-09; %spike rate adaptation conductance step following spike %ranges from 1-200 *10^(-9) (S)
@@ -82,15 +82,6 @@ parameters.nNets = 1; % How many networks to run
 
 
 %{
-% Alternative working parameter set
-parameters.del_G_syn_E_E = 675*10^(-12); %synaptic conductance step following spike (S)
-parameters.del_G_syn_I_I = 0; %1.4*del_G_syn_E_E; %synaptic conductance step following spike (S)
-parameters.del_G_syn_E_I = 450*10^(-12); %synaptic conductance step following spike (S)
-parameters.del_G_syn_I_E = 450*10^(-12); %synaptic conductance step following spike (S)
-parameters.del_G_sra = 100e-09; % or 50nA spike rate adaptation conductance step following spike %ranges from 1-200 *10^(-9) (S)
-%}
-
-%{
 % Attempt with lower dSRA
 parameters.del_G_syn_E_E = 575*10^(-12); %synaptic conductance step following spike (S)
 parameters.del_G_syn_I_I = 0; %1.4*del_G_syn_E_E; %synaptic conductance step following spike (S)
@@ -99,30 +90,39 @@ parameters.del_G_syn_I_E = 325*10^(-12); %synaptic conductance step following sp
 parameters.del_G_sra = 10e-09; %spike rate adaptation conductance step following spike %ranges from 1-200 *10^(-9) (S)
 %}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Temp, parameter tuning: %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+parameters.mnc = 1.5; % mean number of clusters each neuron is a member of
+
+parameters.del_G_sra = 30e-09; %spike rate adaptation conductance step following spike %ranges from 1-200 *10^(-9) (S)
+
+parameters.del_G_syn_E_E = 1000*10^(-12); %synaptic conductance step following spike (S)
+parameters.del_G_syn_E_I = 600*10^(-12); %synaptic conductance step following spike (S)
+
+parameters.Win_mean = 750*10^-12;
+parameters.Win_var = (175e-12)^2;
+parameters.W_gin = log(parameters.Win_mean^2 / sqrt(parameters.Win_var+parameters.Win_mean^2)); % increase in conductance, if using poisson inputs
+parameters.cueSigma = sqrt(log(parameters.Win_var/parameters.Win_mean^2 + 1)); % temp value, to produce identical values
+parameters.PFcontextScale = 0.1;
+%parameters.del_G_syn_E_E = 1250*10^(-12); %synaptic conductance step following spike (S)
+%parameters.del_G_syn_E_I = 450*10^(-12); %synaptic conductance step following spike (S)
+
 %{
-% Attempt with lower rG
-parameters.rG = 250; % input spiking rate, if using poisson inputs
-parameters.W_gin = 2300*10^-12; % increase in conductance, if using poisson inputs
-parameters.del_G_syn_E_E = 1200*10^(-12); %synaptic conductance step following spike (S)
-parameters.del_G_syn_I_I = 0; %1.4*del_G_syn_E_E; %synaptic conductance step following spike (S)
-parameters.del_G_syn_E_I = 550*10^(-12); %synaptic conductance step following spike (S)
-parameters.del_G_syn_I_E = 550*10^(-12); %synaptic conductance step following spike (S)
+Win_mean = 675*10^-12;
+Win_var = (100e-12)^2;
+parameters.W_gin = log(Win_mean^2 / sqrt(Win_var+Win_mean^2)); % increase in conductance, if using poisson inputs
+parameters.cueSigma = sqrt(log(Win_var/Win_mean^2 + 1)); % temp value, to produce identical values
 %}
 
-Win_mean = 625*10^-12;
-Win_var = (200e-12)^2;
-parameters.W_gin = log(Win_mean^2 / sqrt(Win_var+Win_mean^2)); % increase in conductance, if using poisson inputs
-parameters.cueSigma = sqrt(log(Win_var/Win_mean^2 + 1)); % temp value, to produce identical values
-parameters.PFcontextScale = 0.1;
-
-Win_mean = 600*10^-12;
-Win_var = (200e-12)^2;
-parameters.W_gin = log(Win_mean^2 / sqrt(Win_var+Win_mean^2)); % increase in conductance, if using poisson inputs
-parameters.cueSigma = sqrt(log(Win_var/Win_mean^2 + 1)); % temp value, to produce identical values
-
-parameters.del_G_syn_E_E = 950*10^(-12); %synaptic conductance step following spike (S)
+%parameters.del_G_syn_E_E = 1100*10^(-12); %synaptic conductance step following spike (S)
+%parameters.del_G_syn_E_I = 900*10^(-12); %synaptic conductance step following spike (S)
 
 % X = lognrnd(parameters.W_gin, parameters.cueSigma, 100 ); figure; histogram(X)
+
+PFsimFlag = 1;
+% preplaySimFlag = 1;
 
 %% Parameters for sequence analysis
 
@@ -130,7 +130,7 @@ parameters.del_G_syn_E_E = 950*10^(-12); %synaptic conductance step following sp
 parameters.PBE_min_Hz = 0.5; % minimum population mean rate during PBE
 parameters.PBE_zscore = 1.0; % minimum stds above mean rate to detect PBE
 parameters.PBE_min_dur = 30 * (1/1000); % minimum duration of a PBE
-parameters.PBE_window =  10 * (1/1000) *(1/parameters.dt); % width of gaussian kernel used to calculate mean pop activity rate
+parameters.PBE_window =  15 * (1/1000) *(1/parameters.dt); % width of gaussian kernel used to calculate mean pop activity rate
 parameters.PBE_max_combine = 10 * (1/1000); % Combine adjacent PBEs separaeted by less than this duration
 
 
@@ -208,7 +208,7 @@ for ithNet = 1:parameters.nNets
     
     
     %% Place field simulation:
-    %{
+    if PFsimFlag
     G_in_PFs = zeros(parameters.n, numel(pfsim.t), pfsim.nEnvironments, pfsim.nTrials);
     for ithEnv = 1:pfsim.nEnvironments
         for ithTrial = 1:pfsim.nTrials
@@ -254,7 +254,7 @@ for ithNet = 1:parameters.nNets
     score = mean(allScores);
     disp(['Mean score: ', num2str(score)])
     PFruntime = toc
-    %}
+    end
         
     %% Preplay simulation:
     %Run through every cluster initialization and store relevant data and

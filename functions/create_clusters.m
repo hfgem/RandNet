@@ -60,8 +60,14 @@ function [network] = create_clusters(parameters, varargin)
         cluster_mat(i,ord) = 1; %note which neurons are in a cluster
     end
     clear ord i
-
-    if include_all
+    
+    keyboard
+    if include_all == 1
+        ind_non = find(sum(cluster_mat) == 0);
+        for i = ind_non
+            cluster_mat(randi(parameters.clusters),i) = 1;
+        end
+    elseif include_all==2
         %Add back in those neurons that are not placed in a cluster, by
         %removing a place from another neuron with a high presence - this
         %section can be removed if you'd like some neurons to be unconnected

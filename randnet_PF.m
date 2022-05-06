@@ -116,7 +116,7 @@ parameters.W_gin = log(Win_mean^2 / sqrt(Win_var+Win_mean^2)); % increase in con
 parameters.cueSigma = sqrt(log(Win_var/Win_mean^2 + 1)); % temp value, to produce identical values
 %}
 
-parameters.del_G_syn_E_E = 1100*10^(-12); %synaptic conductance step following spike (S)
+parameters.del_G_syn_E_E = 1300*10^(-12); %synaptic conductance step following spike (S)
 parameters.del_G_syn_E_I = 900*10^(-12); %synaptic conductance step following spike (S)
 
 % X = lognrnd(parameters.W_gin, parameters.cueSigma, 100 ); figure; histogram(X)
@@ -130,7 +130,7 @@ parameters.W_gin = log(parameters.Win_mean^2 / sqrt(parameters.Win_var+parameter
 parameters.cueSigma = sqrt(log(parameters.Win_var/parameters.Win_mean^2 + 1)); % temp value, to produce identical values
 parameters.PFcontextScale = 0.1;
 %}
-PFsimFlag = 1;
+PFsimFlag = 0;
 PFscoreFlag = 0;
 preplaySimFlag = 1;
 
@@ -221,10 +221,12 @@ for ithNet = 1:parameters.nNets
     
     
     %% Place field simulation:
+    tic
     if PFsimFlag
         G_in_PFs = zeros(parameters.n, numel(pfsim.t), pfsim.nEnvironments, pfsim.nTrials);
         for ithEnv = 1:pfsim.nEnvironments
             for ithTrial = 1:pfsim.nTrials
+                %rng(ithTrial)
                 % G_in_PFs(:,1,ithEnv,ithTrial) = 1/10* dI(:,ithEnv) * 2*parameters.rGmax * parameters.tau_syn_E + sqrt(1/2*parameters.tau_syn_E*dI(:,ithEnv).^2*2*parameters.rGmax).*randn(parameters.n, 1) ; 
                 G_in_PFs(:,1,ithEnv,ithTrial) = zeros(parameters.n, 1) ; 
                 for i = 2:numel(pfsim.t)
@@ -237,7 +239,7 @@ for ithNet = 1:parameters.nNets
                                 network.contextInput(:,ithEnv) .* parameters.PFcontextScale .* [rand(parameters.n, 1) < (parameters.dt*parameters.rG)]  ;
                     end
             end
-            tic
+            
             opV = zeros(parameters.n, numel(pfsim.t), pfsim.nEnvironments, pfsim.nTrials); % Voltage from all sims
             opS = zeros(parameters.n, numel(pfsim.t), pfsim.nEnvironments, pfsim.nTrials); % Spikes from all sims
             for ithEnv = 1:pfsim.nEnvironments
@@ -259,20 +261,20 @@ for ithNet = 1:parameters.nNets
         % keyboard
 
         % Calculate Place fields and PF-objective score
-        if PFscoreFlag
-            for i = 1:pfsim.nEnvironments
-                [linfields, PFpeaksSequence] = calculate_linfields(opS, pfsim, pfsim, network, true);
-                tic
+        allScores = zeros(size(pfsim.nEnvironments));
+        for i = 1:pfsim.nEnvironments
+            [linfields, PFpeaksSequence] = calculate_linfields(opS, pfsim, pfsim, network, true);
+            if PFscoreFlag
                 allScores(i) = calculate_linfieldsScore(linfields, pfsim, pfsim, network)
-                toc
-                disp(['Env: ', num2str(i), ', Score: ', num2str(allScores(i))])
             end
-            score = mean(allScores);
-            disp(['Mean score: ', num2str(score)])
+            disp(['Env: ', num2str(i), ', Score: ', num2str(allScores(i))])
         end
-        PFruntime = toc
+        score = mean(allScores);
+        disp(['Mean score: ', num2str(score)])
+            
     end
-        
+    PFruntime = toc
+
     %% Preplay simulation:
     if preplaySimFlag
         V_m_var = struct;

@@ -61,7 +61,6 @@ function [network] = create_clusters(parameters, varargin)
     end
     clear ord i
     
-    keyboard
     if include_all == 1
         ind_non = find(sum(cluster_mat) == 0);
         for i = ind_non

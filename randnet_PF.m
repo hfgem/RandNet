@@ -72,7 +72,7 @@ parameters.G_mean = 0* 10^-12; % mean of the input conductance G_in, if using ra
 % Network connection parameters
 parameters.conn_prob = 0.08; %set a total desired connection probability
 parameters.p_E = 0.75; %probability of an excitatory neuron
-parameters.include_all = 1; % if a neuron is not in any cluster, take cluster membership from a highly connected neuron
+parameters.include_all = 2; % if a neuron is not in any cluster, take cluster membership from a highly connected neuron
 parameters.global_inhib = 1; % if 1, I-cells are not clustered and have connection probability p_I
 parameters.p_I = 0.5; % probability of an I cell connecting to any other cell
 
@@ -116,8 +116,9 @@ parameters.W_gin = log(Win_mean^2 / sqrt(Win_var+Win_mean^2)); % increase in con
 parameters.cueSigma = sqrt(log(Win_var/Win_mean^2 + 1)); % temp value, to produce identical values
 %}
 
-parameters.del_G_syn_E_E = 1300*10^(-12); %synaptic conductance step following spike (S)
-parameters.del_G_syn_E_I = 900*10^(-12); %synaptic conductance step following spike (S)
+parameters.mnc = 1.5; % mean number of clusters each neuron is a member of
+parameters.del_G_syn_E_E = 1200*10^(-12); %synaptic conductance step following spike (S)
+parameters.del_G_syn_E_I = 500*10^(-12); %synaptic conductance step following spike (S)
 
 % X = lognrnd(parameters.W_gin, parameters.cueSigma, 100 ); figure; histogram(X)
 

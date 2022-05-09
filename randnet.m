@@ -6,7 +6,7 @@
 clear all
 
 parameters.saveFlag = 0; % 1 to save simulation results
-parameters.selectPath = 0; % 1 to select save destination, 0 to save in current dir
+parameters.selectPath = 1; % 1 to select save destination, 0 to save in current dir
 parameters.plotResults = 1; % 1 to plot basic simulation results
 
 if parameters.saveFlag & parameters.selectPath
@@ -50,7 +50,7 @@ parameters.del_G_syn_E_I = 500*10^(-12); %synaptic conductance step following sp
 parameters.del_G_syn_I_E = nan; %synaptic conductance step following spike (S)
 
 % SRA parameters
-parameters.del_G_sra = 330e-09; %spike rate adaptation conductance step following spike %ranges from 1-200 *10^(-9) (S)
+parameters.del_G_sra = 30e-09; %spike rate adaptation conductance step following spike %ranges from 1-200 *10^(-9) (S)
 parameters.tau_sra = 30*10^(-3); %spike rate adaptation time constant (s)
 
 % STDP parameters

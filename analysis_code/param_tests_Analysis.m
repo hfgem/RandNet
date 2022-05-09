@@ -22,7 +22,10 @@ variedParam(2).name
 correlationType = 'Pearson'; 
 nShuffMultiplier = 3;
 minNShuff = 50; % minimum nShuffles
-minDetectedSequences = 2;
+minDetectedSequences = 5
+
+useMaxSeq = 0
+maxDetectedSequences = 100
 
 xParamvec = variedParam(1).range;
 xName = variedParam(1).name;
@@ -65,8 +68,12 @@ for ithParam1 = 1:size(resultsStruct, 1)
                 analysisTitle = 'KS-test, against shuffle';
                 
                 correlationType = 'Pearson'; % Pearson, Kendall, Spearman
+                if useMaxSeq
+                    if size(x, 2) > maxDetectedSequences
+                        x = x(:, randsample(size(x, 2), maxDetectedSequences) );
+                    end
+                end
                 nSeq = size(x, 2); % number of sequences in x
-                
                 rMat_full = corr(x, 'rows','pairwise');
                 rMat = tril(rMat_full, -1); rMat(rMat==0)=nan;
                 %{

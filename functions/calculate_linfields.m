@@ -98,6 +98,7 @@ row_n_all_zeros1 = find(~all( PFmat_E==0, 2)) ;
 [B,sortedCellIndsbyPeakRateLocation] = sort(peakRateLocation, 'descend');
 PFpeaksSequence = [row_n_all_zeros1(sortedCellIndsbyPeakRateLocation); row_all_zeros1];
 
+[peakRate, peakRateLocation_all] = max(PFmat_E, [], 2);
 
 
 normRates = 1;
@@ -109,11 +110,24 @@ else
     caxmax = max(PFmat_E, [], 'all');
 end
 if plotPFs
-    figure; imagesc( PFmat_E(PFpeaksSequence,:)./rateDenom1 ); title('Env1, sort Env1'); colorbar; caxis([0, caxmax])
-    xlabel('Position (2 cm bin)'); ylabel('Cell (sorted))');
     
     figure; histogram(rateDenom1); 
     xlabel('Peak PF rate (Hz)'); ylabel('E cells (count)');
+    
+    figure; imagesc( PFmat_E(PFpeaksSequence,:)./rateDenom1 ); title('Env1, sort Env1'); colorbar; caxis([0, caxmax])
+    xlabel('Position (2 cm bin)'); ylabel('Cell (sorted)');
+    
+    %{
+    padPFmat = [PFmat_E, zeros( [size(PFmat_E, 1), size(PFmat_E, 2) ] )];    
+    shiftpadPFmat = cell2mat(arrayfun(@(i){ [circshift(padPFmat(i,:), [50-peakRateLocation_all(i)] )]' }, 1:numel(peakRateLocation_all)))' ;% output matrix
+    figure; imagesc( shiftpadPFmat(PFpeaksSequence,:)./rateDenom1 ); title('Env1, sort Env1'); colorbar; caxis([0, caxmax])
+    xlabel('Position (2 cm bin)'); ylabel('Cell (sorted)');
+    
+    %[~, tempInds] = sort( std(PFmat_E(PFpeaksSequence,:), [], 2) );
+    [~, tempInds] = sort( max(PFmat_E(PFpeaksSequence,:), [], 2) );
+    figure; imagesc( shiftpadPFmat(PFpeaksSequence(tempInds),:)./rateDenom1(tempInds) ); title('Env1, sort Env1'); colorbar; caxis([0, caxmax])
+    xlabel('Position (2 cm bin)'); ylabel('Cell (sorted by peak rate)');
+    %}
 end
 
 peakRate = max(PFmat_E(PFpeaksSequence,:), [], 2);

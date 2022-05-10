@@ -3,6 +3,8 @@
 %
 % randnet_PF is the same as randnet.m, but includes simulation of place
 % fields for each network.
+% 
+
 
 %% Simulation options and save path
 
@@ -105,7 +107,7 @@ parameters.Win_mean = 700*10^-12;
 parameters.Win_var = (200e-12)^2;
 parameters.W_gin = log(parameters.Win_mean^2 / sqrt(parameters.Win_var+parameters.Win_mean^2)); % increase in conductance, if using poisson inputs
 parameters.cueSigma = sqrt(log(parameters.Win_var/parameters.Win_mean^2 + 1)); % temp value, to produce identical values
-parameters.PFcontextScale = 0.1;
+parameters.PFcontextScale = 0.1; % scales E-cell's context cue input during PF trials
 %parameters.del_G_syn_E_E = 1250*10^(-12); %synaptic conductance step following spike (S)
 %parameters.del_G_syn_E_I = 450*10^(-12); %synaptic conductance step following spike (S)
 
@@ -118,7 +120,14 @@ parameters.cueSigma = sqrt(log(Win_var/Win_mean^2 + 1)); % temp value, to produc
 
 parameters.mnc = 1.5; % mean number of clusters each neuron is a member of
 parameters.del_G_syn_E_E = 1200*10^(-12); %synaptic conductance step following spike (S)
-parameters.del_G_syn_E_I = 500*10^(-12); %synaptic conductance step following spike (S)
+parameters.del_G_syn_E_I = 1200*10^(-12); %synaptic conductance step following spike (S)
+
+
+parameters.del_G_syn_E_E = 800*10^(-12); %synaptic conductance step following spike (S)
+parameters.del_G_syn_E_I = 400*10^(-12); %synaptic conductance step following spike (S)
+
+parameters.IcueScale = 1.2; % scales strength of I cell cue input, if ~=1 then Icells receive no spatial inputs
+
 
 % X = lognrnd(parameters.W_gin, parameters.cueSigma, 100 ); figure; histogram(X)
 
@@ -131,7 +140,7 @@ parameters.W_gin = log(parameters.Win_mean^2 / sqrt(parameters.Win_var+parameter
 parameters.cueSigma = sqrt(log(parameters.Win_var/parameters.Win_mean^2 + 1)); % temp value, to produce identical values
 parameters.PFcontextScale = 0.1;
 %}
-PFsimFlag = 0;
+PFsimFlag = 1;
 PFscoreFlag = 0;
 preplaySimFlag = 1;
 
@@ -237,8 +246,9 @@ for ithNet = 1:parameters.nNets
                         G_in_PFs(:,i,ithEnv,ithTrial) = G_in_PFs(:,i,ithEnv,ithTrial) + ...
                                 network.spatialInput{1} .* [rand(parameters.n, 1) < (parameters.dt* (parameters.rG * (i/numel(pfsim.t)) ))] + ...
                                 network.spatialInput{2} .* [rand(parameters.n, 1) < (parameters.dt* ( parameters.rG * ((numel(pfsim.t)-i)/numel(pfsim.t)) ) )] + ...
-                                network.contextInput(:,ithEnv) .* parameters.PFcontextScale .* [rand(parameters.n, 1) < (parameters.dt*parameters.rG)]  ;
-                    end
+                                network.contextInput(:,ithEnv) .* [parameters.PFcontextScale.*ismember(network.all_indices, network.E_indices)]' .* [rand(parameters.n, 1) < (parameters.dt*parameters.rG) + ...
+                                network.contextInput(:,ithEnv) .* [1.*ismember(network.all_indices, network.I_indices)]' .* [rand(parameters.n, 1) < (parameters.dt*parameters.rG)] ]  ;
+                end
             end
             
             opV = zeros(parameters.n, numel(pfsim.t), pfsim.nEnvironments, pfsim.nTrials); % Voltage from all sims
@@ -277,6 +287,7 @@ for ithNet = 1:parameters.nNets
     PFruntime = toc
 
     %% Preplay simulation:
+    tic
     if preplaySimFlag
         V_m_var = struct;
         G_var = struct;
@@ -337,7 +348,8 @@ for ithNet = 1:parameters.nNets
 
         end % trial loop
     end
-    
+    Preplayruntime = toc
+
     
     %SAVE NETWORK DATA
     if parameters.saveFlag

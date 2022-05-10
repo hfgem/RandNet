@@ -106,6 +106,16 @@ parameters.del_G_syn_E_I = 550*10^(-12); %synaptic conductance step following sp
 parameters.del_G_syn_I_E = 550*10^(-12); %synaptic conductance step following spike (S)
 %}
 
+%% New, needed to keep up with Add-PF-sims branch changes
+
+parameters.Win_mean = 725*10^-12;
+parameters.Win_var = (50e-12)^2;
+parameters.W_gin = log(parameters.Win_mean^2 / sqrt(parameters.Win_var+parameters.Win_mean^2)); % increase in conductance, if using poisson inputs
+parameters.cueSigma = sqrt(log(parameters.Win_var/parameters.Win_mean^2 + 1)); % temp value, to produce identical values
+
+parameters.IcueScale = 1;
+
+
 
 %% Parameters for sequence analysis
 
@@ -206,12 +216,13 @@ for ithNet = 1:parameters.nNets
         %Create Storage Variables
         V_m = zeros(parameters.n,parameters.t_steps+1); %membrane potential for each neuron at each timestep
         V_m(:,1) = parameters.V_reset + randn([parameters.n,1])*(10^(-3))*sqrt(parameters.dt); %set all neurons to baseline reset membrane potential with added noise
-        
         seed = ithTest;
         
         %Run model
+        tic
         [V_m, G_sra, G_syn_E_E, G_syn_I_E, G_syn_E_I, G_syn_I_I, conns] = ...
                 randnet_calculator(parameters, seed, network, V_m);
+        simTime = toc
         V_m_var(ithTest).V_m = V_m;
         G_var(ithTest).G_in = G_in;
         G_var(ithTest).G_sra = G_sra;

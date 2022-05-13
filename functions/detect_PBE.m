@@ -75,11 +75,9 @@ function [network_spike_sequences] = detect_PBE(spikes, parameters, varargin)
     if size(events, 1)==0 % If no events, set results as empty
         network_spike_sequences.events = [];
         network_spike_sequences.event_lengths = [];
-        network_spike_sequences.spike_order = [];
-        network_spike_sequences.frac_spike = {};
+        network_spike_sequences.spike_order = {};
         network_spike_sequences.ranks_vec = [];
-        %network_spike_sequences.ranks_vec = [];
-        %network_spike_sequences.nonspiking_neurons = [];
+        network_spike_sequences.frac_spike = {};
         
     else % If PBEs detected, calculate and store results
         
@@ -90,11 +88,17 @@ function [network_spike_sequences] = detect_PBE(spikes, parameters, varargin)
         for ithEvent = 1:size(events, 1)
 
             event_spikes = spikes(:,events(ithEvent,1):events(ithEvent,2));
-            % figure; plotSpikeRaster(event_spikes, 'TimePerBin', parameters.dt, 'PlotType', 'scatter'); 
+            
+            if parameters.plotResults == 1 %Plot event raster
+                figure;
+                plotSpikeRaster(event_spikes, 'TimePerBin', parameters.dt, 'PlotType', 'scatter'); 
+            end
             
             [e_spikes_x, ~] = find(event_spikes); % find neuron index of all spikes in order of spike-time
             spike_order = unique(e_spikes_x,'stable'); % take only first spike of each neuron
-
+            network_spike_sequences.spike_order{ithEvent} = spike_order;
+            
+            %store ranks for each neuron
             ranks_vec = nan(1, size(spikes, 1));
             for k = 1:length(spike_order)
                 n_ind = spike_order(k);

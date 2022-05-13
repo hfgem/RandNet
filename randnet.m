@@ -5,7 +5,7 @@
 
 clear all
 
-parameters.saveFlag = 0; % 1 to save simulation results
+parameters.saveFlag = 1; % 1 to save simulation results
 parameters.selectPath = 1; % 1 to select save destination, 0 to save in current dir
 parameters.plotResults = 1; % 1 to plot basic simulation results
 
@@ -58,12 +58,15 @@ parameters.connectivity_gain = 0; %0.005; %amount to increase or decrease connec
 
 % Input parameters:
 % Poisson input
-parameters.usePoisson = 1; % 1 to use poisson spike inputs, 0 for randn() input
-parameters.rG = 1000; % input spiking rate, if using poisson inputs
-parameters.W_gin = 750*10^-12; % increase in conductance, if using poisson inputs
-% Conductance input
-parameters.G_std = -19*10^-9; % STD of the input conductance G_in, if using randn()
-parameters.G_mean = 0* 10^-12; % mean of the input conductance G_in, if using randn()
+parameters.usePoisson = 0; % 1 to use poisson spike inputs, 0 for randn() input
+if parameters.usePoisson == 1
+    parameters.rG = 1000; % input spiking rate, if using poisson inputs
+    parameters.W_gin = 750*10^-12; % increase in conductance, if using poisson inputs
+else
+    % Conductance input
+    parameters.G_std = -19*10^-9; % STD of the input conductance G_in, if using randn()
+    parameters.G_mean = 0* 10^-12; % mean of the input conductance G_in, if using randn()
+end
 
 % Network connection parameters
 parameters.conn_prob = 0.08; %set a total desired connection probability
@@ -75,7 +78,6 @@ parameters.p_I = 0.5; % probability of an I cell connecting to any other cell
 % Number of trials per net to run
 parameters.nTrials = 1; % How many tests of different initializations to run
 parameters.nNets = 1; % How many networks to run
-
 
 %{
 % Alternative working parameter set
@@ -108,34 +110,38 @@ parameters.del_G_syn_I_E = 550*10^(-12); %synaptic conductance step following sp
 
 %% Parameters for sequence analysis
 
-%{
-parameters.E_events_only = 1; % if 1, only consider E-cells for detect_events
-parameters.IEI = 0.02; %inter-event-interval (s) the elapsed time between spikes to count separate events
-parameters.bin_width = 5*10^(-3); %5 ms bin
+%If want to detect events as population burst events, set
+%parameters.eventType = 'PBE'. If want to detect events based on event
+%parameters, set parameters.eventType = 'Seq'.
+parameters.eventType = 'Seq';
 
-%TEST 1: The number of neurons participating in a sequence must pass a threshold:
-parameters.event_cutoff = 0.10; %0.25; %fraction of neurons that have to be involved to constitute a successful event
+if strcmp(parameters.eventType,'PBE')
+    % Analysis parameters for PBE detection
+    parameters.PBE_min_Hz = 0.5; % minimum population mean rate during PBE
+    parameters.PBE_zscore = 1.0; % minimum stds above mean rate to detect PBE
+    parameters.PBE_min_dur = 30 * (1/1000); % minimum duration of a PBE
+    parameters.PBE_window =  10 * (1/1000) *(1/parameters.dt); % width of gaussian kernel used to calculate mean pop activity rate
+    parameters.PBE_max_combine = 10 * (1/1000); % Combine adjacent PBEs separaeted by less than this duration
+else    
+    parameters.E_events_only = 1; % if 1, only consider E-cells for detect_events
+    parameters.IEI = 0.1; %inter-event-interval (s) the elapsed time between spikes to count separate events
+    parameters.bin_width = 5*10^(-3); %5 ms bin
 
-%TEST 2: The firing rate must fall within a realistic range
-parameters.min_avg_fr = 0.01;
-parameters.max_avg_fr = 3.0;
+    %TEST 1: The number of neurons participating in a sequence must pass a threshold:
+    parameters.event_cutoff = 0.10; %0.25; %fraction of neurons that have to be involved to constitute a successful event
 
-% TEST 3: The sequence(s) of firing is(are) within reasonable lengths
-parameters.min_avg_length = 0.01;
-parameters.max_avg_length = 0.5;
-%}
+    %TEST 2: The firing rate must fall within a realistic range
+    parameters.min_avg_fr = 0.01;
+    parameters.max_avg_fr = 3.0;
 
-% Analysis parameters for PBE detection
-parameters.PBE_min_Hz = 0.5; % minimum population mean rate during PBE
-parameters.PBE_zscore = 1.0; % minimum stds above mean rate to detect PBE
-parameters.PBE_min_dur = 30 * (1/1000); % minimum duration of a PBE
-parameters.PBE_window =  10 * (1/1000) *(1/parameters.dt); % width of gaussian kernel used to calculate mean pop activity rate
-parameters.PBE_max_combine = 10 * (1/1000); % Combine adjacent PBEs separaeted by less than this duration
+    % TEST 3: The sequence(s) of firing is(are) within reasonable lengths
+    parameters.min_avg_length = 0.01;
+    parameters.max_avg_length = 0.5;
+end
 
 
 %% __set/update Dependent Parameters__ %%
 parameters = set_depedent_parameters(parameters);
-
 
 %Save to computer
 if parameters.saveFlag == 1

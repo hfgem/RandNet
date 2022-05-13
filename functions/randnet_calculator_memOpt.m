@@ -1,11 +1,11 @@
 function [spikeMat, conns] = randnet_calculator_memOpt(parameters, seed, network, V_m)
     %_________
     % ABOUT: This function produces identical results as
-    % randnet_calculator, but the only variables it saves is V_m.
+    % randnet_calculator, but the only variables it outputs are spikeMat, a
+    % matrix of which neurons spike at which timepoints, and conns, a
+    % connectivity matrix. This significantly reduces memory load.
     % Use randnet_calculator for simulations where you want to analyze
-    % other variables. 
-    % Use randnet_calculator for simulations where you only need V_m and
-    % wanted to reduce memory usage. 
+    % other variables.
     % 
     % The script test_randnet_calculator tests that randnet_calcualtor and
     % randnet_calculator_memOpt produce the same V_m and conns
@@ -37,12 +37,18 @@ function [spikeMat, conns] = randnet_calculator_memOpt(parameters, seed, network
     
     %Variables for STDP
     t_spike = zeros(parameters.n,1); %vector to store the time of each neuron's last spike, for use in STDP
-    t_stdp = round(parameters.tau_stdp/parameters.dt);
+    pre_spikes = zeros(parameters.n,1);
+    pre_strength = parameters.connectivity_gain;
+    post_spikes = zeros(parameters.n,1);
+    post_strength = parameters.connectivity_gain*2; %Depression should be greater than Potentiation
     
     spikeMat = false(parameters.n, parameters.t_steps+1); 
     
     %Run through each timestep and calculate
     for t = 1:parameters.t_steps
+        %update STDP storage values with exponential decay
+        pre_spikes = pre_spikes + (-pre_spikes/parameters.tau_stdp)*parameters.dt;
+        post_spikes = post_spikes + (-post_spikes/parameters.tau_stdp)*parameters.dt;
         %check for spiking neurons and postsynaptic and separate into E and I
         spikers = find(V_m >= parameters.V_th);
         spikeMat(spikers,t) = spikers;
@@ -78,14 +84,9 @@ function [spikeMat, conns] = randnet_calculator_memOpt(parameters, seed, network
         G_syn_I_I = G_syn_I_I.*exp(-parameters.dt/parameters.tau_syn_I); %inhibitory conductance update
         G_syn_E_I = G_syn_E_I.*exp(-parameters.dt/parameters.tau_syn_E); %inhibitory conductance update
         %______________________________________
-        %Update connection strengths via STDP
-        pre_syn_n = sum(conns(:,spikers),2) > 0; %pre-synaptic neurons
-        post_syn_n = sum(conns(spikers,:),1) > 0; %post-synaptic neurons
-        pre_syn_t = t_spike.*pre_syn_n; %spike times of pre-synaptic neurons
-        post_syn_t = t_spike.*post_syn_n'; %spike times of post-synaptic neurons
-        t_diff_pre = t - pre_syn_t; %time diff between pre-synaptic and current
-        t_diff_post = t - post_syn_t; %time diff between post-synaptic and current
-        del_conn_pre = parameters.connectivity_gain*exp(-t_diff_pre/t_stdp);
-        del_conn_post = parameters.connectivity_gain*exp(-t_diff_post/t_stdp);
-        conns(:,spikers) = conns(:,spikers) + del_conn_pre - del_conn_post; %enhance connections of those neurons that just fired
+        %Update connection strengths via continuous STDP updates
+        pre_spikes(spikers,1) = pre_spikes(spikers,1) + 1;
+        post_spikes(spikers,1) = post_spikes(spikers,1) + 1;
+        conns(spikers,:) = conns(spikers,:) + pre_strength*pre_spikes'.*(conns(spikers,:) > 0);
+        conns(:,spikers) = conns(:,spikers) + post_strength*post_spikes.*(conns(:,spikers) > 0);
     end

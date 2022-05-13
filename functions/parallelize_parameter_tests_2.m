@@ -1,99 +1,73 @@
-function [avg_mat, allResults] = parallelize_parameter_tests_2(parameters,num_nets,...
-    num_inits, parameterSets_vec, ithParamSet, variedParam)
+function [avg_mat, allResults] = parallelize_parameter_tests_2(parameters,...
+    parameterSets_vec, ithParamSet, variedParam, optFlag)
     %_________
     %ABOUT: This function runs through a series of commands to test the
     %outputs of a particular parameter set in comparison to a strict set of
     %criteria. This function is to be used in conjunction with
-    %network_tests2.m where a parallelized for loop calls this function,
-    %parallelize_networks.m where network initializations are parallelized,
-    %and parallelize_network_tests.m where network tests are parallelized.
-    %
+    %randnet_calculator_memOpt.m or randnet_calculator.m
     %INPUTS:
     %   parameters = a structure that contains the following (only
     %   relevant listed below):
     %       n = Number of neurons in the network
     %       clusters = Number of clusters of neurons in network
+    %       mnc = Mean number of clusters to which neurons belong
     %       t_max = maximum time of simulation (s)
     %       dt = timestep of simulation (s)
-    %       tau_syn_E = AMPA synaptic decay time constant (s) [Ignoring NMDA as slow and weak]
-    %       tau_syn_I = GABA synaptic decay time constant (s)
-    %       tau_stdp = STDP decay time constant (s)
-    %       E_K = Potassium reversal potential (V)
-    %       E_L = Leak reversal potential (V)
-    %       G_L = Leak conductance (S) - 10-30 nS range
-    %       C_m = Total membrane capacitance (F)
-    %       V_m_noise = Magnitude of membrane potential simulation noise (V)
-    %       V_th = The threshold membrane potential (V)
-    %       V_reset = The reset membrane potential (V)
-    %       V_syn_E = Excitatory synaptic reversal potential (V)
-    %       V_syn_I = Inhibitory synaptic reversal potential (V)
-    %       del_G_syn_E_E = Synaptic conductance step for 
-    %               excitatory-excitatory neuron connections following
-    %               spike (S)
-    %       del_G_syn_E_I = Synaptic conductance step for 
-    %               excitatory-inhibitory neuron connections following
-    %               spike (S)
-    %       del_G_syn_I_I = Synaptic conductance step for 
-    %               inhibitory-inhibitory neuron connections following
-    %               spike (S)
-    %       del_G_syn_I_E = Synaptic conductance step for 
-    %               inhibitory-excitatory neuron connections following
-    %               spike (S)
-    %       del_G_sra = spike rate adaptation conductance step following spike 
-    %               ranges from 1-200 *10^(-9) (S)
-    %       tau_sra = Spike rate adaptation time constant (s)
-    %       connectivity_gain = Amount to increase or decrease connectivity by 
-    %               with each spike (more at the range of 1.002-1.005) -
-    %               keep at 1 to ensure no connectivity change
-    %       G_coeff = input conductance coefficient (setting strength) (S)
-    %       G_scale = input conductance scale (ex. nano = 1*10^(-9)) (S)
-    %       t_steps = The number of timesteps in the simulation
-    %       syn_E = An [n x 1] vector of the synaptic reversal potential for
-    %               excitatory connections (V)
-    %       syn_I = An [n x 1] vector of the synaptic reversal potential for
-    %               inhibitory connections (V)     
-    %   num_nets = number of network structures to test per parameter set 
-    %   num_inits = number of network initializations to test per network
-    %       structure
-    %   parameter_vec = a matrix of size [num_params,test_n] that
-    %       contains parameter values to test
-    %   test_n = number of parameter values to test
-    %   ind = what index of parameter combinations is being tested
-    %   save_path = where to save results
+    %       saveFlag = flag of whether to save results (1 to save, 
+    %                   0 otherwise)
+    %       save_path = where to save results if desired
+    %       plotResults = flag of whether to plot results (1 to plot, 
+    %                   0 otherwise)
+    %       p_I = probability of an I cell connecting to any other cell
+    %       nNets = number of network initializations to test
+    %       nTrials = number of simulation initializations to test   
+    %       E_events_only = flag to analyze only excitatory neuron behavior
+    %   parameterSets_vec = a matrix of that contains parameter values to
+    %       test: rows = number of parameters, columns = number of sets.
+    %   ithParamSet = index of which parameter set to test
+    %   variedParam = structure containing the names of parameters being
+    %       modified
+    %   optFlag = flag to use optimized randnet_calculator_memOpt.m code
+    %       or unoptimized randnet_calculator.m code.
     %OUTPUTS:
     %   avg_mat = A vector representing average values from all network
     %   initializations and the firing initializations for each network
-    %   structure. Namely, the first dimension length is the number of
-    %   networks, the second dimension length is the number of
-    %   initializations, and the third dimension length is the 3 parameters
-    %   from each combination:
-    %       1. number of spiking neurons
+    %   structure. Only successful tests are averaged:
+    %       1. average fraction of neurons spiking in an event
     %       2. average firing rate
     %       3. average event length
+    %       4. average number of identified events
     %_________
-    
 
     % Set up parameter values for current parameter set
     for i = 1:size(variedParam, 2)
         parameters.(variedParam(i).name) = parameterSets_vec(i,ithParamSet);
     end
-
     
     % Update any parameters that are dependent on a varied parameter
     parameters = set_depedent_parameters(parameters);
 
     %Run network initialization code
-    resp_mat = zeros(num_nets, 4);
-    allResults = cell(1, num_nets) ;
-    for ithNet = 1:num_nets
+    resp_mat = zeros(parameters.nNets, 4);
+    allResults = cell(1, parameters.nNets) ;
+    for ithNet = 1:parameters.nNets
         
         network = create_clusters(parameters, 'seed', ithNet, 'include_all', parameters.include_all, 'global_inhib', parameters.global_inhib);
         
-        mat = zeros(num_inits,4);
+        if parameters.saveFlag == 1
+            if ~isfolder(strcat(parameters.save_path,'/networks'))
+                mkdir(parameters.save_path,'/networks')
+            end
+            save(strcat(parameters.save_path,'/networks','/network_',string(ithParamSet),'_',string(ithNet),'.mat'),'network')
+        end
+        
+        mat = zeros(parameters.nTrials,4);
         network_spike_sequences = struct; 
-        for ithTest = 1:num_inits
-            seed = ithTest;
-
+        for ithTest = 1:parameters.nTrials
+            
+            %Random number generator seed for initialization
+            seed = ithTest; 
+            
             %Create input conductance variable
             if parameters.usePoisson
                 G_in = single(zeros(parameters.n, parameters.t_steps+1));
@@ -110,40 +84,53 @@ function [avg_mat, allResults] = parallelize_parameter_tests_2(parameters,num_ne
             
             %Run model
             
-            %Create Storage Variables
-            % V_m = zeros(parameters.n,parameters.t_steps+1); %membrane potential for each neuron at each timestep
-            % V_m(:,1) = parameters.V_reset + randn([parameters.n,1])*parameters.V_m_noise; %set all neurons to baseline reset membrane potential with added noise
-            % [V_m, ~, ~, ~, ~] = randnet_calculator(parameters, seed, network, V_m);
-            % E_spikes_V_m = sparse(V_m(network.E_indices,:) >= parameters.V_th);
-            V_m = parameters.V_reset + randn([parameters.n,1])*parameters.V_m_noise; %set all neurons to baseline reset membrane potential with added noise
-            spikeMat = randnet_calculator_memOpt(parameters, seed, network, V_m);
-            parameters = rmfield(parameters, 'G_in');
-            E_spikes_V_m = spikeMat(network.E_indices,:); clear spikeMat
+            %Create Storage Variables Based on Calculator Code Used
+            if optFlag == 1 %Use randnet_calculator_memOpt.m
+                V_m = parameters.V_reset + randn([parameters.n,1])*parameters.V_m_noise; %set all neurons to baseline reset membrane potential with added noise
+                spikes_V_m = randnet_calculator_memOpt(parameters, seed, network, V_m);
+                parameters = rmfield(parameters, 'G_in');
+            else %Use randnet_calculator.m
+                V_m = zeros(parameters.n,parameters.t_steps+1); %membrane potential for each neuron at each timestep
+                V_m(:,1) = parameters.V_reset + randn([parameters.n,1])*parameters.V_m_noise; %set all neurons to baseline reset membrane potential with added noise
+                [V_m, ~, ~, ~, ~] = randnet_calculator(parameters, seed, network, V_m);
+                spikes_V_m = V_m >= parameters.V_th;
+            end
             
-
+            %Set which spikes are analyzed based on E_events_only flag
+            if parameters.E_events_only == 1 %Use only excitatory neurons in analyses
+                used_spikes_mat = spikes_V_m(network.E_indices,:);
+            else %Use all neurons in analyses
+                used_spikes_mat = spikes_V_m;
+            end
+            
             % detect events and compute outputs
-            % [network_spike_sequences, network_cluster_sequences, outputVec] = detect_events(parameters, network, V_m , j, network_spike_sequences, network_cluster_sequences);
-
-            [trialResults] = detect_PBE(E_spikes_V_m, parameters);
-            if ithTest == 1 % append trialResults struct to network results struct
+            if strcmp(parameters.eventType,'PBE')
+                [trialResults] = detect_PBE(used_spikes_mat, parameters);
+            else
+                [trialResults, outputVec] = detect_events(parameters, used_spikes_mat, ithParamSet, ithNet, ithTest);
+            end
+            
+            % append trialResults struct to network results struct
+            if ithTest == 1
                 network_spike_sequences = trialResults;
             else
-                network_spike_sequences = [network_spike_sequences, trialResults]; 
+                network_spike_sequences = [network_spike_sequences, trialResults];  %#ok<*AGROW>
             end
             
             % Overall simulation statistics
             allResults{ithNet}{ithTest}.ithInit = ithTest;
             allResults{ithNet}{ithTest}.numEvents = numel(network_spike_sequences(ithTest).event_lengths); % number of detected events
-            allResults{ithNet}{ithTest}.fracFire =  mean(sum(E_spikes_V_m, 2)>0); % Fraction of cells that fire at all during simulation
+            allResults{ithNet}{ithTest}.fracFire =  mean(sum(used_spikes_mat, 2)>0); % Fraction of cells that fire at all during simulation
             allResults{ithNet}{ithTest}.frac_participation = mean([network_spike_sequences(ithTest).frac_spike{:}]); % mean fraction of cells firing per event
-            allResults{ithNet}{ithTest}.meanRate = mean(sum(E_spikes_V_m, 2)/parameters.t_max); % mean over cells' average firing rate
-            allResults{ithNet}{ithTest}.stdRate = std(sum(E_spikes_V_m, 2)/parameters.t_max); % STD over cells' average firing rate
+            allResults{ithNet}{ithTest}.meanRate = mean(sum(used_spikes_mat, 2)/parameters.t_max); % mean over cells' average firing rate
+            allResults{ithNet}{ithTest}.stdRate = std(sum(used_spikes_mat, 2)/parameters.t_max); % STD over cells' average firing rate
 
             % Stats for each detected event
             allResults{ithNet}{ithTest}.eventLength = network_spike_sequences(ithTest).event_lengths; % duration in seconds of all detected events
             allResults{ithNet}{ithTest}.eventParticipation = [network_spike_sequences(ithTest).frac_spike{:}]; % fraction of cells that fired in each event
                         
-            % Save ranks_vec
+            % Save spike_order and ranks_vec
+            allResults{ithNet}{ithTest}.spike_order = network_spike_sequences(ithTest).spike_order;
             allResults{ithNet}{ithTest}.ranksVec = network_spike_sequences(ithTest).ranks_vec;
             
             % Main output statistics

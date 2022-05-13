@@ -7,59 +7,21 @@ function [V_m, G_sra, G_syn_E_E, G_syn_I_E, G_syn_E_I, G_syn_I_I, conns] = randn
     %particular set of parameters and initialization.
     %
     %INPUTS:
-    %   parameters = a structure that contains the following (only
-    %   relevant listed below):
+    %   parameters = a structure that contains a majority of LIF neuron
+    %   initialization parameters. A few relevant listed below:
     %       n = Number of neurons in the network
     %       clusters = Number of clusters of neurons in network
     %       t_max = maximum time of simulation (s)
     %       dt = timestep of simulation (s)
-    %       tau_syn_E = AMPA synaptic decay time constant (s) [Ignoring NMDA as slow and weak]
-    %       tau_syn_I = GABA synaptic decay time constant (s)
-    %       tau_stdp = STDP decay time constant (s)
-    %       E_K = Potassium reversal potential (V)
-    %       E_L = Leak reversal potential (V)
-    %       G_L = Leak conductance (S) - 10-30 nS range
-    %       C_m = Total membrane capacitance (F)
-    %       V_m_noise = Magnitude of membrane potential simulation noise (V)
+    %       t_steps = The number of timesteps in the simulation
     %       V_th = The threshold membrane potential (V)
     %       V_reset = The reset membrane potential (V)
-    %       V_syn_E = Excitatory synaptic reversal potential (V)
-    %       V_syn_I = Inhibitory synaptic reversal potential (V)
-    %       del_G_syn_E_E = Synaptic conductance step for 
-    %               excitatory-excitatory neuron connections following
-    %               spike (S)
-    %       del_G_syn_E_I = Synaptic conductance step for 
-    %               excitatory-inhibitory neuron connections following
-    %               spike (S)
-    %       del_G_syn_I_I = Synaptic conductance step for 
-    %               inhibitory-inhibitory neuron connections following
-    %               spike (S)
-    %       del_G_syn_I_E = Synaptic conductance step for 
-    %               inhibitory-excitatory neuron connections following
-    %               spike (S)
-    %       del_G_sra = spike rate adaptation conductance step following spike 
-    %               ranges from 1-200 *10^(-9) (S)
-    %       tau_sra = Spike rate adaptation time constant (s)
     %       connectivity_gain = Amount to increase or decrease connectivity by 
     %               with each spike (more at the range of 1.002-1.005) -
     %               keep at 1 to ensure no connectivity change
-    %       G_coeff = input conductance coefficient (setting strength) (S)
-    %       G_scale = input conductance scale (ex. nano = 1*10^(-9)) (S)
-    %       t_steps = The number of timesteps in the simulation
-    %       syn_E = An [n x 1] vector of the synaptic reversal potential for
-    %               excitatory connections (V)
-    %       syn_I = An [n x 1] vector of the synaptic reversal potential for
-    %               inhibitory connections (V)      
-    %   seed = A random number generator seed which:
-    %       1. when type = 'cluster' sets which cluster is to be used for
-    %           the initialization of spiking
-    %       2. when type = 'neuron' sets the random number generator seed
-    %           which affects the random selection of neurons used in the
-    %           initialization of spiking as well as the random noise added
-    %           to the membrane potential
-    %       3. when type = 'current' sets the random number generator seed 
-    %           which affects only the random noise added to the membrane 
-    %           potential 
+    %       G_in = input conductance matrix of size [n,t_steps+1]
+    %   seed = A random number generator seed which affects membrane
+    %       potential noise
     %   network = a structure that contains the following:
     %       cluster_mat = A binary [clusters x n] matrix of which neurons are
     %               in which cluster
@@ -86,7 +48,7 @@ function [V_m, G_sra, G_syn_E_E, G_syn_I_E, G_syn_E_I, G_syn_I_I, conns] = randn
     %               excitatory to postsynaptic inhibitory (S)
     %   G_syn_I_I = An [n x t_steps+1] matrix of conductance for presynaptic 
     %               inhibitory to postsynaptic inhibitory (S)
-    %   conns = The updated conns matrix (if connectivity_gain != 1)
+    %   conns = The updated conns matrix (if connectivity_gain != 0)
     %
     %ASSUMPTIONS:
     %   1. LIF model with spike rate adaptation and synaptic transmission
@@ -103,10 +65,6 @@ function [V_m, G_sra, G_syn_E_E, G_syn_I_E, G_syn_E_I, G_syn_I_I, conns] = randn
     
     %Set the random number generator seed
     rng(seed)
-    
-    %Calculate input conductance
-%     G_in = parameters.G_coeff*randn(parameters.n,parameters.t_steps+1)*parameters.G_scale;
-%     parameters.('G_in') = G_in;
     
     %Create Storage Variables
     G_sra = zeros(parameters.n,parameters.t_steps+1); %refractory conductance for each neuron at each timestep (S)
@@ -126,10 +84,16 @@ function [V_m, G_sra, G_syn_E_E, G_syn_I_E, G_syn_E_I, G_syn_I_I, conns] = randn
     
     %Variables for STDP
     t_spike = zeros(parameters.n,1); %vector to store the time of each neuron's last spike, for use in STDP
-    t_stdp = round(parameters.tau_stdp/parameters.dt);
+    pre_spikes = zeros(parameters.n,1);
+    pre_strength = parameters.connectivity_gain;
+    post_spikes = zeros(parameters.n,1);
+    post_strength = parameters.connectivity_gain*2; %Depression should be greater than Potentiation
     
     %Run through each timestep and calculate
     for t = 1:parameters.t_steps
+        %update STDP storage values with exponential decay
+        pre_spikes = pre_spikes + (-pre_spikes/parameters.tau_stdp)*parameters.dt;
+        post_spikes = post_spikes + (-post_spikes/parameters.tau_stdp)*parameters.dt;
         %check for spiking neurons and postsynaptic and separate into E and I
         spikers = find(V_m(:,t) >= parameters.V_th);
         t_spike(spikers) = t;
@@ -163,14 +127,9 @@ function [V_m, G_sra, G_syn_E_E, G_syn_I_E, G_syn_E_I, G_syn_I_I, conns] = randn
         G_syn_I_I(:,t+1) = G_syn_I_I(:,t).*exp(-parameters.dt/parameters.tau_syn_I); %inhibitory conductance update
         G_syn_E_I(:,t+1) = G_syn_E_I(:,t).*exp(-parameters.dt/parameters.tau_syn_E); %inhibitory conductance update
         %______________________________________
-        %Update connection strengths via STDP
-        pre_syn_n = sum(conns(:,spikers),2) > 0; %pre-synaptic neurons
-        post_syn_n = sum(conns(spikers,:),1) > 0; %post-synaptic neurons
-        pre_syn_t = t_spike.*pre_syn_n; %spike times of pre-synaptic neurons
-        post_syn_t = t_spike.*post_syn_n'; %spike times of post-synaptic neurons
-        t_diff_pre = t - pre_syn_t; %time diff between pre-synaptic and current
-        t_diff_post = t - post_syn_t; %time diff between post-synaptic and current
-        del_conn_pre = parameters.connectivity_gain*exp(-t_diff_pre/t_stdp);
-        del_conn_post = parameters.connectivity_gain*exp(-t_diff_post/t_stdp);
-        conns(:,spikers) = conns(:,spikers) + del_conn_pre - del_conn_post; %enhance connections of those neurons that just fired
+        %Update connection strengths via continuous STDP updates
+        pre_spikes(spikers,1) = pre_spikes(spikers,1) + 1;
+        post_spikes(spikers,1) = post_spikes(spikers,1) + 1;
+        conns(spikers,:) = conns(spikers,:) + pre_strength*pre_spikes'.*(conns(spikers,:) > 0);
+        conns(:,spikers) = conns(:,spikers) + post_strength*post_spikes.*(conns(:,spikers) > 0);
     end

@@ -120,8 +120,8 @@ optFlag = 1; %If 1 uses randnet_calculator_memOpt.m for calculations, if 0 uses 
 parameters.E_events_only = 1; %If 1 only analyses excitatory neuron behavior, if 0 analyses entire population's behavior
 
 %Test parameters
-parameters.nTrials = 1; % How many tests of different initializations to run
-parameters.nNets = 1; % How many networks to run
+parameters.nTrials = 5; % How many tests of different initializations to run
+parameters.nNets = 5; % How many networks to run
 test_n = 10; % Number of values to test for each parameters
 
 % assert(parameters.usePoisson==1)
@@ -142,7 +142,9 @@ variedParam(3).name = 'del_G_syn_E_I'; % 3rd parameter to be varied
 variedParam(3).range =  linspace(1*10^(-12), 100*10^(-12), test_n); % set of values to test param3
 variedParam(4).name = 'p_I'; % 3rd parameter to be varied
 variedParam(4).range =  linspace(0, 1, test_n); % set of values to test param3
-parameters.del_G_syn_I_I = 0;
+variedParam(5).name = 'G_std'; %4th parameter to be varied
+variedParam(5).range = linspace(1*10^(-12), 100*10^(-12), test_n); % set of values to test param4
+%parameters.del_G_syn_I_I = 0;
 
 % Combine into one parameter vector to pass to parfor function
 parameterSets_vec = combvec(variedParam(:).range);
@@ -193,8 +195,8 @@ for i = 1:size(resultsMatLinear, 2)
     end
     resultsMat(structIndices{:},:) = resultsMatLinear(:,i);
     
-    for j = 1:num_nets
-        for k = 1:num_inits
+    for j = 1:parameters.nNets
+        for k = 1:parameters.nTrials
             resultsStruct(structIndices{:}, j, k).results = resultsStructLinear{i}{j}{k};
         end
     end
@@ -208,7 +210,7 @@ avg_event_length = resultsMat(nSlices{:},3);
 avg_n_events = resultsMat(nSlices{:},4);
 
 
-if saveFlag
+if parameters.saveFlag
     save(strcat(save_path,'/parameterSets_vec.mat'),'parameterSets_vec','-v7.3')
     save(strcat(save_path,'/results.mat'),'resultsMat', 'resultsStruct', '-v7.3')
    
@@ -222,51 +224,67 @@ end
 
 %% Visualize Value Grid Search Results
 
-if plotResults
-    
-    % select index of parameters to plot against each other
-    % Note: below code is not generalized to arbitrary n of variedParam
-    paramPlot1 = 1;
-    paramPlot2 = 2;
+%All pairs of parameters to loop through
+pair_param_comb = nchoosek(1:size(variedParam,2),2);
 
-    % paramPlot1 v paramPlot2
-    
+%Create save path if plots are to be saved
+if parameters.saveFlag
+    fig_save_path = strcat(parameters.save_path,'/grid_pair_results');
+    if ~isfolder(fig_save_path)
+        mkdir(fig_save_path)
+    end
+end    
 
-    %{
-    frac_partic = squeeze(mean(frac_partic,3))';
-    avg_fr = squeeze(mean(avg_fr,3))';
-    avg_event_length = squeeze(mean(avg_event_length,3))';
-    avg_n_events = squeeze(mean(avg_n_events,3))';
-    %}
-    % avg_n_events = resultsMat(nSlices{:},4);
-    
-    figure;
-    subplot(2,2,1)
-    imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, frac_partic', 'AlphaData', ~isnan(frac_partic'))
-    set(gca,'YDir','normal')
-    c1 = colorbar(); c1.Label.String = 'Fraction of neurons';
-    title('Frac. firing (event)'); xlabel(variedParam(paramPlot1).name,'Interpreter','none'); ylabel(variedParam(paramPlot2).name,'Interpreter','none')
-    
-    subplot(2,2,2)
-    imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, avg_fr', 'AlphaData', ~isnan(avg_fr'))
-    set(gca,'YDir','normal')
-    c2 = colorbar(); c2.Label.String = "Hz";
-    title('Mean spike rate (trial)'); xlabel(variedParam(paramPlot1).name,'Interpreter','none'); ylabel(variedParam(paramPlot2).name,'Interpreter','none')
-    
-    subplot(2,2,3)
-    imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, avg_event_length', 'AlphaData', ~isnan(avg_event_length'))
-    set(gca,'YDir','normal')
-    c3 = colorbar(); c3.Label.String = "Seconds";
-    title('Mean Event Length'); xlabel(variedParam(paramPlot1).name,'Interpreter','none'); ylabel(variedParam(paramPlot2).name,'Interpreter','none')
-    clear c1 c2 c3
-    
-    subplot(2,2,4)
-    imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, avg_n_events'/parameters.t_max, 'AlphaData', ~isnan(avg_n_events'))
-    set(gca,'YDir','normal')
-    c3 = colorbar(); c3.Label.String = "nEvents / s";
-    title('Mean event frequency'); xlabel(variedParam(paramPlot1).name,'Interpreter','none'); ylabel(variedParam(paramPlot2).name,'Interpreter','none')
-    clear c1 c2 c3
+for i = 1:length(pair_param_comb)
 
+    if parameters.plotResults
+
+        % select index of parameters to plot against each other
+        % Note: below code is not generalized to arbitrary n of variedParam
+        paramPlot1 = pair_param_comb(i,1);
+        paramPlot2 = pair_param_comb(i,2);
+
+        notparams = setdiff([1:size(variedParam,2)],[paramPlot1,paramPlot2]);
+
+        % paramPlot1 v paramPlot2 across 4 average results
+
+        f = figure;
+        subplot(2,2,1)
+        imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, squeeze(mean(frac_partic,notparams))', 'AlphaData', ~isnan(squeeze(mean(frac_partic,notparams))'))
+        set(gca,'YDir','normal')
+        c1 = colorbar(); c1.Label.String = 'Fraction of neurons';
+        title('Frac. firing (event)'); xlabel(variedParam(paramPlot1).name,'Interpreter','none'); ylabel(variedParam(paramPlot2).name,'Interpreter','none')
+
+        subplot(2,2,2)
+        imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, squeeze(mean(avg_fr,notparams))', 'AlphaData', ~isnan(squeeze(mean(avg_fr,notparams))'))
+        set(gca,'YDir','normal')
+        c2 = colorbar(); c2.Label.String = "Hz";
+        title('Mean spike rate (trial)'); xlabel(variedParam(paramPlot1).name,'Interpreter','none'); ylabel(variedParam(paramPlot2).name,'Interpreter','none')
+
+        subplot(2,2,3)
+        imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, squeeze(mean(avg_event_length,notparams))', 'AlphaData', ~isnan(squeeze(mean(avg_event_length,notparams))'))
+        set(gca,'YDir','normal')
+        c3 = colorbar(); c3.Label.String = "Seconds";
+        title('Mean Event Length'); xlabel(variedParam(paramPlot1).name,'Interpreter','none'); ylabel(variedParam(paramPlot2).name,'Interpreter','none')
+        clear c1 c2 c3
+
+        subplot(2,2,4)
+        imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, squeeze(mean(avg_n_events,notparams))'/parameters.t_max, 'AlphaData', ~isnan(squeeze(mean(avg_n_events,notparams))'))
+        set(gca,'YDir','normal')
+        c3 = colorbar(); c3.Label.String = "nEvents / s";
+        title('Mean event frequency'); xlabel(variedParam(paramPlot1).name,'Interpreter','none'); ylabel(variedParam(paramPlot2).name,'Interpreter','none')
+        clear c1 c2 c3
+
+        f.Units = 'normalized';
+        f.Position = [0 0 1 1];
+
+        if parameters.saveFlag
+            fig_name = strcat('randnet_param_test_plots_parameters_',variedParam(paramPlot1).name,'_v_',variedParam(paramPlot2).name);
+            savefig(f,strcat(fig_save_path,'/',fig_name,'.fig'))
+            saveas(f,strcat(fig_save_path,'/',fig_name,'.jpg'))
+        end    
+
+    end
     
 end
 

@@ -64,7 +64,7 @@ if parameters.usePoisson == 1
     parameters.W_gin = 750*10^-12; % increase in conductance, if using poisson inputs
 else
     % Conductance input
-    parameters.G_std = -19*10^-9; % STD of the input conductance G_in, if using randn()
+    parameters.G_std = 19*10^-9; % STD of the input conductance G_in, if using randn()
     parameters.G_mean = 0* 10^-12; % mean of the input conductance G_in, if using randn()
 end
 

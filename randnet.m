@@ -106,10 +106,44 @@ parameters.del_G_syn_E_I = 550*10^(-12); %synaptic conductance step following sp
 parameters.del_G_syn_I_E = 550*10^(-12); %synaptic conductance step following spike (S)
 %}
 
+parameters.clusters = 15; % Number of clusters in the network
+parameters.mnc = 1.25; % mean number of clusters each neuron is a member of
+parameters.t_max = 60; %maximum amount of time (s)
+parameters.del_G_syn_E_E = 750*10^(-12); %synaptic conductance step following spike (S)
+
+
+parameters.clusters = 10; % Number of clusters in the network
+parameters.mnc = 1.0; % mean number of clusters each neuron is a member of
+parameters.t_max = 3; %maximum amount of time (s)
+parameters.del_G_syn_E_E = 600*10^(-12); %synaptic conductance step following spike (S)
+
+parameters.include_all = 1; % if a neuron is not in any cluster, take cluster membership from a highly connected neuron
+
+
+
+parameters.clusters = 10; % Number of clusters in the network
+parameters.mnc = 1.0; % mean number of clusters each neuron is a member of
+parameters.t_max = 60; %maximum amount of time (s)
+parameters.del_G_syn_E_E = 200*10^(-12); %synaptic conductance step following spike (S)
+parameters.del_G_syn_E_I = 100*10^(-12); %synaptic conductance step following spike (S)
+parameters.W_gin = 350e-12;
+parameters.include_all = 1; % if a neuron is not in any cluster, take cluster membership from a highly connected neuron
+parameters.G_L = 10*10^(-9); %leak conductance (S) %10 - 30 nS range
+
+
+parameters.clusters = 10; % Number of clusters in the network
+parameters.mnc = 1.0; % mean number of clusters each neuron is a member of
+parameters.t_max = 60; %maximum amount of time (s)
+parameters.del_G_syn_E_E = 115*10^(-12); %synaptic conductance step following spike (S)
+parameters.del_G_syn_E_I = 100*10^(-12); %synaptic conductance step following spike (S)
+parameters.W_gin = 90e-12;
+parameters.include_all = 1; % if a neuron is not in any cluster, take cluster membership from a highly connected neuron
+parameters.G_L = 25*10^(-10); %leak conductance (S) %10 - 30 nS range
+
 %% New, needed to keep up with Add-PF-sims branch changes
 
-parameters.Win_mean = 725*10^-12;
-parameters.Win_var = (50e-12)^2;
+parameters.Win_mean = parameters.W_gin;
+parameters.Win_var = (0e-12)^2;
 parameters.W_gin = log(parameters.Win_mean^2 / sqrt(parameters.Win_var+parameters.Win_mean^2)); % increase in conductance, if using poisson inputs
 parameters.cueSigma = sqrt(log(parameters.Win_var/parameters.Win_mean^2 + 1)); % temp value, to produce identical values
 

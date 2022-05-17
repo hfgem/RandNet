@@ -133,7 +133,6 @@ x = shuffledRmat; p = squareform(pdist(x)); l = linkage(p); c = cluster(l, 'Maxc
 figure; imagesc(x(I,I)); colorbar
 title('Shuf: Clustered ixj Pearson Corr.'); xlabel('i^{th} sequence'); ylabel('j^{th} sequence');
 
-
 %% Plot Dimensionality reduction:
 
 % Relative ranks:
@@ -157,6 +156,8 @@ subplot(1,3,3); hold on; scatter(Y_PCA(:,1),Y_PCA(:,2), [], clr); title('PCA');
 % Sequence correlations:
 dimRedData = [combinedRmat];
 Y_tsne = tsne(dimRedData);
+Y_tsnegoodrows = not(any(isnan(dimRedData),2));
+
 try
     Y_mds = mdscale( pdist(dimRedData), 2); % this fails if any x_shuffle is identical to any x_actual
 catch
@@ -166,7 +167,7 @@ end
 
 clr = [repmat([0 0 0], size(x_actual, 2), 1); repmat([1 0 0], size(x_shuff, 2), 1) ]  ; size(clr)
 figure; sgtitle('Sequence correlations dim. red. (red=shuf.)')
-subplot(1,3,1); hold on; scatter(Y_tsne(:,1),Y_tsne(:,2), [], clr); title('t-sne');
+subplot(1,3,1); hold on; scatter(Y_tsne(:,1),Y_tsne(:,2), [], clr(Y_tsnegoodrows,:)); title('t-sne');
 subplot(1,3,2); hold on; scatter(Y_mds(:,1),Y_mds(:,2), [], clr); title('MDS');
 subplot(1,3,3); hold on; scatter(Y_PCA(:,1),Y_PCA(:,2), [], clr); title('PCA');
 

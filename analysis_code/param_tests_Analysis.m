@@ -7,6 +7,7 @@
 % load('results_2022-04-28T19-37.mat')
 % load('results_2022-04-28T23-08.mat')
 
+
 %% Analyze sequence properties from resultsStruct
 %
 % resultsStruct(param1Ind, param2Ind, ithNet)
@@ -272,6 +273,25 @@ title(analysisTitle)
 
 % hold on; plot(variedParam(1).range, exp(variedParam(1).range/1.1)-1); plot(variedParam(1).range, exp((variedParam(1).range-1)*5)+15);
 
+
+%%
+X = squeeze(op(1,:,:))';
+figure; plot(X); set(gca,'YScale','log')
+
+%% Detect threshold crossing, then plot fitted exponential curve
+
+thresh = 0.4;
+x = squeeze(op(2,:,:))>thresh; 
+% figure; imagesc(mncVec, nClustersVec, x'); set(gca, 'YDir', 'normal')
+% figure; imagesc(mncVec, nClustersVec,  diff(x, [], 2)'); set(gca, 'YDir', 'normal')
+[xvalinds, yvalinds] = find( diff(x, [], 2) )
+
+ft = fittype('a*exp(b*x) + c');
+% [fexp_offset, fexp_offset_G] = fit(mncVec(xvalinds)', nClustersVec(yvalinds)', ft);
+[fexp, fexp_G] = fit(xParamvec(xvalinds)', yParamvec(yvalinds)','exp1');
+
+hold on; scatter(xParamvec(xvalinds), yParamvec(yvalinds), 'r')
+plot(xParamvec, fexp(xParamvec), 'r')
 
 %% % %%%%%%%%%%%%
 % %% Functions %%

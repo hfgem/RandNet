@@ -120,25 +120,41 @@ parameters.del_G_syn_E_E = 600*10^(-12); %synaptic conductance step following sp
 parameters.include_all = 1; % if a neuron is not in any cluster, take cluster membership from a highly connected neuron
 
 
-
+% New params with lower G_L
 parameters.clusters = 10; % Number of clusters in the network
 parameters.mnc = 1.0; % mean number of clusters each neuron is a member of
-parameters.t_max = 60; %maximum amount of time (s)
+parameters.t_max = 6; %maximum amount of time (s)
 parameters.del_G_syn_E_E = 200*10^(-12); %synaptic conductance step following spike (S)
 parameters.del_G_syn_E_I = 100*10^(-12); %synaptic conductance step following spike (S)
 parameters.W_gin = 350e-12;
 parameters.include_all = 1; % if a neuron is not in any cluster, take cluster membership from a highly connected neuron
 parameters.G_L = 10*10^(-9); %leak conductance (S) %10 - 30 nS range
 
-
+%{
+% Even lower G_L
 parameters.clusters = 10; % Number of clusters in the network
 parameters.mnc = 1.0; % mean number of clusters each neuron is a member of
-parameters.t_max = 60; %maximum amount of time (s)
+parameters.t_max = 6; %maximum amount of time (s)
 parameters.del_G_syn_E_E = 115*10^(-12); %synaptic conductance step following spike (S)
 parameters.del_G_syn_E_I = 100*10^(-12); %synaptic conductance step following spike (S)
 parameters.W_gin = 90e-12;
 parameters.include_all = 1; % if a neuron is not in any cluster, take cluster membership from a highly connected neuron
 parameters.G_L = 25*10^(-10); %leak conductance (S) %10 - 30 nS range
+%}
+
+% Lower G_L, lower G_sra, and longer tau_sra
+parameters.clusters = 10; % Number of clusters in the network
+parameters.mnc = 1.0; % mean number of clusters each neuron is a member of
+parameters.t_max = 6; %maximum amount of time (s)
+parameters.del_G_syn_E_E = 225*10^(-12); %synaptic conductance step following spike (S)
+parameters.del_G_syn_E_I = 150*10^(-12); %synaptic conductance step following spike (S)
+parameters.W_gin = 325e-12;
+parameters.include_all = 1; % if a neuron is not in any cluster, take cluster membership from a highly connected neuron
+parameters.G_L = 10*10^(-9); %leak conductance (S) %10 - 30 nS range
+
+parameters.del_G_sra = 3e-12; %spike rate adaptation conductance step following spike %ranges from 1-200 *10^(-9) (S)
+parameters.tau_sra = 500*10^(-3); %spike rate adaptation time constant (s)
+
 
 %% New, needed to keep up with Add-PF-sims branch changes
 
@@ -282,6 +298,17 @@ for ithNet = 1:parameters.nNets
             plot_randnet_results(parameters, network, V_m, G_in, network_spike_sequences, ithTest, net_save_path)
         end
         
+        % Temp, code to check mean n spikes within events
+        eSpikes = V_m(network.E_indices,:)>= parameters.V_th;
+        overallmeanspikes = 0;
+        for ithEvent = 1:size(trialResults.events, 1)
+            eventSpikes = eSpikes(:,trialResults.events(ithEvent,1):trialResults.events(ithEvent,2));
+            nSpikes = sum(eventSpikes, 2);
+            meannSpikes = sum(nSpikes)/sum(nSpikes>0)
+            overallmeanspikes = overallmeanspikes+ meannSpikes;
+        end; overallmeanspikes = overallmeanspikes./size(trialResults.events, 1)
+        
+        % sum( sum()./ sum( [sum(s(:,r.events(1,1):r.events(1,2)), 2)>0] )
         
     end % trial loop
     

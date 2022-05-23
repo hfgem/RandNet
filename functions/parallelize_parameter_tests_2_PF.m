@@ -97,9 +97,13 @@ function [avg_mat, allResults] = parallelize_parameter_tests_2(parameters,num_ne
             %Create input conductance variable
             if parameters.usePoisson
                 G_in = single(zeros(parameters.n, parameters.t_steps+1));
+                
                 for k = 2:(parameters.t_steps+1)
                     G_in(:,k) = G_in(:,k-1)*exp(-parameters.dt/parameters.tau_syn_E);
-                    G_in(:,k) = G_in(:,k) + parameters.W_gin * [rand(parameters.n, 1) < (parameters.dt*parameters.rG)];
+
+                    % G_in(:,k) = G_in(:,k) + network.contextInput .* [rand(parameters.n, 1) < (parameters.dt*parameters.rG)];
+                    G_in(:,k) = G_in(:,k) + [network.contextInput .* [1     .*              ismember(network.all_indices, network.E_indices)]' .* [rand(parameters.n, 1) < (parameters.dt*parameters.rG)] + ...
+                                             network.contextInput .* [parameters.IcueScale.*ismember(network.all_indices, network.I_indices)]'  .* [rand(parameters.n, 1) < (parameters.dt*parameters.rG)]] ;
                 end
             else
                 G_in = (parameters.G_std*randn(parameters.n,parameters.t_steps+1))+parameters.G_mean;
@@ -131,6 +135,16 @@ function [avg_mat, allResults] = parallelize_parameter_tests_2(parameters,num_ne
                 network_spike_sequences = [network_spike_sequences, trialResults]; 
             end
             
+            % Calculate mean n spikes within events
+            overallmeanspikes = 0;
+            for ithEvent = 1:size(trialResults.events, 1)
+                eventSpikes = E_spikes_V_m(:,trialResults.events(ithEvent,1):trialResults.events(ithEvent,2));
+                nSpikes = sum(eventSpikes, 2);
+                meannSpikes = sum(nSpikes)/sum(nSpikes>0);
+                overallmeanspikes = overallmeanspikes+ meannSpikes;
+            end
+            overallmeanspikes = overallmeanspikes./size(trialResults.events, 1);
+            
             % Overall simulation statistics
             allResults{ithNet}{ithTest}.ithInit = ithTest;
             allResults{ithNet}{ithTest}.numEvents = numel(network_spike_sequences(ithTest).event_lengths); % number of detected events
@@ -138,6 +152,8 @@ function [avg_mat, allResults] = parallelize_parameter_tests_2(parameters,num_ne
             allResults{ithNet}{ithTest}.frac_participation = mean([network_spike_sequences(ithTest).frac_spike{:}]); % mean fraction of cells firing per event
             allResults{ithNet}{ithTest}.meanRate = mean(sum(E_spikes_V_m, 2)/parameters.t_max); % mean over cells' average firing rate
             allResults{ithNet}{ithTest}.stdRate = std(sum(E_spikes_V_m, 2)/parameters.t_max); % STD over cells' average firing rate
+            allResults{ithNet}{ithTest}.meanCellnEventSpikes = overallmeanspikes; % mean n event spikes over cells that spike
+
 
             % Stats for each detected event
             allResults{ithNet}{ithTest}.eventLength = network_spike_sequences(ithTest).event_lengths; % duration in seconds of all detected events

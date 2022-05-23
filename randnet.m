@@ -298,15 +298,6 @@ for ithNet = 1:parameters.nNets
             plot_randnet_results(parameters, network, V_m, G_in, network_spike_sequences, ithTest, net_save_path)
         end
         
-        % Temp, code to check mean n spikes within events
-        eSpikes = V_m(network.E_indices,:)>= parameters.V_th;
-        overallmeanspikes = 0;
-        for ithEvent = 1:size(trialResults.events, 1)
-            eventSpikes = eSpikes(:,trialResults.events(ithEvent,1):trialResults.events(ithEvent,2));
-            nSpikes = sum(eventSpikes, 2);
-            meannSpikes = sum(nSpikes)/sum(nSpikes>0);
-            overallmeanspikes = overallmeanspikes+ meannSpikes;
-        end; overallmeanspikes = overallmeanspikes./size(trialResults.events, 1)
         
         % sum( sum()./ sum( [sum(s(:,r.events(1,1):r.events(1,2)), 2)>0] )
         

@@ -27,11 +27,12 @@
 %% Save Path + Load Parameters
 addpath('functions')
 
-saveFlag = 1 % 1 to save simulation results
+saveFlag = 0 % 1 to save simulation results
 selectSavePath = 0; % 1 to select save destination, 0 to save in results dir
 selectLoadPath = 1; % 1 to select load source, 0 to load from results dir
 plotResults = 1; % 1 to plot basic simulation results
-scriptFolder = '/param_tests'; % sub-folder so save analysis results to
+scriptFolder = '/randnet_param_tests'; % sub-folder so save analysis results to
+scriptFolder = '/randnet_PF_param_tests'; % sub-folder so save analysis results to
 
 % Save path
 if selectSavePath
@@ -66,8 +67,8 @@ parameters.max_avg_length = inf;
 %}
 
 % Simulation duration
-%parameters.t_max = 10;
-parameters.t_max = 60;
+parameters.t_max = 10;
+%parameters.t_max = 60;
 
 % __Necessary to override the loaded parameters__ %
 parameters.saveFlag = saveFlag;
@@ -92,11 +93,11 @@ test_n = 20; % Number of parameters to test (each)
 
 
 % % temp, for testing code
-%{
+
 num_nets = 2;
 num_inits = 1;
 test_n = 4;
-%}
+
 % %
 assert(parameters.usePoisson==1)
 
@@ -122,11 +123,12 @@ variedParam(2).name = 'clusters'; % 2nd parameter to be varied
 variedParam(2).range = [2:2:36]; % set of values to test param2 at
 %}
 
+
 variedParam(1).name = 'del_G_syn_E_E'; % 2nd parameter to be varied
-variedParam(1).range = linspace(550*10^(-12), 950*10^(-12), test_n); % set of values to test param2 at
+variedParam(1).range = linspace( (135-10)*10^(-12), (135+10)*10^(-12), test_n); % set of values to test param2 at
 
 variedParam(2).name = 'del_G_syn_I_E'; % 2nd parameter to be varied
-variedParam(2).range =  linspace(300*10^(-12), 700*10^(-12), test_n); % set of values to test param2 at
+variedParam(2).range =  linspace( (80-10)*10^(-12), (80+10)*10^(-12), test_n); % set of values to test param2 at
 
 parameters.del_G_syn_E_I = nan;
 
@@ -156,7 +158,7 @@ resultsMatLinear = zeros(4, size(parameterSets_vec, 2));
 resultsStructLinear = cell(1, size(parameterSets_vec, 2));
 parfor ithParamSet = 1:size(parameterSets_vec, 2)
     
-    [resultsMatLinear(:,ithParamSet), resultsStructLinear{ithParamSet}] = parallelize_parameter_tests_2(...
+    [resultsMatLinear(:,ithParamSet), resultsStructLinear{ithParamSet}] = parallelize_parameter_tests_2_PF(...
                 parameters, num_nets, num_inits, parameterSets_vec, ithParamSet, variedParam);
     send(D, 1);
 end

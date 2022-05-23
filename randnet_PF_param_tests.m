@@ -27,7 +27,7 @@
 %% Save Path + Load Parameters
 addpath('functions')
 
-saveFlag = 0 % 1 to save simulation results
+saveFlag = 1 % 1 to save simulation results
 selectSavePath = 0; % 1 to select save destination, 0 to save in results dir
 selectLoadPath = 1; % 1 to select load source, 0 to load from results dir
 plotResults = 1; % 1 to plot basic simulation results
@@ -52,6 +52,7 @@ else
     load_path = [pwd, '/results'];
 end
 load(strcat(load_path,'/parameters.mat'))
+load(strcat(load_path,'/pfsim.mat'))
 
 
 %% Parameters that are different from the loaded parameters
@@ -67,8 +68,8 @@ parameters.max_avg_length = inf;
 %}
 
 % Simulation duration
-parameters.t_max = 10;
-%parameters.t_max = 60;
+%parameters.t_max = 10;
+parameters.t_max = 60;
 
 % __Necessary to override the loaded parameters__ %
 parameters.saveFlag = saveFlag;
@@ -94,10 +95,11 @@ test_n = 20; % Number of parameters to test (each)
 
 % % temp, for testing code
 
-num_nets = 2;
+num_nets = 3;
 num_inits = 1;
 test_n = 4;
-
+test_n = 5;
+pfsim.PFscoreFlag = 0
 % %
 assert(parameters.usePoisson==1)
 
@@ -125,10 +127,10 @@ variedParam(2).range = [2:2:36]; % set of values to test param2 at
 
 
 variedParam(1).name = 'del_G_syn_E_E'; % 2nd parameter to be varied
-variedParam(1).range = linspace( (135-10)*10^(-12), (135+10)*10^(-12), test_n); % set of values to test param2 at
+variedParam(1).range = linspace( (135-20)*10^(-12), (135+20)*10^(-12), test_n); % set of values to test param2 at
 
 variedParam(2).name = 'del_G_syn_I_E'; % 2nd parameter to be varied
-variedParam(2).range =  linspace( (80-10)*10^(-12), (80+10)*10^(-12), test_n); % set of values to test param2 at
+variedParam(2).range =  linspace( (80-20)*10^(-12), (80+20)*10^(-12), test_n); % set of values to test param2 at
 
 parameters.del_G_syn_E_I = nan;
 
@@ -156,10 +158,11 @@ afterEach(D, @nUpdateWaitbar);
 tic
 resultsMatLinear = zeros(4, size(parameterSets_vec, 2));
 resultsStructLinear = cell(1, size(parameterSets_vec, 2));
+PFresultsStructLinear = cell(1, size(parameterSets_vec, 2));
 parfor ithParamSet = 1:size(parameterSets_vec, 2)
     
-    [resultsMatLinear(:,ithParamSet), resultsStructLinear{ithParamSet}] = parallelize_parameter_tests_2_PF(...
-                parameters, num_nets, num_inits, parameterSets_vec, ithParamSet, variedParam);
+    [resultsMatLinear(:,ithParamSet), resultsStructLinear{ithParamSet}, PFresultsStructLinear{ithParamSet}] = parallelize_parameter_tests_2_PF(...
+                parameters, pfsim, num_nets, num_inits, parameterSets_vec, ithParamSet, variedParam);
     send(D, 1);
 end
 runTime = toc
@@ -168,6 +171,8 @@ runTime = toc
 
 resultsMat = nan([cellfun(@length, {variedParam.range}), 4]);
 resultsStruct = struct;
+PFresultsStruct = struct;
+
 for i = 1:size(resultsMatLinear, 2)
     
     structIndices = {};
@@ -176,10 +181,11 @@ for i = 1:size(resultsMatLinear, 2)
     end
     resultsMat(structIndices{:},:) = resultsMatLinear(:,i);
     
-    for j = 1:num_nets
+    for ithNet = 1:num_nets
         for k = 1:num_inits
-            resultsStruct(structIndices{:}, j, k).results = resultsStructLinear{i}{j}{k};
+            resultsStruct(structIndices{:}, ithNet, k).results = resultsStructLinear{i}{ithNet}{k};
         end
+        PFresultsStruct(structIndices{:}, ithNet).results = PFresultsStructLinear{i}{ithNet};
     end
 end
 
@@ -197,7 +203,7 @@ if saveFlag
    
     
     clear D h % Don't save pool.DataQueue or waitbar handle
-    clear resultsStructLinear resultsMatLinear % don't save redundant data
+    clear resultsStructLinear resultsMatLinear PFresultsStructLinear % don't save redundant data
     
     % Save everything, with unique filename based on date-time
     save( strcat(save_path,'/results_', datestr(now,'yyyy-mm-ddTHH-MM'), '.mat'), '-v7.3') 

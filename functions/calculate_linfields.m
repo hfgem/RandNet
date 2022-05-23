@@ -1,4 +1,4 @@
-function [linfields, PFpeaksSequence] = calculate_linfields(opS, parameters, sim, network, plotPFs)
+function [linfields, PFpeaksSequence, PFmat] = calculate_linfields(opS, parameters, sim, network, plotPFs)
 % Calculate linear place fields, based on Jadhav lab methods
 %
 % Adapted from ReplayNet code, with assumption of simulating a single
@@ -82,14 +82,14 @@ end
 
 
 % Extract place field order from linfields struct
-opTemp = [];
+PFmat = [];
 for ithCell = 1:parameters.n
     PF = linfields{day}{epoch}{tetrode}{ithCell}{tr}(:,5);
     %if sum(PF>0)
-        opTemp= [opTemp;PF'];
+        PFmat= [PFmat;PF'];
     %end
 end
-PFmat_E = opTemp(network.E_indices,:);
+PFmat_E = PFmat(network.E_indices,:);
 
 row_all_zeros1 = find(all( PFmat_E==0, 2)) ;
 row_n_all_zeros1 = find(~all( PFmat_E==0, 2)) ;

@@ -89,7 +89,7 @@ parameters.nNets = 1; % How many networks to run
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 PFsimFlag = 0;
-PFscoreFlag = 0;
+pfsim.PFscoreFlag = 0;
 preplaySimFlag = 1;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -168,6 +168,10 @@ pfsim.minPeakRate = 3; % minimum PF peak rate to consider a cell a place cell
 % set depedendent parameters for PF sim
 pfsim = set_depedent_parameters(pfsim);
 
+%Save to computer
+if parameters.saveFlag == 1
+    save(strcat(save_path,'/pfsim.mat'),'pfsim')
+end
 
 %% Create Networks and Check Spike Progression
 %Runs through a series of different random number generator seeds to change
@@ -260,7 +264,7 @@ for ithNet = 1:parameters.nNets
             'TimePerBin', parameters.dt, 'PlotType', 'scatter'); % 
             ylabel('Cell');
             %}
-            if PFscoreFlag
+            if pfsim.PFscoreFlag
                 allScores(i) = calculate_linfieldsScore(linfields, pfsim, pfsim, network)
             end
             disp(['Env: ', num2str(i), ', Score: ', num2str(allScores(i))])

@@ -61,12 +61,7 @@ function [network] = create_clusters(parameters, varargin)
     end
     clear ord i
     
-    if include_all == 2
-        ind_non = find(sum(cluster_mat) == 0);
-        for i = ind_non
-            cluster_mat(randi(parameters.clusters),i) = 1;
-        end
-    elseif include_all==1
+    if include_all == 1 
         %Add back in those neurons that are not placed in a cluster, by
         %removing a place from another neuron with a high presence - this
         %section can be removed if you'd like some neurons to be unconnected
@@ -80,6 +75,20 @@ function [network] = create_clusters(parameters, varargin)
                 cluster_mat(clust_place,i) = 1;
                 cluster_mat(clust_place,val_steal) = 0;
                 ind_high = find(sum(cluster_mat) > 2);
+            end
+        end
+    elseif include_all==2
+        % Same as include_all==1, but ind_high threshold is changed to 1
+        ind_non = find(sum(cluster_mat) == 0);
+        ind_high = find(sum(cluster_mat) > 1);
+        for i = ind_non
+            clust_place = randi(parameters.clusters);
+            ind_inclust = find(cluster_mat(clust_place,:));
+            try %#ok<TRYNC>
+                val_steal = datasample(intersect(ind_inclust,ind_high),1);
+                cluster_mat(clust_place,i) = 1;
+                cluster_mat(clust_place,val_steal) = 0;
+                ind_high = find(sum(cluster_mat) > 1);
             end
         end
     end

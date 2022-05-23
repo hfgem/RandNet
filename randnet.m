@@ -304,7 +304,7 @@ for ithNet = 1:parameters.nNets
         for ithEvent = 1:size(trialResults.events, 1)
             eventSpikes = eSpikes(:,trialResults.events(ithEvent,1):trialResults.events(ithEvent,2));
             nSpikes = sum(eventSpikes, 2);
-            meannSpikes = sum(nSpikes)/sum(nSpikes>0)
+            meannSpikes = sum(nSpikes)/sum(nSpikes>0);
             overallmeanspikes = overallmeanspikes+ meannSpikes;
         end; overallmeanspikes = overallmeanspikes./size(trialResults.events, 1)
         

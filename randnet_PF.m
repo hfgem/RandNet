@@ -140,12 +140,93 @@ parameters.W_gin = log(parameters.Win_mean^2 / sqrt(parameters.Win_var+parameter
 parameters.cueSigma = sqrt(log(parameters.Win_var/parameters.Win_mean^2 + 1)); % temp value, to produce identical values
 parameters.PFcontextScale = 0.1;
 %}
-PFsimFlag = 1;
+PFsimFlag = 0;
 PFscoreFlag = 0;
 preplaySimFlag = 1;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Preplay tuned, 5/18, decreased G_L
+parameters.del_G_sra = 30e-09; %spike rate adaptation conductance step following spike %ranges from 1-200 *10^(-9) (S)
+parameters.IcueScale = 1.05; % scales strength of I cell cue input, if ~=1 then Icells receive no spatial inputs
+parameters.clusters = 12; % Number of clusters in the network
+parameters.mnc = 1.2; % mean number of clusters each neuron is a member of
+parameters.t_max = 6; %maximum amount of time (s)
+parameters.del_G_syn_E_E = 160*10^(-12); %synaptic conductance step following spike (S)
+parameters.del_G_syn_E_I = 40*10^(-12); %synaptic conductance step following spike (S)
+parameters.Win_mean = 90*10^-12;
+parameters.Win_var = (20e-12)^2;
+parameters.include_all = 2; % if a neuron is not in any cluster, take cluster membership from a highly connected neuron
+parameters.G_L = 25*10^(-10); %leak conductance (S) %10 - 30 nS range
+
+% modification of above section
+parameters.tau_sra = 100*10^(-3); %spike rate adaptation time constant (s)
+parameters.del_G_sra = 3.0e-09; %spike rate adaptation conductance step following spike %ranges from 1-200 *10^(-9) (S)
+
+
+%% 
+parameters.rG = 5000;
+
+% Place fields
+parameters.tau_sra = 30*10^(-3); %spike rate adaptation time constant (s)
+parameters.del_G_sra = 3.0e-012; %spike rate adaptation conductance step following spike %ranges from 1-200 *10^(-9) (S)
+parameters.IcueScale = 1.05; % scales strength of I cell cue input, if ~=1 then Icells receive no spatial inputs
+parameters.clusters = 12; % Number of clusters in the network
+parameters.mnc = 1.2; % mean number of clusters each neuron is a member of
+parameters.t_max = 6; %maximum amount of time (s)
+parameters.del_G_syn_E_E = 100*10^(-12); %synaptic conductance step following spike (S)
+parameters.del_G_syn_E_I = 100*10^(-12); %synaptic conductance step following spike (S)
+parameters.Win_mean = 67 *10^-12;
+parameters.Win_var = (5e-12)^2;
+parameters.include_all = 2; % if a neuron is not in any cluster, take cluster membership from a highly connected neuron
+parameters.G_L = 10*10^(-9); %leak conductance (S) %10 - 30 nS range
+
+
+parameters.Win_mean = 67 *10^-12;
+parameters.IcueScale = 1.9; % scales strength of I cell cue input, if ~=1 then Icells receive no spatial inputs
+parameters.del_G_syn_E_E = 140*10^(-12); %synaptic conductance step following spike (S)
+parameters.del_G_syn_E_I = 70*10^(-12); %synaptic conductance step following spike (S)
+parameters.p_I = 0.25; % probability of an I cell connecting to any other cell
+
+
+parameters.Win_mean = 67 *10^-12;
+parameters.IcueScale = 1.8; % scales strength of I cell cue input, if ~=1 then Icells receive no spatial inputs
+parameters.del_G_syn_E_E = 130*10^(-12); %synaptic conductance step following spike (S)
+parameters.del_G_syn_E_I = 90*10^(-12); %synaptic conductance step following spike (S)
+parameters.p_I = 0.25; % probability of an I cell connecting to any other cell
+
+parameters.Win_mean = 67 *10^-12;
+parameters.IcueScale = 1.9; % scales strength of I cell cue input, if ~=1 then Icells receive no spatial inputs
+parameters.del_G_syn_E_E = 135*10^(-12); %synaptic conductance step following spike (S)
+parameters.del_G_syn_E_I = 80*10^(-12); %synaptic conductance step following spike (S)
+parameters.p_I = 0.25; % probability of an I cell connecting to any other cell
+
+% Creates place field ghosts and slightly clustered PF peaks
+parameters.clusters = 8; % Number of clusters in the network
+parameters.mnc = 1.5; % mean number of clusters each neuron is a member of
+
+% Preplay
+%{
+parameters.Win_mean = 73 *10^-12;
+parameters.IcueScale = 1.01; % scales strength of I cell cue input, if ~=1 then Icells receive no spatial inputs
+parameters.del_G_syn_E_E = 135*10^(-12); %synaptic conductance step following spike (S)
+parameters.del_G_syn_E_I = 80*10^(-12); %synaptic conductance step following spike (S)
+parameters.p_I = 0.25; % probability of an I cell connecting to any other cell
+%}
+
+% Combined Preplay and PFs
+parameters.Win_mean = 67 *10^-12;
+parameters.IcueScale = 1.9; % scales strength of I cell cue input, if ~=1 then Icells receive no spatial inputs
+parameters.del_G_syn_E_E = 135*10^(-12); %synaptic conductance step following spike (S)
+parameters.del_G_syn_E_I = 80*10^(-12); %synaptic conductance step following spike (S)
+parameters.p_I = 0.25; % probability of an I cell connecting to any other cell
+parameters.PFcontextScale = 0.1; % scales E-cell's context cue input during PF trials
+
+
+parameters.W_gin = log(parameters.Win_mean^2 / sqrt(parameters.Win_var+parameters.Win_mean^2)); % increase in conductance, if using poisson inputs
+parameters.cueSigma = sqrt(log(parameters.Win_var/parameters.Win_mean^2 + 1)); % temp value, to produce identical values
+
 
 %% Parameters for sequence analysis
 
@@ -246,8 +327,8 @@ for ithNet = 1:parameters.nNets
                         G_in_PFs(:,i,ithEnv,ithTrial) = G_in_PFs(:,i,ithEnv,ithTrial) + ...
                                 network.spatialInput{1} .* [rand(parameters.n, 1) < (parameters.dt* (parameters.rG * (i/numel(pfsim.t)) ))] + ...
                                 network.spatialInput{2} .* [rand(parameters.n, 1) < (parameters.dt* ( parameters.rG * ((numel(pfsim.t)-i)/numel(pfsim.t)) ) )] + ...
-                                network.contextInput(:,ithEnv) .* [parameters.PFcontextScale.*ismember(network.all_indices, network.E_indices)]' .* [rand(parameters.n, 1) < (parameters.dt*parameters.rG) + ...
-                                network.contextInput(:,ithEnv) .* [1.*ismember(network.all_indices, network.I_indices)]' .* [rand(parameters.n, 1) < (parameters.dt*parameters.rG)] ]  ;
+                                network.contextInput(:,ithEnv) .* [parameters.PFcontextScale.*ismember(network.all_indices, network.E_indices)]' .* [rand(parameters.n, 1) < (parameters.dt*parameters.rG)] + ...
+                                network.contextInput(:,ithEnv) .* [1.*ismember(network.all_indices, network.I_indices)]' .* [rand(parameters.n, 1) < (parameters.dt*parameters.rG)]   ;
                 end
             end
             
@@ -265,7 +346,7 @@ for ithNet = 1:parameters.nNets
                     % PF Simulation
                     [V_m, G_sra, G_syn_E_E, G_syn_I_E, G_syn_E_I, G_syn_I_I, conns] = randnet_calculator(pfsim, trialSeed, network, V_m);
                     opV(:,:,ithEnv,i) = V_m;
-                    opS(:,:,ithEnv,i) = V_m>parameters.V_th;
+                    opS(:,:,ithEnv,i) = logical( V_m>parameters.V_th);
                 end
             end
         end
@@ -275,6 +356,17 @@ for ithNet = 1:parameters.nNets
         allScores = zeros(size(pfsim.nEnvironments));
         for i = 1:pfsim.nEnvironments
             [linfields, PFpeaksSequence] = calculate_linfields(opS, pfsim, pfsim, network, true);
+            %{
+            figure; plot(pfsim.t, V_m(network.E_indices(1:3),:)); ylabel('Vm (V)'); xlabel('Time (s)'); 
+            figure; plot(pfsim.t, V_m(network.I_indices(1:3),:)); ylabel('Vm (V)'); xlabel('Time (s)'); 
+            figure; plot(pfsim.t, G_in_PFs(1:4,:,1,1)); ylabel('G in (S)'); xlabel('Time (s)');      
+            figure; plotSpikeRaster( logical( [ opS(network.E_indices,:,1,1), opS(network.I_indices,:,1,1) ]) ...
+            'TimePerBin', parameters.dt, 'PlotType', 'scatter'); % 
+            ylabel('Cell');
+            figure; plotSpikeRaster( logical(opS(network.I_indices,:,1,1)), ...
+            'TimePerBin', parameters.dt, 'PlotType', 'scatter'); % 
+            ylabel('Cell');
+            %}
             if PFscoreFlag
                 allScores(i) = calculate_linfieldsScore(linfields, pfsim, pfsim, network)
             end
@@ -282,10 +374,14 @@ for ithNet = 1:parameters.nNets
         end
         score = mean(allScores);
         disp(['Mean score: ', num2str(score)])
-            
+    
+    figure; plotSpikeRaster( logical( [ opS(network.E_indices,:,1,1); opS(network.I_indices,:,1,1) ]), 'TimePerBin', parameters.dt, 'PlotType', 'scatter');
+    figure; histogram( sum(opS, [2:4])./parameters.t_max./parameters.nTrials, 50 )
+    
     end
     PFruntime = toc
-
+    
+        
     %% Preplay simulation:
     tic
     if preplaySimFlag

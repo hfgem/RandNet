@@ -120,11 +120,9 @@ function [network] = create_clusters(parameters, varargin)
     % contextInput = parameters.Win_mean+(sqrt(parameters.Win_var)*randn(parameters.n, 1)); % context cue strength
     %contextInput = lognrnd(log(parameters.W_gin), parameters.cueSigma, parameters.n, pfsim.nEnvironments);
     
-    if parameters.IcueScale~=1
-        input1(I_indices) = 0;
-        input2(I_indices) = 0;
-        contextInput(I_indices) = contextInput(I_indices) * parameters.IcueScale;
-    end
+    % I cells don't receive spatially modulated input
+    input1(I_indices) = 0;
+    input2(I_indices) = 0;
     
     %SAVE NETWORK STRUCTURE
     network = struct;

@@ -10,8 +10,8 @@
 
 clear all
 
-parameters.saveFlag = 0; % 1 to save simulation results
-parameters.selectPath = 0; % 1 to select save destination, 0 to save in current dir
+parameters.saveFlag = 1; % 1 to save simulation results
+parameters.selectPath = 1; % 1 to select save destination, 0 to save in current dir
 parameters.plotResults = 1; % 1 to plot basic simulation results
 
 if parameters.saveFlag & parameters.selectPath
@@ -83,63 +83,11 @@ parameters.nTrials = 1; % How many tests of different initializations to run
 parameters.nNets = 1; % How many networks to run
 
 
-%{
-% Attempt with lower dSRA
-parameters.del_G_syn_E_E = 575*10^(-12); %synaptic conductance step following spike (S)
-parameters.del_G_syn_I_I = 0; %1.4*del_G_syn_E_E; %synaptic conductance step following spike (S)
-parameters.del_G_syn_E_I = 325*10^(-12); %synaptic conductance step following spike (S)
-parameters.del_G_syn_I_E = 325*10^(-12); %synaptic conductance step following spike (S)
-parameters.del_G_sra = 10e-09; %spike rate adaptation conductance step following spike %ranges from 1-200 *10^(-9) (S)
-%}
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% Temp, parameter tuning: %%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%
+% %Temp, parameter tuning: %%
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-parameters.mnc = 1.33; % mean number of clusters each neuron is a member of
-
-parameters.del_G_sra = 30e-09; %spike rate adaptation conductance step following spike %ranges from 1-200 *10^(-9) (S)
-
-parameters.del_G_syn_E_E = 1000*10^(-12); %synaptic conductance step following spike (S)
-parameters.del_G_syn_E_I = 550*10^(-12); %synaptic conductance step following spike (S)
-
-parameters.Win_mean = 700*10^-12;
-parameters.Win_var = (200e-12)^2;
-parameters.W_gin = log(parameters.Win_mean^2 / sqrt(parameters.Win_var+parameters.Win_mean^2)); % increase in conductance, if using poisson inputs
-parameters.cueSigma = sqrt(log(parameters.Win_var/parameters.Win_mean^2 + 1)); % temp value, to produce identical values
-parameters.PFcontextScale = 0.1; % scales E-cell's context cue input during PF trials
-%parameters.del_G_syn_E_E = 1250*10^(-12); %synaptic conductance step following spike (S)
-%parameters.del_G_syn_E_I = 450*10^(-12); %synaptic conductance step following spike (S)
-
-%{
-Win_mean = 675*10^-12;
-Win_var = (100e-12)^2;
-parameters.W_gin = log(Win_mean^2 / sqrt(Win_var+Win_mean^2)); % increase in conductance, if using poisson inputs
-parameters.cueSigma = sqrt(log(Win_var/Win_mean^2 + 1)); % temp value, to produce identical values
-%}
-
-parameters.mnc = 1.5; % mean number of clusters each neuron is a member of
-parameters.del_G_syn_E_E = 1200*10^(-12); %synaptic conductance step following spike (S)
-parameters.del_G_syn_E_I = 1200*10^(-12); %synaptic conductance step following spike (S)
-
-
-parameters.del_G_syn_E_E = 800*10^(-12); %synaptic conductance step following spike (S)
-parameters.del_G_syn_E_I = 400*10^(-12); %synaptic conductance step following spike (S)
-
-parameters.IcueScale = 1.2; % scales strength of I cell cue input, if ~=1 then Icells receive no spatial inputs
-
-
-% X = lognrnd(parameters.W_gin, parameters.cueSigma, 100 ); figure; histogram(X)
-
-%parameters.del_G_syn_E_E = 0000*10^(-12); %synaptic conductance step following spike (S)
-%parameters.del_G_syn_E_I = 00*10^(-12); %synaptic conductance step following spike (S)
-%{
-parameters.Win_mean = 700*10^-12;
-parameters.Win_var = (200e-12)^2;
-parameters.W_gin = log(parameters.Win_mean^2 / sqrt(parameters.Win_var+parameters.Win_mean^2)); % increase in conductance, if using poisson inputs
-parameters.cueSigma = sqrt(log(parameters.Win_var/parameters.Win_mean^2 + 1)); % temp value, to produce identical values
-parameters.PFcontextScale = 0.1;
-%}
 PFsimFlag = 0;
 PFscoreFlag = 0;
 preplaySimFlag = 1;
@@ -147,85 +95,26 @@ preplaySimFlag = 1;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% Preplay tuned, 5/18, decreased G_L
-parameters.del_G_sra = 30e-09; %spike rate adaptation conductance step following spike %ranges from 1-200 *10^(-9) (S)
-parameters.IcueScale = 1.05; % scales strength of I cell cue input, if ~=1 then Icells receive no spatial inputs
-parameters.clusters = 12; % Number of clusters in the network
-parameters.mnc = 1.2; % mean number of clusters each neuron is a member of
+
+% Combined Preplay and PFs
 parameters.t_max = 6; %maximum amount of time (s)
-parameters.del_G_syn_E_E = 160*10^(-12); %synaptic conductance step following spike (S)
-parameters.del_G_syn_E_I = 40*10^(-12); %synaptic conductance step following spike (S)
-parameters.Win_mean = 90*10^-12;
-parameters.Win_var = (20e-12)^2;
-parameters.include_all = 2; % if a neuron is not in any cluster, take cluster membership from a highly connected neuron
-parameters.G_L = 25*10^(-10); %leak conductance (S) %10 - 30 nS range
-
-% modification of above section
-parameters.tau_sra = 100*10^(-3); %spike rate adaptation time constant (s)
-parameters.del_G_sra = 3.0e-09; %spike rate adaptation conductance step following spike %ranges from 1-200 *10^(-9) (S)
-
-
-%% 
+parameters.G_L = 10*10^(-9); %leak conductance (S) %10 - 30 nS range
 parameters.rG = 5000;
-
-% Place fields
+parameters.Win_var = (5e-12)^2;
 parameters.tau_sra = 30*10^(-3); %spike rate adaptation time constant (s)
 parameters.del_G_sra = 3.0e-012; %spike rate adaptation conductance step following spike %ranges from 1-200 *10^(-9) (S)
-parameters.IcueScale = 1.05; % scales strength of I cell cue input, if ~=1 then Icells receive no spatial inputs
-parameters.clusters = 12; % Number of clusters in the network
-parameters.mnc = 1.2; % mean number of clusters each neuron is a member of
-parameters.t_max = 6; %maximum amount of time (s)
-parameters.del_G_syn_E_E = 100*10^(-12); %synaptic conductance step following spike (S)
-parameters.del_G_syn_E_I = 100*10^(-12); %synaptic conductance step following spike (S)
-parameters.Win_mean = 67 *10^-12;
-parameters.Win_var = (5e-12)^2;
 parameters.include_all = 2; % if a neuron is not in any cluster, take cluster membership from a highly connected neuron
-parameters.G_L = 10*10^(-9); %leak conductance (S) %10 - 30 nS range
-
-
-parameters.Win_mean = 67 *10^-12;
-parameters.IcueScale = 1.9; % scales strength of I cell cue input, if ~=1 then Icells receive no spatial inputs
-parameters.del_G_syn_E_E = 140*10^(-12); %synaptic conductance step following spike (S)
-parameters.del_G_syn_E_I = 70*10^(-12); %synaptic conductance step following spike (S)
-parameters.p_I = 0.25; % probability of an I cell connecting to any other cell
-
-
-parameters.Win_mean = 67 *10^-12;
-parameters.IcueScale = 1.8; % scales strength of I cell cue input, if ~=1 then Icells receive no spatial inputs
-parameters.del_G_syn_E_E = 130*10^(-12); %synaptic conductance step following spike (S)
-parameters.del_G_syn_E_I = 90*10^(-12); %synaptic conductance step following spike (S)
-parameters.p_I = 0.25; % probability of an I cell connecting to any other cell
-
-parameters.Win_mean = 67 *10^-12;
-parameters.IcueScale = 1.9; % scales strength of I cell cue input, if ~=1 then Icells receive no spatial inputs
-parameters.del_G_syn_E_E = 135*10^(-12); %synaptic conductance step following spike (S)
-parameters.del_G_syn_E_I = 80*10^(-12); %synaptic conductance step following spike (S)
-parameters.p_I = 0.25; % probability of an I cell connecting to any other cell
-
-% Creates place field ghosts and slightly clustered PF peaks
 parameters.clusters = 8; % Number of clusters in the network
 parameters.mnc = 1.5; % mean number of clusters each neuron is a member of
 
-% Preplay
-%{
 parameters.Win_mean = 73 *10^-12;
+parameters.IcueScale_PF = 1.4; % scales strength of I cell cue input, if ~=1 then Icells receive no spatial inputs
 parameters.IcueScale = 1.01; % scales strength of I cell cue input, if ~=1 then Icells receive no spatial inputs
 parameters.del_G_syn_E_E = 135*10^(-12); %synaptic conductance step following spike (S)
 parameters.del_G_syn_E_I = 80*10^(-12); %synaptic conductance step following spike (S)
 parameters.p_I = 0.25; % probability of an I cell connecting to any other cell
-%}
+parameters.PFcontextFrac = 0.1; % scales E-cell's context cue input during PF trials, and 1-PFcontextFrac for spatial inputs
 
-% Combined Preplay and PFs
-parameters.Win_mean = 67 *10^-12;
-parameters.IcueScale = 1.9; % scales strength of I cell cue input, if ~=1 then Icells receive no spatial inputs
-parameters.del_G_syn_E_E = 135*10^(-12); %synaptic conductance step following spike (S)
-parameters.del_G_syn_E_I = 80*10^(-12); %synaptic conductance step following spike (S)
-parameters.p_I = 0.25; % probability of an I cell connecting to any other cell
-parameters.PFcontextScale = 0.1; % scales E-cell's context cue input during PF trials
-
-
-parameters.W_gin = log(parameters.Win_mean^2 / sqrt(parameters.Win_var+parameters.Win_mean^2)); % increase in conductance, if using poisson inputs
-parameters.cueSigma = sqrt(log(parameters.Win_var/parameters.Win_mean^2 + 1)); % temp value, to produce identical values
 
 
 %% Parameters for sequence analysis
@@ -239,6 +128,10 @@ parameters.PBE_max_combine = 10 * (1/1000); % Combine adjacent PBEs separaeted b
 
 
 %% __set/update Dependent Parameters__ %%
+
+parameters.W_gin = log(parameters.Win_mean^2 / sqrt(parameters.Win_var+parameters.Win_mean^2)); % increase in conductance, if using poisson inputs
+parameters.cueSigma = sqrt(log(parameters.Win_var/parameters.Win_mean^2 + 1)); % temp value, to produce identical values
+
 parameters = set_depedent_parameters(parameters);
 
 %Save to computer
@@ -325,10 +218,10 @@ for ithNet = 1:parameters.nNets
                         G_in_PFs(:,i,ithEnv,ithTrial) = G_in_PFs(:,i-1,ithEnv,ithTrial)*exp(-parameters.dt/parameters.tau_syn_E);
                         % Add spikes from each input source
                         G_in_PFs(:,i,ithEnv,ithTrial) = G_in_PFs(:,i,ithEnv,ithTrial) + ...
-                                network.spatialInput{1} .* [rand(parameters.n, 1) < (parameters.dt* (parameters.rG * (i/numel(pfsim.t)) ))] + ...
-                                network.spatialInput{2} .* [rand(parameters.n, 1) < (parameters.dt* ( parameters.rG * ((numel(pfsim.t)-i)/numel(pfsim.t)) ) )] + ...
-                                network.contextInput(:,ithEnv) .* [parameters.PFcontextScale.*ismember(network.all_indices, network.E_indices)]' .* [rand(parameters.n, 1) < (parameters.dt*parameters.rG)] + ...
-                                network.contextInput(:,ithEnv) .* [1.*ismember(network.all_indices, network.I_indices)]' .* [rand(parameters.n, 1) < (parameters.dt*parameters.rG)]   ;
+                                network.spatialInput{1} .* (1-parameters.PFcontextFrac).*[rand(parameters.n, 1) < (parameters.dt* (parameters.rG * (i/numel(pfsim.t)) ))] + ...
+                                network.spatialInput{2} .* (1-parameters.PFcontextFrac).* [rand(parameters.n, 1) < (parameters.dt* ( parameters.rG * ((numel(pfsim.t)-i)/numel(pfsim.t)) ) )] + ...
+                                network.contextInput(:,ithEnv) .* [parameters.PFcontextFrac.*ismember(network.all_indices, network.E_indices)]' .* [rand(parameters.n, 1) < (parameters.dt*parameters.rG)] + ...
+                                network.contextInput(:,ithEnv) .* [parameters.IcueScale_PF.*ismember(network.all_indices, network.I_indices)]' .* [rand(parameters.n, 1) < (parameters.dt*parameters.rG)]   ;
                 end
             end
             
@@ -399,7 +292,10 @@ for ithNet = 1:parameters.nNets
                 G_in = zeros(parameters.n, parameters.t_steps+1);
                 for k = 2:(parameters.t_steps+1)
                     G_in(:,k) = G_in(:,k-1)*exp(-parameters.dt/parameters.tau_syn_E);
-                    G_in(:,k) = G_in(:,k) + network.contextInput .* [rand(parameters.n, 1) < (parameters.dt*parameters.rG)];
+
+                    % G_in(:,k) = G_in(:,k) + network.contextInput .* [rand(parameters.n, 1) < (parameters.dt*parameters.rG)];
+                    G_in(:,k) = G_in(:,k) + [network.contextInput .* [1     .*              ismember(network.all_indices, network.E_indices)]' .* [rand(parameters.n, 1) < (parameters.dt*parameters.rG)] + ...
+                                             network.contextInput .* [parameters.IcueScale.*ismember(network.all_indices, network.I_indices)]'  .* [rand(parameters.n, 1) < (parameters.dt*parameters.rG)]] ;
                 end
             else
                 G_in = (parameters.G_std*randn(parameters.n,parameters.t_steps+1))+parameters.G_mean;

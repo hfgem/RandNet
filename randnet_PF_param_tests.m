@@ -97,9 +97,8 @@ test_n = 20; % Number of parameters to test (each)
 
 num_nets = 3;
 num_inits = 1;
-test_n = 4;
 test_n = 5;
-pfsim.PFscoreFlag = 0
+pfsim.PFscoreFlag = 0; disp(pfsim.PFscoreFlag)
 % %
 assert(parameters.usePoisson==1)
 
@@ -115,22 +114,37 @@ variedParam(2).name = 'del_G_syn_E_E'; % 2nd parameter to be varied
 variedParam(2).range = linspace(550*10^(-12), 950*10^(-12), test_n); % set of values to test param2 at
 %}
 
-%{
+
 variedParam(1).name = 'mnc'; % 2nd parameter to be varied
 %variedParam(1).range = linspace(1, 21, 81); % set of values to test param2 at
-variedParam(1).range = linspace(1, 6, 21); % set of values to test param2 at
+variedParam(1).range = linspace(1, 21, 21); % set of values to test param2 at
+%variedParam(1).range = linspace(1, 6, 21); % set of values to test param2 at
 
 variedParam(2).name = 'clusters'; % 2nd parameter to be varied
 %variedParam(2).range = [2:1:21]; % set of values to test param2 at
 variedParam(2).range = [2:2:36]; % set of values to test param2 at
+
+
+%variedParam(1).range = linspace(1, 25, 5); % set of values to test param2 at
+%variedParam(2).range = [2:5:25]; % set of values to test param2 at
+
+
+%{
+variedParam(1).name = 'W_gin'; % 1st parameter to be varied. Must be a field in the parameter structure
+variedParam(1).range = linspace( (73-10)*10^(-12), (73+10)*10^(-12), test_n); % set of values to test param1 at
+
+variedParam(2).name = 'del_G_syn_E_E'; % 2nd parameter to be varied
+variedParam(2).range = linspace( (135-20)*10^(-12), (135+30)*10^(-12), test_n); % set of values to test param2 at
 %}
 
-
+%{
 variedParam(1).name = 'del_G_syn_E_E'; % 2nd parameter to be varied
-variedParam(1).range = linspace( (135-20)*10^(-12), (135+20)*10^(-12), test_n); % set of values to test param2 at
+variedParam(1).range = linspace( (135-20)*10^(-12), (135+30)*10^(-12), test_n); % set of values to test param2 at
 
 variedParam(2).name = 'del_G_syn_I_E'; % 2nd parameter to be varied
-variedParam(2).range =  linspace( (80-20)*10^(-12), (80+20)*10^(-12), test_n); % set of values to test param2 at
+variedParam(2).range =  linspace( (80-20)*10^(-12), (80+30)*10^(-12), test_n); % set of values to test param2 at
+%}
+
 
 parameters.del_G_syn_E_I = nan;
 
@@ -142,7 +156,7 @@ parameterSets_vec = combvec(variedParam(:).range);
 if isequal(variedParam(1).name, 'mnc') && isequal(variedParam(2).name, 'clusters')
     parameterSets_vec = parameterSets_vec(:,~[parameterSets_vec(1,:)>parameterSets_vec(2,:)]);
 end
-
+keyboard
 
 %% Run Grid Search With Spike Stats Returned
 

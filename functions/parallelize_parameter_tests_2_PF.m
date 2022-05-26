@@ -96,6 +96,10 @@ function [avg_mat, allResults, PFresults] = parallelize_parameter_tests_2(parame
         %% Run PF simulation
         G_in_PFs = zeros(parameters.n, numel(pfsim.t), pfsim.nEnvironments, pfsim.nTrials);
         for ithEnv = 1:pfsim.nEnvironments
+            
+            PFresults{ithNet}{ithEnv}.E_indices = network.E_indices;
+
+                    
             for ithTrial = 1:pfsim.nTrials
                 %rng(ithTrial)
                 % G_in_PFs(:,1,ithEnv,ithTrial) = 1/10* dI(:,ithEnv) * 2*parameters.rGmax * parameters.tau_syn_E + sqrt(1/2*parameters.tau_syn_E*dI(:,ithEnv).^2*2*parameters.rGmax).*randn(parameters.n, 1) ; 
@@ -128,7 +132,7 @@ function [avg_mat, allResults, PFresults] = parallelize_parameter_tests_2(parame
                     opV(:,:,ithEnv,ithTrial) = V_m;
                     opS(:,:,ithEnv,ithTrial) = logical( V_m>parameters.V_th);
                     clear V_m 
-                    rmfield(pfsim, 'G_in')
+                    rmfield(pfsim, 'G_in');
                 end
             end
         end
@@ -158,7 +162,9 @@ function [avg_mat, allResults, PFresults] = parallelize_parameter_tests_2(parame
                 %disp(['Env: ', num2str(i), ', Score: ', num2str(allScores(i))])
             end
         end
-        score = mean(allScores);
+        if pfsim.PFscoreFlag
+            score = mean(allScores);
+        end
         %disp(['Mean score: ', num2str(score)])
 
         %figure; plotSpikeRaster( logical( [ opS(network.E_indices,:,1,1); opS(network.I_indices,:,1,1) ]), 'TimePerBin', parameters.dt, 'PlotType', 'scatter');

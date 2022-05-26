@@ -29,4 +29,8 @@ parameters.cluster_prob = min(parameters.conn_prob*parameters.npairs/parameters.
 parameters.n_I = round((1-parameters.p_E)*parameters.n); %number of inhibitory neurons
 parameters.n_E = parameters.n-parameters.n_I; %number of excitatory neurons
 
+% Set lognormal distribution mu and sigma, based on desired mean and variance
+parameters.W_gin = log(parameters.Win_mean^2 / sqrt(parameters.Win_var+parameters.Win_mean^2));
+parameters.cueSigma = sqrt(log(parameters.Win_var/parameters.Win_mean^2 + 1));
+
 end

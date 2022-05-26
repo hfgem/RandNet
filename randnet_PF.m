@@ -129,9 +129,6 @@ parameters.PBE_max_combine = 10 * (1/1000); % Combine adjacent PBEs separaeted b
 
 %% __set/update Dependent Parameters__ %%
 
-parameters.W_gin = log(parameters.Win_mean^2 / sqrt(parameters.Win_var+parameters.Win_mean^2)); % increase in conductance, if using poisson inputs
-parameters.cueSigma = sqrt(log(parameters.Win_var/parameters.Win_mean^2 + 1)); % temp value, to produce identical values
-
 parameters = set_depedent_parameters(parameters);
 
 %Save to computer

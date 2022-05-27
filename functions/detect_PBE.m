@@ -76,7 +76,7 @@ function [network_spike_sequences] = detect_PBE(spikes, parameters, varargin)
     
     events = [onsetInds_final', offsetInds_final']; 
     event_lengths = [offsetInds_final' - onsetInds_final']*parameters.dt; 
-    keyboard
+    
     if size(events, 1)==0 % If no events, set results as empty
         network_spike_sequences.events = [];
         network_spike_sequences.event_lengths = [];

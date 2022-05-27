@@ -65,13 +65,18 @@ function [network_spike_sequences] = detect_PBE(spikes, parameters, varargin)
     onsetInds_final = find(diff(PBE_candidate)==1)+1; % indexes where processed PBEs starts
     offsetInds_final = find(diff(PBE_candidate)==-1)+1; % indexes where processed PBEs ends
     
+    if offsetInds_final(end)>numel(meanPopRate)
+        disp(['Bug found: offsetInds end is ', num2str(offsetInds_final(end))])
+        offsetInds_final(end) = numel(meanPopRate)
+    end
+    
     if numel(onsetInds_final) > numel(offsetInds_final) % if event continues to the end of the trial, terminate it then
         offsetInds_final = [offsetInds_final, numel(meanPopRate)];
     end
     
     events = [onsetInds_final', offsetInds_final']; 
     event_lengths = [offsetInds_final' - onsetInds_final']*parameters.dt; 
-    
+    keyboard
     if size(events, 1)==0 % If no events, set results as empty
         network_spike_sequences.events = [];
         network_spike_sequences.event_lengths = [];

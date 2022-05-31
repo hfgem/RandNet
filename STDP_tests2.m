@@ -19,7 +19,7 @@ load(strcat(load_path,'/parameters.mat'))
 
 %____Neuron initialization____
 neur_seed = 1; %probability of a neuron participating in the initializing group
-num_init = 100; %how many times to run neuron initialization and STDP
+num_init = 1000; %how many times to run neuron initialization and STDP
 
 %____________________________________
 %___Assign STDP Rules Desired________
@@ -73,54 +73,87 @@ for i = 1:parameters.test_val_max %Run repeats of initialization
     %Run model
     [V_m, ~, ~, ~, conns] = lif_sra_calculator_postrotation(...
     parameters, neur_seed, network, G_syn_I, G_syn_E, V_m, G_sra);
-    
+
     %Update connection matrix
     network.conns = conns;
-
+    
     %Find spike profile
     spikes_V_m = V_m >= parameters.V_th;
     [spikes_x,spikes_t] = find(spikes_V_m);
     max_time = max(spikes_t);
     
     %Save results
-    spikes_struct(i).spikes_Vm = spikes_V_m;
-    spikes_struct(i).spikes_x = spikes_x;
-    spikes_struct(i).spikes_t = spikes_t;
-    spikes_struct(i).max_dt = max_time;
-    spikes_struct(i).max_time = max_time*parameters.dt;
-    conns_struct(i).conns = conns;
+    if i == 1
+        spikes_struct(1).repeat_number = i;
+        spikes_struct(1).spikes_Vm = spikes_V_m;
+        spikes_struct(1).spikes_x = spikes_x;
+        spikes_struct(1).spikes_t = spikes_t;
+        spikes_struct(1).max_dt = max_time;
+        spikes_struct(1).max_time = max_time*parameters.dt;
+        conns_struct(1).repeat_number = i;
+        conns_struct(1).conns = conns;
+    elseif mod(i,10) == 0
+        spikes_struct(end+1).repeat_number = i;
+        spikes_struct(end).spikes_Vm = spikes_V_m;
+        spikes_struct(end).spikes_x = spikes_x;
+        spikes_struct(end).spikes_t = spikes_t;
+        spikes_struct(end).max_dt = max_time;
+        spikes_struct(end).max_time = max_time*parameters.dt;
+        conns_struct(end+1).repeat_number = i;
+        conns_struct(end).conns = conns;
+    end
+
 end    
 clear i G_syn_I G_syn_E V_m G_sra conns spikes_V_m spikes_x spikes_t max_time 
-
 save(strcat(load_path,'/conns_struct.mat'),'conns_struct','-v7.3')
 save(strcat(load_path,'/spikes_struct.mat'),'spikes_struct','-v7.3')
 
 %% Visualize connectivity matrix changes
 
 %Visualize first and last sequence
-[~,num_repeats] = size(spikes_struct);
 spikes_1 = unique(spikes_struct(1).spikes_x,'stable');
 non_spiking_1 = setdiff(1:parameters.n,spikes_1);
 spikes_1 = [spikes_1;non_spiking_1'];
-spikes_end = unique(spikes_struct(num_repeats).spikes_x,'stable');
+spikes_end = unique(spikes_struct(end).spikes_x,'stable');
 non_spiking_end = setdiff(1:parameters.n,spikes_end);
 spikes_end = [spikes_end;non_spiking_end'];
+dt = spikes_struct(1).max_time/spikes_struct(1).max_dt;
 max_1 = spikes_struct(1).max_dt;
-max_2 = spikes_struct(2).max_dt;
+max_2 = spikes_struct(end).max_dt;
 max_time = max(max_1,max_2);
 figure;
 ax1 = subplot(2,2,1);
 imagesc(spikes_struct(1).spikes_Vm(spikes_1,1:max_time))
-title('Sequence 1: Ordered by Sequence 1')
+ticks = xticks();
+x_ticklabels = cellstr(string(round(ticks*dt,3)));
+xticklabels(x_ticklabels)
+title(sprintf('Sequence %i: Ordered by Sequence %i',spikes_struct(1).repeat_number,spikes_struct(1).repeat_number))
+xlabel('Time (s)')
+ylabel('Neuron Reordered Index')
 ax2 = subplot(2,2,2);
 imagesc(spikes_struct(1).spikes_Vm(spikes_end,1:max_time))
-title('Sequence 1: Ordered by Last Repeat Sequence')
+ticks = xticks();
+x_ticklabels = cellstr(string(round(ticks*dt,3)));
+xticklabels(x_ticklabels)
+title(sprintf('Sequence %i: Ordered by Sequence %i',spikes_struct(1).repeat_number,spikes_struct(end).repeat_number))
+xlabel('Time (s)')
+ylabel('Neuron Reordered Index')
 ax3 = subplot(2,2,3);
-imagesc(spikes_struct(num_repeats).spikes_Vm(spikes_1,1:max_time))
-title('Sequence 100: Ordered by Sequence 1')
+imagesc(spikes_struct(end).spikes_Vm(spikes_1,1:max_time))
+ticks = xticks();
+x_ticklabels = cellstr(string(round(ticks*dt,3)));
+xticklabels(x_ticklabels)
+title(sprintf('Sequence %i: Ordered by Sequence %i',spikes_struct(end).repeat_number,spikes_struct(1).repeat_number))
+xlabel('Time (s)')
+ylabel('Neuron Reordered Index')
 ax4 = subplot(2,2,4);
-imagesc(spikes_struct(num_repeats).spikes_Vm(spikes_end,1:max_time))
-title('Sequence 100: Ordered by Last Repeat Sequence')
+imagesc(spikes_struct(end).spikes_Vm(spikes_end,1:max_time))
+ticks = xticks();
+x_ticklabels = cellstr(string(round(ticks*dt,3)));
+xticklabels(x_ticklabels)
+title(sprintf('Sequence %i: Ordered by Sequence %i',spikes_struct(end).repeat_number,spikes_struct(end).repeat_number))
+xlabel('Time (s)')
+ylabel('Neuron Reordered Index')
 linkaxes([ax1,ax2,ax3,ax4])
 clear ax1 ax2 ax3 ax4 spikes_1 non_spiking_1 spikes_end non_spiking_end max_1 max_2 max_time
 
@@ -128,21 +161,24 @@ clear ax1 ax2 ax3 ax4 spikes_1 non_spiking_1 spikes_end non_spiking_end max_1 ma
 spikes_1 = spikes_struct(1).spikes_x;
 not_spiked = setdiff(1:parameters.n,spikes_1);
 spikes_1 = [spikes_1;not_spiked'];
-inds = round(linspace(1,num_repeats,9));
+[~,num_tests_saved] = size(spikes_struct);
+inds = round(linspace(1,num_tests_saved,9));
 figure;
 for i = 1:9
     subplot(3,3,i)
     imagesc(conns_struct(inds(i)).conns(spikes_1,spikes_1))
     colorbar()
-    title(sprintf('Repeat = %i',inds(i)))
+    title(sprintf('Repeat = %i',conns_struct(inds(i)).repeat_number))
+    xlabel('Index')
+    ylabel('Index')
 end
 sgtitle('Connectivity Matrix')
-clear spikes_1 not_spiked inds i
+clear spikes_1 not_spiked num_tests_saved inds i
 
 %% Set Current Initialization Parameters
 
 parameters.type = 'current';
-parameters.connectivity_gain = 0;
+parameters.connectivity_gain = 0; %Turn off STDP
 
 %Input conductance parameters
 G_coeff = 16;
@@ -151,7 +187,7 @@ G_scale = 1*10^(-9);
 parameters.G_scale = G_scale;
 
 %Simulation time parameters
-t_max = 100; %Time in seconds
+t_max = 600; %Time in seconds
 parameters.t_max = t_max;
 test_val_max = 1;
 parameters.test_val_max = test_val_max;
@@ -163,6 +199,7 @@ parameters.t_steps = t_steps;
 load(strcat(load_path,'/conns_struct.mat'))
 curr_seed = 1; %Seed for current initialization
 conns_to_test = [1,round(length(conns_struct)/2),length(conns_struct)];
+conns_to_test_vals = [conns_struct(conns_to_test).repeat_number];
 
 curr_struct = struct; %to save current sequences
 for i = 1:parameters.test_val_max %Run repeats of initialization
@@ -196,7 +233,7 @@ for i = 1:parameters.test_val_max %Run repeats of initialization
         curr_struct(c).spikes_t = spikes_t;
         curr_struct(c).max_dt = max_time;
         curr_struct(c).max_time = max_time*parameters.dt;
-        curr_struct(c).learning_repeats = conns_to_test(c);
+        curr_struct(c).learning_repeats = conns_to_test_vals(c);
         curr_struct(c).conns = conns;
         curr_struct(c).spiking_neurons = spiking_neurons;
 
@@ -280,8 +317,8 @@ save(strcat(load_path,'/curr_struct.mat'),'curr_struct','-v7.3')
 %load(strcat(load_path,'/spikes_struct.mat'))
 
 [~,num_conns] = size(curr_struct);
-
-compare_to = 1;
+[~,num_repeat_tests] = size(spikes_struct);
+compare_to = 1; %Index of neuron-initialized learned sequence to compare to
 
 neur_seq = unique(spikes_struct(compare_to).spikes_x,'stable');
 non_spiking_neur = setdiff(1:parameters.n,neur_seq);
@@ -298,6 +335,7 @@ for c = 1:num_conns
         corr_vals(c,i) = corr(neur_seq,curr_seq);
     end    
 end
+clear c i curr_seq non_spiking_curr
 
 colors = ['r','g','b'];
 
@@ -310,13 +348,14 @@ end
 legend()
 xlabel('Correlation Value')
 ylabel('Number of Current Sequences')
-title('Correlation of Sequences to Template Before and After STDP')
+title(sprintf('Correlation of Sequences to %i Repeat(s) Template \n Before and After STDP',spikes_struct(compare_to).repeat_number))
 
-% Visualize true vs replay with gaussian conv. of replays
+clear colors c
+%% Visualize true vs replay with gaussian conv. of replays
 %Max correlation indices and values
 [~, max_ind] = max(corr_vals,[],2);
 %Convolution parameters
-bin_size = 1; %width of Gaussian kernel in bins
+bin_size = 20; %width of Gaussian kernel in bins
 x = round(-bin_size/2):round(bin_size/2); %x-values for Gaussian convolution kernel
 norm_conv = normpdf(x,0,bin_size/6); %Gaussian convolution kernel
 %Figure
@@ -333,6 +372,7 @@ for i = 1:length(spikes_x)
     bin_conv = conv(norm_conv,seq_spikes_1(i,:));
     seq_1_conv = [seq_1_conv; bin_conv];
 end    
+clear times_1 seq_spikes_1 i bin_conv
 imagesc(seq_1_conv)
 title(sprintf('Sequence from %i Repeat',curr_struct(1).learning_repeats))
 ax2 = subplot(2,2,3);
@@ -343,6 +383,7 @@ for i = 1:length(spikes_x)
     bin_conv = conv(norm_conv,seq_spikes_1(i,:));
     seq_2_conv = [seq_2_conv; bin_conv];
 end    
+clear times_2 seq_spikes_2 i bin_conv
 imagesc(seq_2_conv)
 title(sprintf('Sequence from %i Repeat',curr_struct(2).learning_repeats))
 ax3 = subplot(2,2,4);
@@ -353,6 +394,8 @@ for i = 1:length(spikes_x)
     bin_conv = conv(norm_conv,seq_spikes_1(i,:));
     seq_3_conv = [seq_3_conv; bin_conv];
 end
+clear times_3 seq_spikes_3 i bin_conv
 imagesc(seq_3_conv)
 title(sprintf('Sequence from %i Repeat',curr_struct(3).learning_repeats))
 linkaxes([ax1,ax2,ax3])
+clear seq_1_conv seq_2_conv seq_3_conv ax1 ax2 ax3 x bin_size norm_conv max_ind

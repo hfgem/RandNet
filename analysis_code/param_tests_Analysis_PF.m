@@ -25,6 +25,10 @@ useMeanPFDensity = 0
 useMaxSeq = 0
 maxDetectedSequences = 100;
 
+shuffleMethod = 3 % 1 to shuffle sequences, 2 to shuffle PFs, 3 to compare each preplay sequence to many shuffled PFs
+nPFshuffles = 100;
+sigAlpha = 0.05;
+
 xParamvec = variedParam(1).range;
 xName = variedParam(1).name;
 yParamvec = variedParam(2).range;
@@ -101,29 +105,65 @@ for ithParam1 = 1:size(resultsStruct, 1)
                 nSeq = size(x, 2); % number of sequences in x
                 rVec = corr(PFseq_Rank, x, 'rows', 'pairwise');
 
-                
-                % Shuffled sequence-by-sequence correlation analysi
-                nShuf = max(nShuffMultiplier * size(x, 2), minNShuff);
-                x_shuff = zeros( size(x, 1), nShuf);
-                for i = 1:nShuf
-                    % randomly select from an actual sequence
-                    randSeq = x(:, randi(size(x, 2))); 
-                    firedInd = find(~isnan(randSeq));
-                    % Randomly permute only those cells that actually fired
-                    shufSeq = nan(size(randSeq));
-                    shufSeq(firedInd) = randSeq(firedInd(randperm(numel(firedInd))));
-                    x_shuff(:,i) = shufSeq;
-                end
-                rVec_shuff = corr(PFseq_Rank, x_shuff, 'rows', 'pairwise');
-                
-                
-                if sum(~isnan(rVec), 'all')>0
-                    % [~,p_kstest,KSSTAT] = kstest2(rMat(:), rMat_shuff(:));
-                    [~,p_kstest,KSSTAT] = kstest2(rVec, rVec_shuff);
-                else
-                    p_kstest = nan;
+                % Shuffle either preplay sequences of PF sequence
+                if shuffleMethod==1 % Compare PF sequence to shuffled preplays
+                    % Shuffled sequence-by-sequence correlation analysis
+                    nShuf = max(nShuffMultiplier * size(x, 2), minNShuff);
+                    x_shuff = zeros( size(x, 1), nShuf);
+                    for i = 1:nShuf
+                        % randomly select from an actual sequence
+                        randSeq = x(:, randi(size(x, 2))); 
+                        firedInd = find(~isnan(randSeq));
+                        % Randomly permute only those cells that actually fired
+                        shufSeq = nan(size(randSeq));
+                        shufSeq(firedInd) = randSeq(firedInd(randperm(numel(firedInd))));
+                        x_shuff(:,i) = shufSeq;
+                    end
+                    rVec_shuff = corr(PFseq_Rank, x_shuff, 'rows', 'pairwise');
+
+
+                    if sum(~isnan(rVec), 'all')>0
+                        % [~,p_kstest,KSSTAT] = kstest2(rMat(:), rMat_shuff(:));
+                        [~,p_kstest,KSSTAT] = kstest2(rVec, rVec_shuff);
+                    else % Compare preplay sequences to shuffled PF sequences
+                        p_kstest = nan;
+                        KSSTAT = nan;
+                    end
+                    
+                elseif shuffleMethod==2 % Compare preplay sequences to shuffled PF sequences
+                    
+                    shuffOP = zeros(1, nPFshuffles);
+                    for i = 1:nPFshuffles
+                        PF_shuff = PFseq_Rank(randperm(length(PFseq_Rank))); 
+                        rVec_shuff = corr(PF_shuff, x, 'rows', 'pairwise');
+                        
+                        %[~,p_kstest,KSSTAT] = kstest2(rVec, rVec_shuff);
+                        %shuffOP(i) = p_kstest;
+                        shuffOP(i) = mean(rVec_shuff);
+                        
+                    end
+                    % figure; histogram(shuffOP, 50); xline(mean(rVec))
+                    
+                    p_kstest =  1 - mean( mean(rVec) > shuffOP );
                     KSSTAT = nan;
+                    
+                elseif shuffleMethod==3 % Compare individual preplay sequences to shuffled PF sequences
+                    
+                    for i = 1:nPFshuffles
+                        PF_shuffMat(:,i) = PFseq_Rank(randperm(length(PFseq_Rank))); 
+                    end
+                    
+                    sequences_rVec_shuff = zeros(nPFshuffles, size(x, 2));
+                    for i = 1:size(x, 2)
+                        sequences_rVec_shuff(:,i) = corr(x(:,i), PF_shuffMat, 'rows', 'pairwise');
+                        % figure; histogram(sequences_rVec_shuff(:,i)); xline(rVec(i))
+                    end
+                    sequencePval = 1 - mean(rVec > sequences_rVec_shuff);
+                    p_kstest = mean( sequencePval < sigAlpha ) ;
+                    KSSTAT = nan;
+                    
                 end
+                
                 temp(1, ithNet) = p_kstest;
                 temp(2, ithNet) = KSSTAT;
                 

@@ -90,14 +90,14 @@ end
 num_nets = 3;
 % num_nets = 4;
 num_inits = 1;
-test_n = 20; % Number of parameters to test (each)
+test_n = 15; % Number of parameters to test (each)
 
 
 % % temp, for testing code
 
 num_nets = 3;
 num_inits = 1;
-test_n = 5;
+% test_n = 5;
 pfsim.PFscoreFlag = 0; disp(pfsim.PFscoreFlag)
 % %
 assert(parameters.usePoisson==1)
@@ -107,34 +107,36 @@ assert(parameters.usePoisson==1)
 % dependent parameter set in set_depedent_parameters
 
 
-
+%{
 variedParam(1).name = 'mnc'; % 2nd parameter to be varied
 %variedParam(1).range = linspace(1, 21, 81); % set of values to test param2 at
-variedParam(1).range = linspace(1, 21, 21); % set of values to test param2 at
-%variedParam(1).range = linspace(1, 6, 21); % set of values to test param2 at
+%variedParam(1).range = linspace(1, 21, 21); % set of values to test param2 at
+variedParam(1).range = linspace(1, 6, 21); % set of values to test param2 at
 %variedParam(1).range = linspace(1, 25, 5); % set of values to test param2 at
+variedParam(1).range = linspace(1, 8, 29); % set of values to test param2 at
 
 variedParam(2).name = 'clusters'; % 2nd parameter to be varied
 %variedParam(2).range = [2:1:21]; % set of values to test param2 at
 variedParam(2).range = [2:2:36]; % set of values to test param2 at
 %variedParam(2).range = [2:5:25]; % set of values to test param2 at
-
+variedParam(2).range = [2:2:50]; % set of values to test param2 at
+%}
 
 %{
 variedParam(1).name = 'Win_mean'; % 1st parameter to be varied. Must be a field in the parameter structure
 variedParam(1).range = linspace( (73-5)*10^(-12), (73+5)*10^(-12), test_n); % set of values to test param1 at
 
 variedParam(2).name = 'del_G_syn_E_E'; % 2nd parameter to be varied
-variedParam(2).range = linspace( (135-20)*10^(-12), (135+20)*10^(-12), test_n); % set of values to test param2 at
+variedParam(2).range = linspace( (135-25)*10^(-12), (135+25)*10^(-12), test_n); % set of values to test param2 at
 %}
 
-%{
+
 variedParam(1).name = 'del_G_syn_E_E'; % 2nd parameter to be varied
-variedParam(1).range = linspace( (135-20)*10^(-12), (135+30)*10^(-12), test_n); % set of values to test param2 at
+variedParam(1).range = linspace( (135-25)*10^(-12), (135+25)*10^(-12), test_n); % set of values to test param2 at
 
 variedParam(2).name = 'del_G_syn_I_E'; % 2nd parameter to be varied
-variedParam(2).range =  linspace( (80-20)*10^(-12), (80+30)*10^(-12), test_n); % set of values to test param2 at
-%}
+variedParam(2).range =  linspace( (80-25)*10^(-12), (80+25)*10^(-12), test_n); % set of values to test param2 at
+
 
 
 parameters.del_G_syn_E_I = nan;

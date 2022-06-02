@@ -65,8 +65,8 @@ function [network_spike_sequences] = detect_PBE(spikes, parameters, varargin)
     onsetInds_final = find(diff(PBE_candidate)==1)+1; % indexes where processed PBEs starts
     offsetInds_final = find(diff(PBE_candidate)==-1)+1; % indexes where processed PBEs ends
     
-    if offsetInds_final(end)>numel(meanPopRate)
-        disp(['Bug found: offsetInds end is ', num2str(offsetInds_final(end))])
+    if ~isempty(offsetInds_final) && offsetInds_final(end)>numel(meanPopRate)
+        disp(['Bug found offsetInds end is ', num2str(offsetInds_final(end))])
         offsetInds_final(end) = numel(meanPopRate)
     end
     

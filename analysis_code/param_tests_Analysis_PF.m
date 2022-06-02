@@ -16,7 +16,7 @@ variedParam(2).name
 
 correlationType = 'Pearson'; 
 nShuffMultiplier = 3; % 
-minNShuff = 50; % minimum nShuffles, if nSequences*nShuffMultiplier is lower than minNShuff
+minNShuff = 100; % minimum nShuffles, if nSequences*nShuffMultiplier is lower than minNShuff
 minDetectedSequences = 5; % minimum preplay sequences to run analyis
 
 minPeakRate = 2; % minimum peak PF rate to be considered a place cell
@@ -25,7 +25,7 @@ useMeanPFDensity = 0
 useMaxSeq = 0
 maxDetectedSequences = 100;
 
-shuffleMethod = 3 % 1 to shuffle sequences, 2 to shuffle PFs, 3 to compare each preplay sequence to many shuffled PFs
+shuffleMethod = 1 % 1 to shuffle sequences, 2 to shuffle PFs, 3 to compare each preplay sequence to many shuffled PFs
 nPFshuffles = 100;
 sigAlpha = 0.05;
 
@@ -94,7 +94,6 @@ for ithParam1 = 1:size(resultsStruct, 1)
                 % Sequence-by-sequence correlation analysis
                 cbLabel1 = 'p-val';
                 cbLabel2 = 'KS-stat';
-                analysisTitle = 'KS-test, against shuffle';
                 
                 correlationType = 'Pearson'; % Pearson, Kendall, Spearman
                 if useMaxSeq
@@ -107,6 +106,8 @@ for ithParam1 = 1:size(resultsStruct, 1)
 
                 % Shuffle either preplay sequences of PF sequence
                 if shuffleMethod==1 % Compare PF sequence to shuffled preplays
+                    analysisTitle = '1: PF seq against shuffled preplays';
+
                     % Shuffled sequence-by-sequence correlation analysis
                     nShuf = max(nShuffMultiplier * size(x, 2), minNShuff);
                     x_shuff = zeros( size(x, 1), nShuf);
@@ -131,6 +132,7 @@ for ithParam1 = 1:size(resultsStruct, 1)
                     end
                     
                 elseif shuffleMethod==2 % Compare preplay sequences to shuffled PF sequences
+                    analysisTitle = '2: Preplays against shuffled PF seqs';
                     
                     shuffOP = zeros(1, nPFshuffles);
                     for i = 1:nPFshuffles
@@ -148,6 +150,7 @@ for ithParam1 = 1:size(resultsStruct, 1)
                     KSSTAT = nan;
                     
                 elseif shuffleMethod==3 % Compare individual preplay sequences to shuffled PF sequences
+                    analysisTitle = '3: Frac. preplay outliers against shuffled PF seqs';
                     
                     for i = 1:nPFshuffles
                         PF_shuffMat(:,i) = PFseq_Rank(randperm(length(PFseq_Rank))); 
@@ -228,34 +231,3 @@ ft = fittype('a*exp(b*x) + c');
 
 hold on; scatter(xParamvec(xvalinds), yParamvec(yvalinds), 'r')
 plot(xParamvec, fexp(xParamvec), 'r')
-
-
-%% Calculate PF score across 
-
-
-
-
-%% % %%%%%%%%%%%%
-% %% Functions %%
- %%% %%%%%%%%%%%%
-
-function [BF, BC] = bimodalitycoeff(x)
-% check if x is vector and if it is - 
-% represent it as a column-vector
-if isvector(x), x = x(:); end
-
-% determine the data size along its first dimension
-N = size(x, 1);
-
-% determine the data skewness (unbiased)
-S = skewness(x, 0);
-% determine the data kurtosis (unbiased)
-% (the normal distribution has kurtosis of zero)
-K = kurtosis(x, 0) - 3;
-
-% calculate the bimodality coefficient (unbiased)
-BC = (S.^2 + 1) ./ (K + 3* ([(N-1)^2] / [(N-2)*(N-3)]) );
-
-% determine the bimodality flag (using +5% margin)
-BF = BC > 1.05*5/9;
-end

@@ -76,11 +76,13 @@ function [avg_mat, allResults, PFresults] = parallelize_parameter_tests_2(parame
     % Set up parameter values for current parameter set
     for i = 1:size(variedParam, 2)
         parameters.(variedParam(i).name) = parameterSets_vec(i,ithParamSet);
+        pfsim.(variedParam(i).name) = parameterSets_vec(i,ithParamSet);
     end
 
     
     % Update any parameters that are dependent on a varied parameter
     parameters = set_depedent_parameters(parameters);
+    pfsim = set_depedent_parameters(pfsim);
 
     %Run network initialization code
     resp_mat = zeros(num_nets, 4);

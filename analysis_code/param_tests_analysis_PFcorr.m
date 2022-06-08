@@ -21,11 +21,11 @@ minDetectedSequences = 5; % minimum preplay sequences to run analyis
 
 minPeakRate = 2; % minimum peak PF rate to be considered a place cell
 
-useMeanPFDensity = 0
-useMaxSeq = 0
-maxDetectedSequences = 100;
+useMeanPFDensity = 1
+useMaxnSeq = 0
+maxnDetectedSequences = 100;
 
-shuffleMethod = 3 % 1 to shuffle sequences, 2 to shuffle PFs, 3 to compare each preplay sequence to many shuffled PFs
+shuffleMethod = y % 1 to shuffle sequences, 2 to shuffle PFs, 3 to compare each preplay sequence to many shuffled PFs
 nPFshuffles = 100;
 sigAlpha = 0.05;
 
@@ -69,7 +69,7 @@ for ithParam1 = 1:size(resultsStruct, 1)
                     
                     PFexpectedLocation = sum( PFmat./sum(PFmat, 2) .*([1:size(PFmat, 2)]), 2) ;
                     PFexpectedLocation = PFexpectedLocation(E_indices);
-                    PFexpectedLocation(M<minPeakRate)=nan
+                    PFexpectedLocation(M<minPeakRate)=nan;
                     % figure; histogram(PFexpectedLocation)
                     PFseq = PFexpectedLocation;
                     
@@ -96,9 +96,9 @@ for ithParam1 = 1:size(resultsStruct, 1)
                 cbLabel2 = 'KS-stat';
                 
                 correlationType = 'Pearson'; % Pearson, Kendall, Spearman
-                if useMaxSeq
-                    if size(x, 2) > maxDetectedSequences
-                        x = x(:, randsample(size(x, 2), maxDetectedSequences) );
+                if useMaxnSeq
+                    if size(x, 2) > maxnDetectedSequences
+                        x = x(:, randsample(size(x, 2), maxnDetectedSequences) );
                     end
                 end
                 nSeq = size(x, 2); % number of sequences in x
@@ -193,7 +193,7 @@ disp([ 'Runtime: ', datestr(datenum(0,0,0,0,0,runTime),'HH:MM:SS') ])
 figure; 
 imagesc(xParamvec, yParamvec, squeeze(op(1,:,:))', 'AlphaData', ~isnan(squeeze(op(1,:,:))'))
 set(gca,'YDir','normal')
-cb = colorbar(); cb.Label.String = cbLabel1;
+cb = colorbar(); cb.Label.String = cbLabel1; if shuffleMethod==3; cb.Label.String = 'Frac.'; end;
 xlabel(xName,'Interpreter','none')
 ylabel(yName,'Interpreter','none')
 title(analysisTitle)

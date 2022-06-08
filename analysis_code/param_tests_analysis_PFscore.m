@@ -23,6 +23,9 @@ xName = variedParam(1).name;
 yParamvec = variedParam(2).range;
 yName = variedParam(2).name;
 
+analysisTitle = 'PF score';
+cbLabel1 = 'Mean PF score';
+cbLabel2 = 'Best PF score';
 
 op = nan(2, numel(xParamvec), numel(yParamvec));
 
@@ -67,9 +70,7 @@ for ithParam1 = 1:size(resultsStruct, 1)
                 end
             
                 PFscore = calculate_linfieldsScore(linfields, pfsim, pfsim, network);
-                
                 fprintf('PF score %0.4f %1.0f %1.0f %1.0f \n', PFscore, ithParam1, ithParam2, ithNet)
-                
                 temp(1, ithNet) = PFscore;
                 %temp(2, ithNet) = nan;
 

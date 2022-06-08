@@ -25,7 +25,7 @@ useMeanPFDensity = 0
 useMaxSeq = 0
 maxDetectedSequences = 100;
 
-shuffleMethod = 1 % 1 to shuffle sequences, 2 to shuffle PFs, 3 to compare each preplay sequence to many shuffled PFs
+shuffleMethod = 3 % 1 to shuffle sequences, 2 to shuffle PFs, 3 to compare each preplay sequence to many shuffled PFs
 nPFshuffles = 100;
 sigAlpha = 0.05;
 

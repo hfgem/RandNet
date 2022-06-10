@@ -32,7 +32,7 @@ xlabel(xName,'Interpreter','none')
 ylabel(yName,'Interpreter','none')
 
 rng(1)
-gcp
+
 tic
 for ithParam1 = 1:size(resultsStruct, 1)
     for ithParam2 = 1:size(resultsStruct, 2)
@@ -45,7 +45,7 @@ for ithParam1 = 1:size(resultsStruct, 1)
                 PFmat = PFresultsStruct(ithParam1, ithParam2, ithNet).results{1}.linfields;
                 E_indices = PFresultsStruct(ithParam1, ithParam2, ithNet).results{1}.E_indices;
             catch
-                disp(['PF data error ', num2str(ithParam1), num2str(ithParam2), num2str(ithNet)])
+                disp(['PF data error ', num2str(ithParam1), ' ', num2str(ithParam2), ' ', num2str(ithNet)])
                 PFmat = [];
             end
             
@@ -60,7 +60,7 @@ for ithParam1 = 1:size(resultsStruct, 1)
                 
                 % 'MeanRate'
                 meanPeakRate= mean( max(ePFmat, [], 2) );
-                fprintf('PF mean Peak Rate %0.4f %1.0f %1.0f %1.0f \n', meanPeakRate, ithParam1, ithParam2, ithNet)
+                %fprintf('PF mean Peak Rate %0.4f %1.0f %1.0f %1.0f \n', meanPeakRate, ithParam1, ithParam2, ithNet)
                 temp(1, ithNet) = meanPeakRate;  
                     
                 % 'kstest'
@@ -83,7 +83,7 @@ for ithParam1 = 1:size(resultsStruct, 1)
                 temp(4, ithNet) = nanmean(spatialInfo);                
 
             else
-                temp(:, ithNet) = nans(4,1);
+                temp(:, ithNet) = nan(4,1);
             end
             
         end
@@ -108,32 +108,37 @@ disp([ 'Runtime: ', datestr(datenum(0,0,0,0,0,runTime),'HH:MM:SS') ])
 % disp( duration(0, 0, runTime) )
 
 figure; 
+subplot(2,2,1)
 imagesc(xParamvec, yParamvec, squeeze(op(1,:,:))', 'AlphaData', ~isnan(squeeze(op(1,:,:))'))
 set(gca,'YDir','normal')
 cb = colorbar(); cb.Label.String = '';
 xlabel(xName,'Interpreter','none')
 ylabel(yName,'Interpreter','none')
+title('Mean peak rate')
 
-figure; 
+subplot(2,2,2)
 imagesc(xParamvec, yParamvec, squeeze(op(2,:,:))', 'AlphaData', ~isnan(squeeze(op(2,:,:))'))
 set(gca,'YDir','normal')
 cb = colorbar(); cb.Label.String = '';
 xlabel(xName,'Interpreter','none')
 ylabel(yName,'Interpreter','none')
+title('KS-stat')
 
-figure; 
+subplot(2,2,3)
 imagesc(xParamvec, yParamvec, squeeze(op(3,:,:))', 'AlphaData', ~isnan(squeeze(op(2,:,:))'))
 set(gca,'YDir','normal')
 cb = colorbar(); cb.Label.String = '';
 xlabel(xName,'Interpreter','none')
 ylabel(yName,'Interpreter','none')
+title('PF sparsity')
 
-figure; 
+subplot(2,2,4)
 imagesc(xParamvec, yParamvec, squeeze(op(4,:,:))', 'AlphaData', ~isnan(squeeze(op(2,:,:))'))
 set(gca,'YDir','normal')
 cb = colorbar(); cb.Label.String = '';
 xlabel(xName,'Interpreter','none')
 ylabel(yName,'Interpreter','none')
+title('PF spatial info.')
 
 
 %{

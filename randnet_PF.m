@@ -10,8 +10,8 @@
 
 clear all
 
-parameters.saveFlag = 1; % 1 to save simulation results
-parameters.selectPath = 1; % 1 to select save destination, 0 to save in current dir
+parameters.saveFlag = 0; % 1 to save simulation results
+parameters.selectPath = 0; % 1 to select save destination, 0 to save in current dir
 parameters.plotResults = 1; % 1 to plot basic simulation results
 
 if parameters.saveFlag & parameters.selectPath
@@ -88,8 +88,8 @@ parameters.nNets = 1; % How many networks to run
 % %Temp, parameter tuning: %%
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-PFsimFlag = 0;
-pfsim.PFscoreFlag = 0;
+PFsimFlag = 1;
+PFscoreFlag = 1;
 preplaySimFlag = 1;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -107,6 +107,7 @@ parameters.include_all = 2; % if a neuron is not in any cluster, take cluster me
 parameters.clusters = 8; % Number of clusters in the network
 parameters.mnc = 1.5; % mean number of clusters each neuron is a member of
 
+
 parameters.Win_mean = 73 *10^-12;
 parameters.IcueScale_PF = 1.4; % scales strength of I cell cue input, if ~=1 then Icells receive no spatial inputs
 parameters.IcueScale = 1.01; % scales strength of I cell cue input, if ~=1 then Icells receive no spatial inputs
@@ -114,6 +115,9 @@ parameters.del_G_syn_E_E = 135*10^(-12); %synaptic conductance step following sp
 parameters.del_G_syn_E_I = 80*10^(-12); %synaptic conductance step following spike (S)
 parameters.p_I = 0.25; % probability of an I cell connecting to any other cell
 parameters.PFcontextFrac = 0.1; % scales E-cell's context cue input during PF trials, and 1-PFcontextFrac for spatial inputs
+
+
+parameters.t_max = 60; %maximum amount of time (s)
 
 
 
@@ -141,6 +145,7 @@ end
 
 % Copy preplay parameters as defaults
 pfsim = parameters; 
+pfsim.PFscoreFlag = PFscoreFlag;
 
 % Add PF specific parameters and PF specific values
 pfsim.nEnvironments = 1;
@@ -270,8 +275,9 @@ for ithNet = 1:parameters.nNets
         disp(['Mean score: ', num2str(score)])
     
     figure; plotSpikeRaster( logical( [ opS(network.E_indices,:,1,1); opS(network.I_indices,:,1,1) ]), 'TimePerBin', parameters.dt, 'PlotType', 'scatter');
-    figure; histogram( sum(opS, [2:4])./parameters.t_max./parameters.nTrials, 50 )
     
+    figure; histogram( sum(opS, [2:4])./parameters.t_max./parameters.nTrials, 50 )
+    xlabel('Mean rate (Hz, PF trials)'); ylabel('All cells')
     end
     PFruntime = toc
     

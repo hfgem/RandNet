@@ -25,8 +25,8 @@ useMeanPFDensity = 1
 useMaxnSeq = 0
 maxnDetectedSequences = 100;
 
-shuffleMethod = y % 1 to shuffle sequences, 2 to shuffle PFs, 3 to compare each preplay sequence to many shuffled PFs
-nPFshuffles = 100;
+shuffleMethod = 1 % 1 to shuffle sequences, 2 to shuffle PFs, 3 to compare each preplay sequence to many shuffled PFs
+nPFshuffles = 50;
 sigAlpha = 0.05;
 
 xParamvec = variedParam(1).range;
@@ -79,13 +79,14 @@ for ithParam1 = 1:size(resultsStruct, 1)
                 end
                 
                 % figure; imagesc(PFmat(E_indices(PFseq),:)./M(PFseq));
-                
+
                 PFseq_Rank = PFseq;
-                PFseq_Rank(isnan(Isorted))=nan; 
+                PFseq_Rank(isnan(PFseq))=nan; 
                 PFseq_Rank = PFseq_Rank./max(PFseq_Rank);
 
             catch
                 PFseq = [];
+                PFseq_Rank = [];
             end
             
             % Calculate correlation to preplay sequences
@@ -135,6 +136,7 @@ for ithParam1 = 1:size(resultsStruct, 1)
                     analysisTitle = '2: Preplays against shuffled PF seqs';
                     
                     shuffOP = zeros(1, nPFshuffles);
+                    allshuff_rVecs = [];
                     for i = 1:nPFshuffles
                         PF_shuff = PFseq_Rank(randperm(length(PFseq_Rank))); 
                         rVec_shuff = corr(PF_shuff, x, 'rows', 'pairwise');
@@ -142,12 +144,22 @@ for ithParam1 = 1:size(resultsStruct, 1)
                         %[~,p_kstest,KSSTAT] = kstest2(rVec, rVec_shuff);
                         %shuffOP(i) = p_kstest;
                         shuffOP(i) = mean(rVec_shuff);
-                        
+                        allshuff_rVecs = [allshuff_rVecs, rVec_shuff];
                     end
-                    % figure; histogram(shuffOP, 50); xline(mean(rVec))
+                    rVec = abs(rVec); allshuff_rVecs = abs(allshuff_rVecs);
+                    [~,p_kstest,KSSTAT] = kstest2(rVec, allshuff_rVecs);
                     
-                    p_kstest =  1 - mean( mean(rVec) > shuffOP );
-                    KSSTAT = nan;
+                    %{
+                    figure; hold on; ecdf(rVec), ecdf(allshuff_rVecs); 
+                    title(['P1=', num2str(variedParam(1).range(ithParam1))...
+                            ' P2=', num2str(variedParam(2).range(ithParam2))...
+                            ' pval: ', num2str(p_kstest)]); 
+                    keyboard
+                    %}
+
+                    % figure; histogram(shuffOP, 50); xline(mean(rVec))
+                    %p_kstest =  1 - mean( mean(rVec) > shuffOP );
+                    %KSSTAT = nan;
                     
                 elseif shuffleMethod==3 % Compare individual preplay sequences to shuffled PF sequences
                     analysisTitle = '3: Frac. preplay outliers against shuffled PF seqs';
@@ -179,6 +191,7 @@ for ithParam1 = 1:size(resultsStruct, 1)
         end
         
         op(1, ithParam1, ithParam2) = nanmean(temp(1,:));
+        op(1, ithParam1, ithParam2) = min(temp(1,:));
         op(2, ithParam1, ithParam2) = nanmean(temp(2,:));
     end
     
@@ -205,6 +218,33 @@ cb = colorbar(); cb.Label.String = cbLabel2;
 xlabel(xName,'Interpreter','none')
 ylabel(yName,'Interpreter','none')
 title(analysisTitle)
+
+
+%% Plot with better colormap
+
+figure; 
+imagesc(xParamvec, yParamvec, log10(squeeze(op(1,:,:))'), 'AlphaData', ~isnan(squeeze(op(1,:,:))'))
+set(gca,'YDir','normal')
+cb = colorbar(); cb.Label.String = cbLabel2;
+xlabel(xName,'Interpreter','none')
+ylabel(yName,'Interpreter','none')
+title(analysisTitle)
+
+
+N = 256; n = N/2;
+cm = NaN(N,3);
+cm(:,1) = [ones(n,1);linspace(1,0,N-n)';];
+cm(:,2) = [linspace(0,1,n)';linspace(1,0,N-n)']; 
+cm(:,3) = [linspace(0,1,n)';ones(N-n,1)]; 
+%{
+x = peaks(250);
+x = x - min(x, [], 'all'); x = x./max(x, [], 'all');
+figure; imagesc(log10(x));
+%}
+set(gca,'clim',[log10(.05)*2 0])
+set(gcf,'colormap',cm)
+colorbar
+colorbar('Direction','reverse','Ticks',[log10(.005),log10(.05),log10(.5)],'TickLabels',[.005,.05,.5])
 
 
 % caxis([prctile(op, 2.5, 'all'), prctile(op, 97.5, 'all')])

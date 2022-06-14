@@ -75,6 +75,8 @@ function [network_spike_sequences, overallResults] = detect_events(parameters, .
             if parameters.plotResults == 1
                 f = figure(); %#ok<NASGU>
             end
+            
+            any_success = 0;
 
             %Find spike sequence for each event
             for ithEvent = 1:num_events
@@ -100,9 +102,28 @@ function [network_spike_sequences, overallResults] = detect_events(parameters, .
                 network_spike_sequences.ranks_vec(:,ithEvent) = ranks_vec;
                 network_spike_sequences.frac_spike{ithEvent} = sum(~isnan(ranks_vec))/num_neur;
 
+                partic_check = length(spike_order) >= parameters.event_cutoff;
+                fr_check = parameters.min_avg_fr <= avg_fr <= parameters.max_avg_fr;
+                len_check = parameters.min_avg_length <= avg_event_length <= parameters.max_avg_length;
+                overall_check = partic_check*fr_check*len_check;
+                if overall_check ~= 0
+                    any_success = 1;
+                end
+                
+                %plot only  if meets criteria
+                if parameters.plotResults == 1
+                    if overall_check ~= 0
+                        subplot(1,num_events,ithEvent)
+                        plotSpikeRaster(event_spikes, 'TimePerBin', parameters.dt, 'PlotType', 'scatter');
+                        title(sprintf('Event %i Raster',ithEvent))
+                    else
+                        subplot(1,num_events,ithEvent)
+                        title(sprintf('Event %i Does Not Meet Criteria',ithEvent))
+                    end
+                end
             end    
 
-            if (parameters.plotResults == 1) && (parameters.saveFlag == 1) %Save the raster plots of events
+            if (any_success == 1) && (parameters.plotResults == 1) && (parameters.saveFlag == 1) %Save the raster plots of events
                 f.Units = 'Normalized';
                 f.OuterPosition = [0 0 1 1];
                 if ~isfolder(strcat(parameters.save_path,'/sim_plots'))
@@ -110,6 +131,8 @@ function [network_spike_sequences, overallResults] = detect_events(parameters, .
                 end
                 savefig(f,strcat(parameters.save_path,'/sim_plots','/sim_',string(ithParamSet),'_',string(ithNet),'_',string(ithTest),'_events.fig'))
                 saveas(f,strcat(parameters.save_path,'/sim_plots','/sim_',string(ithParamSet),'_',string(ithNet),'_',string(ithTest),'_events.jpg'))
+                close(f)
+            elseif (any_success == 0) && (parameters.plotResults == 1)
                 close(f)
             end
         end

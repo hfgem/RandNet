@@ -69,6 +69,8 @@ parameters.mnc = 3; % mean number of clusters each neuron is a member of
 
 parameters.V_m_noise = 10^(-4); %magnitude of noise
 
+parameters.G_std = 20*10^(-9);
+
 try %Ensure that E_events_only = 1
     assert(parameters.E_events_only == 1)
 catch
@@ -103,6 +105,7 @@ else
     parameters.max_avg_length = 0.5;
 end
 
+disp('Parameters Updated')
 
 %% __set/update dependent parameters__ %%
 parameters = set_depedent_parameters(parameters);
@@ -110,6 +113,8 @@ parameters = set_depedent_parameters(parameters);
 if saveFlag
     save(strcat(save_path,'/parameters.mat'),'parameters')
 end
+
+disp('Parameters Saved')
 
 %% Set Up Grid Search Parameters
 % NOTE: Parameters selected for testing cannot be a dependent parameter set in 
@@ -122,7 +127,7 @@ optFlag = 0;
 
 %Test parameters
 parameters.nTrials = 1; % How many tests of different initializations to run
-parameters.nNets = 3; % How many networks to run
+parameters.nNets = 2; % How many networks to run
 test_n = 10; % Number of values to test for each parameter
 
 % assert(parameters.usePoisson==1)
@@ -136,18 +141,15 @@ variedParam(2).range = linspace(450*10^(-12), 1050*10^(-12), test_n); % set of v
 %}
 
 variedParam(1).name = 'del_G_syn_E_E'; % 2nd parameter to be varied
-variedParam(1).range = linspace(1*10^(-12), 1000*10^(-12), test_n); % set of values to test param1
+variedParam(1).range = linspace(1*10^(-10), 20*10^(-9), test_n); % set of values to test param1
 variedParam(2).name = 'del_G_syn_I_E'; % 2nd parameter to be varied
-variedParam(2).range =  linspace(1*10^(-12), 1000*10^(-12), test_n); % set of values to test param2
+variedParam(2).range =  linspace(1*10^(-10), 20*10^(-9), test_n); % set of values to test param2
 variedParam(3).name = 'del_G_syn_E_I'; % 3rd parameter to be varied
-variedParam(3).range =  linspace(1*10^(-12), 1000*10^(-12), test_n); % set of values to test param3
+variedParam(3).range =  linspace(1*10^(-10), 20*10^(-9), test_n); % set of values to test param3
 variedParam(4).name = 'p_I'; % 4th parameter to be varied
 variedParam(4).range =  linspace(0, 1, test_n); % set of values to test param4
-variedParam(5).name = 'G_std'; %5th parameter to be varied
-variedParam(5).range = linspace(1*10^(-9), 50*10^(-9), test_n); % set of values to test param5
-variedParam(6).name = 'del_G_sra'; %6th parameter to be varied
-variedParam(6).range = linspace(10*10^(-9),1000*10^(-9),test_n); % set of values to test param6
-%parameters.del_G_syn_I_I = 0;
+variedParam(5).name = 'del_G_sra'; %5th parameter to be varied
+variedParam(5).range = linspace(100*10^(-9),1000*10^(-9),test_n); % set of values to test param5
 
 % Combine into one parameter vector to pass to parfor function
 parameterSets_vec = combvec(variedParam(:).range);
@@ -162,6 +164,8 @@ if saveFlag
     save(strcat(save_path,'/parameters.mat'),'parameters')
     save(strcat(save_path,'/variedParam.mat'),'variedParam')
 end
+
+disp('Varied Parameters Set')
 
 %% Run Grid Search With Spike Stats Returned
 
@@ -181,10 +185,10 @@ parfor ithParamSet = 1:size(parameterSets_vec, 2) %Run through all parameter com
     %For each combination run parallelize_parameter_tests_2
     [resultsMatLinear(:,ithParamSet), resultsStructLinear{ithParamSet}] = parallelize_parameter_tests_2(...
                 parameters, parameterSets_vec, ithParamSet, variedParam, optFlag);
-    send(D, 1);
+    send(D, 1);   
 end
 runTime = toc;
-fprintf('Program Runtime (s) = %.2f\n',runTime)
+disp('Program Runtime (s) = %.2f\n',runTime)
 
 %% Format results matrix
 
@@ -306,14 +310,43 @@ if strcmp(parameters.eventType,'PBE') %Population burst event analysis
     
     
 else %Sequence analysis
+    mat_dim = size(frac_partic);
     %Find locations of criteria matching
     frac_partic_bin = frac_partic >= parameters.event_cutoff;
     avg_fr_bin = parameters.min_avg_fr <= avg_fr <= parameters.max_avg_fr;
-    avg_event_length = parameters.min_avg_length <= avg_event_length <= parameters.max_avg_length;
+    avg_event_length_bin = parameters.min_avg_length <= avg_event_length <= parameters.max_avg_length;
+    %Store ranges for each individual criterion
+    w = whos;
+    for a = 1:length(w)
+        name_criterion = w(a).name;
+        split_name = split(name_criterion,'_');
+        %Only perform analysis if ends in _bin
+        if strcmp(split_name{end},'bin')
+            ind_true = find(eval(name_criterion));
+            subsc_true = cell(size(mat_dim));
+            [subsc_true{:}] = ind2sub(mat_dim,ind_true);
+            range_true = zeros(length(mat_dim),2);
+            for i = 1:length(mat_dim)
+                dim_overlap = subsc_true{i};
+                min_ind = min(dim_overlap);
+                max_ind = max(dim_overlap);
+                try
+                    range_true(i,1) = min_ind;
+                catch
+                    range_true(i,1) = NaN;
+                end
+                try
+                    range_true(i,2) = max_ind;
+                catch
+                    range_true(i,2) = NaN;
+                end
+            end
+            eval(strcat(name_criterion,'_ranges = range_true;'))
+        end    
+    end
     %Find where criteria matching overlaps
-    overlap = frac_partic_bin.*avg_fr_bin.*avg_event_length;
+    overlap = frac_partic_bin.*avg_fr_bin.*avg_event_length_bin;
     indc_overlap = find(overlap);
-    mat_dim = size(overlap);
     subsc_overlap = cell(size(mat_dim));
     [subsc_overlap{:}] = ind2sub(mat_dim,indc_overlap);
     %Find ranges of overlap in parameter space
@@ -322,7 +355,16 @@ else %Sequence analysis
         dim_overlap = subsc_overlap{i};
         min_ind = min(dim_overlap);
         max_ind = max(dim_overlap);
-        range_overlap(i,:) = [min_ind,max_ind];
+        try
+            range_overlap(i,1) = min_ind;
+        catch
+            range_overlap(i,1) = NaN;
+        end
+        try
+            range_overlap(i,2) = max_ind;
+        catch
+            range_overlap(i,2) = NaN;
+        end
         param_name = variedParam(i).name;
         param_range = [variedParam(i).range(min_ind),variedParam(i).range(max_ind)];
         disp(strcat(sprintf('Parameter %s successful range = ',param_name),string(param_range)))

@@ -63,9 +63,11 @@ parameters.save_path = save_path; %In the case you'd like to save from within a 
 % set for the parameter tests you'll be doing.
 
 % Network structure parameters
-parameters.n = 500; %number of neurons
+parameters.n = 200; %number of neurons
 parameters.clusters = 10; % Number of clusters in the network
-parameters.mnc = 2; % mean number of clusters each neuron is a member of
+parameters.mnc = 3; % mean number of clusters each neuron is a member of
+
+parameters.V_m_noise = 10^(-4); %magnitude of noise
 
 try %Ensure that E_events_only = 1
     assert(parameters.E_events_only == 1)
@@ -74,6 +76,7 @@ catch
 end
 
 %Event analysis type
+%Note, eventType = 'Seq' outputs plots of spiking activity if the saveFlag and plotResults values are set to 1
 parameters.eventType = 'Seq';
 
 if strcmp(parameters.eventType,'PBE')
@@ -114,15 +117,13 @@ end
 % for a set of independent parameters.
 
 %Use optimized calculator code or not
-optFlag = 1; %If 1 uses randnet_calculator_memOpt.m for calculations, if 0 uses randnet_calculator.m
-
-%Perform analyses only on excitatory neurons or all
-parameters.E_events_only = 1; %If 1 only analyses excitatory neuron behavior, if 0 analyses entire population's behavior
+%If 1 uses randnet_calculator_memOpt.m for calculations, if 0 uses randnet_calculator.m
+optFlag = 0; 
 
 %Test parameters
-parameters.nTrials = 5; % How many tests of different initializations to run
-parameters.nNets = 5; % How many networks to run
-test_n = 10; % Number of values to test for each parameters
+parameters.nTrials = 1; % How many tests of different initializations to run
+parameters.nNets = 3; % How many networks to run
+test_n = 10; % Number of values to test for each parameter
 
 % assert(parameters.usePoisson==1)
 
@@ -135,15 +136,17 @@ variedParam(2).range = linspace(450*10^(-12), 1050*10^(-12), test_n); % set of v
 %}
 
 variedParam(1).name = 'del_G_syn_E_E'; % 2nd parameter to be varied
-variedParam(1).range = linspace(1*10^(-12), 100*10^(-12), test_n); % set of values to test param1
+variedParam(1).range = linspace(1*10^(-12), 1000*10^(-12), test_n); % set of values to test param1
 variedParam(2).name = 'del_G_syn_I_E'; % 2nd parameter to be varied
-variedParam(2).range =  linspace(1*10^(-12), 100*10^(-12), test_n); % set of values to test param2
+variedParam(2).range =  linspace(1*10^(-12), 1000*10^(-12), test_n); % set of values to test param2
 variedParam(3).name = 'del_G_syn_E_I'; % 3rd parameter to be varied
-variedParam(3).range =  linspace(1*10^(-12), 100*10^(-12), test_n); % set of values to test param3
-variedParam(4).name = 'p_I'; % 3rd parameter to be varied
-variedParam(4).range =  linspace(0, 1, test_n); % set of values to test param3
-variedParam(5).name = 'G_std'; %4th parameter to be varied
-variedParam(5).range = linspace(1*10^(-12), 100*10^(-12), test_n); % set of values to test param4
+variedParam(3).range =  linspace(1*10^(-12), 1000*10^(-12), test_n); % set of values to test param3
+variedParam(4).name = 'p_I'; % 4th parameter to be varied
+variedParam(4).range =  linspace(0, 1, test_n); % set of values to test param4
+variedParam(5).name = 'G_std'; %5th parameter to be varied
+variedParam(5).range = linspace(1*10^(-9), 50*10^(-9), test_n); % set of values to test param5
+variedParam(6).name = 'del_G_sra'; %6th parameter to be varied
+variedParam(6).range = linspace(10*10^(-9),1000*10^(-9),test_n); % set of values to test param6
 %parameters.del_G_syn_I_I = 0;
 
 % Combine into one parameter vector to pass to parfor function
@@ -185,6 +188,8 @@ fprintf('Program Runtime (s) = %.2f\n',runTime)
 
 %% Format results matrix
 
+saveAll = 0; %Flag to save all Workspace variables after results are saved
+
 resultsMat = nan([cellfun(@length, {variedParam.range}), 4]);
 resultsStruct = struct;
 for i = 1:size(resultsMatLinear, 2)
@@ -197,7 +202,9 @@ for i = 1:size(resultsMatLinear, 2)
     
     for j = 1:parameters.nNets
         for k = 1:parameters.nTrials
-            resultsStruct(structIndices{:}, j, k).results = resultsStructLinear{i}{j}{k};
+            if ~isempty(resultsStructLinear{i}) %In case run terminates early, existing results can be stored
+                resultsStruct(structIndices{:}, j, k).results = resultsStructLinear{i}{j}{k};
+            end
         end
     end
 end
@@ -219,7 +226,9 @@ if parameters.saveFlag
     clear resultsStructLinear resultsMatLinear % don't save redundant data
     
     % Save everything, with unique filename based on date-time
-    save( strcat(save_path,'/results_', datestr(now,'yyyy-mm-ddTHH-MM'), '.mat'), '-v7.3') 
+    if saveAll == 1
+        save( strcat(save_path,'/results_', datestr(now,'yyyy-mm-ddTHH-MM'), '.mat'), '-v7.3') 
+    end
 end
 
 %% Visualize Value Grid Search Results
@@ -282,11 +291,44 @@ for i = 1:length(pair_param_comb)
             fig_name = strcat('randnet_param_test_plots_parameters_',variedParam(paramPlot1).name,'_v_',variedParam(paramPlot2).name);
             savefig(f,strcat(fig_save_path,'/',fig_name,'.fig'))
             saveas(f,strcat(fig_save_path,'/',fig_name,'.jpg'))
+            close(f)
         end    
 
     end
     
 end
+
+%% Plot Parameter Space that Matches Criteria
+%Data storage: frac_partic, avg_fr, avg_event_length, avg_n_events
+
+
+if strcmp(parameters.eventType,'PBE') %Population burst event analysis
+    
+    
+else %Sequence analysis
+    %Find locations of criteria matching
+    frac_partic_bin = frac_partic >= parameters.event_cutoff;
+    avg_fr_bin = parameters.min_avg_fr <= avg_fr <= parameters.max_avg_fr;
+    avg_event_length = parameters.min_avg_length <= avg_event_length <= parameters.max_avg_length;
+    %Find where criteria matching overlaps
+    overlap = frac_partic_bin.*avg_fr_bin.*avg_event_length;
+    indc_overlap = find(overlap);
+    mat_dim = size(overlap);
+    subsc_overlap = cell(size(mat_dim));
+    [subsc_overlap{:}] = ind2sub(mat_dim,indc_overlap);
+    %Find ranges of overlap in parameter space
+    range_overlap = zeros(length(mat_dim),2);
+    for i = 1:length(mat_dim)
+        dim_overlap = subsc_overlap{i};
+        min_ind = min(dim_overlap);
+        max_ind = max(dim_overlap);
+        range_overlap(i,:) = [min_ind,max_ind];
+        param_name = variedParam(i).name;
+        param_range = [variedParam(i).range(min_ind),variedParam(i).range(max_ind)];
+        disp(strcat(sprintf('Parameter %s successful range = ',param_name),string(param_range)))
+    end   
+end    
+
 
 %% Plot directly from resultsStruct
 %{

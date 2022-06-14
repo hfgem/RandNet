@@ -37,6 +37,7 @@ function [avg_mat, allResults] = parallelize_parameter_tests_2(parameters,...
     %       2. average firing rate
     %       3. average event length
     %       4. average number of identified events
+    %   allResults = Cell structure storing all results
     %_________
 
     % Set up parameter values for current parameter set
@@ -54,12 +55,12 @@ function [avg_mat, allResults] = parallelize_parameter_tests_2(parameters,...
         
         network = create_clusters(parameters, 'seed', ithNet, 'include_all', parameters.include_all, 'global_inhib', parameters.global_inhib);
         
-        if parameters.saveFlag == 1
-            if ~isfolder(strcat(parameters.save_path,'/networks'))
-                mkdir(parameters.save_path,'/networks')
-            end
-            save(strcat(parameters.save_path,'/networks','/network_',string(ithParamSet),'_',string(ithNet),'.mat'),'network')
-        end
+%         if parameters.saveFlag == 1
+%             if ~isfolder(strcat(parameters.save_path,'/networks'))
+%                 mkdir(parameters.save_path,'/networks')
+%             end
+%             save(strcat(parameters.save_path,'/networks','/network_',string(ithParamSet),'_',string(ithNet),'.mat'),'network')
+%         end
         
         mat = zeros(parameters.nTrials,4);
         network_spike_sequences = struct; 
@@ -145,11 +146,11 @@ function [avg_mat, allResults] = parallelize_parameter_tests_2(parameters,...
         end % trial loop
         mat(isnan(mat)) = 0;
         resp_mat(ithNet,:) = sum(mat,1) ./ sum(mat > 0,1); %Only averaging those that did successfully produce data        
-        
     end % Network loop
     resp_mat(isnan(resp_mat)) = 0;
     avg_mat = sum(resp_mat,1)./sum(resp_mat > 0,1); %Only averaging those that had results
-
+    avg_mat(isnan(avg_mat)) = 0;
+    
     disp(['Parameter set ', num2str(ithParamSet), '/', num2str(size(parameterSets_vec, 2)), ' complete'])
 
 end % Function

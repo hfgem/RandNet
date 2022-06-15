@@ -25,8 +25,9 @@ useMeanPFDensity = 1
 useMaxnSeq = 0
 maxnDetectedSequences = 100;
 
-shuffleMethod = 1 % 1 to shuffle sequences, 2 to shuffle PFs, 3 to compare each preplay sequence to many shuffled PFs
-nPFshuffles = 50;
+shuffleMethod = 2 % 1 to shuffle sequences, 2 to shuffle PFs, 3 to compare each preplay sequence to many shuffled PFs
+combineNetData = 1 %
+nPFshuffles = 100;
 sigAlpha = 0.05;
 
 xParamvec = variedParam(1).range;
@@ -49,6 +50,8 @@ for ithParam1 = 1:size(resultsStruct, 1)
     for ithParam2 = 1:size(resultsStruct, 2)
         
         temp = nan(2, num_nets);
+        allRvecs = [];
+        allRvecs_shuff = [];
         for ithNet = 1:size(resultsStruct, 3)
             
             try
@@ -132,6 +135,9 @@ for ithParam1 = 1:size(resultsStruct, 1)
                         KSSTAT = nan;
                     end
                     
+                    allRvecs = [allRvecs, rVec];
+                    allRvecs_shuff = [allRvecs_shuff, rVec_shuff];
+                    
                 elseif shuffleMethod==2 % Compare preplay sequences to shuffled PF sequences
                     analysisTitle = '2: Preplays against shuffled PF seqs';
                     
@@ -149,6 +155,9 @@ for ithParam1 = 1:size(resultsStruct, 1)
                     rVec = abs(rVec); allshuff_rVecs = abs(allshuff_rVecs);
                     [~,p_kstest,KSSTAT] = kstest2(rVec, allshuff_rVecs);
                     
+                    allRvecs = [allRvecs, rVec];
+                    allRvecs_shuff = [allRvecs_shuff, allshuff_rVecs];
+
                     %{
                     figure; hold on; ecdf(rVec), ecdf(allshuff_rVecs); 
                     title(['P1=', num2str(variedParam(1).range(ithParam1))...
@@ -188,12 +197,24 @@ for ithParam1 = 1:size(resultsStruct, 1)
                 temp(2, ithNet) = nan;
             end
             
-        end
+        end % Net Loop
         
-        op(1, ithParam1, ithParam2) = nanmean(temp(1,:));
-        op(1, ithParam1, ithParam2) = min(temp(1,:));
-        op(2, ithParam1, ithParam2) = nanmean(temp(2,:));
-    end
+        if combineNetData
+            if ~isempty(allRvecs)
+                [~,p_kstest,KSSTAT] = kstest2(allRvecs, allRvecs_shuff);
+                op(1, ithParam1, ithParam2) = p_kstest;
+                op(2, ithParam1, ithParam2) = KSSTAT;
+            else
+                op(1, ithParam1, ithParam2) = nan;
+                op(2, ithParam1, ithParam2) = nan;
+            end
+        else
+            op(1, ithParam1, ithParam2) = nanmean(temp(1,:));
+            op(1, ithParam1, ithParam2) = min(temp(1,:));
+            op(2, ithParam1, ithParam2) = nanmean(temp(2,:));
+        end
+    
+    end % Param2 loop
     
     figure(515)
     imagesc(xParamvec, yParamvec, squeeze(op(1,:,:))', 'AlphaData', ~isnan(squeeze(op(1,:,:))')); drawnow
@@ -220,8 +241,7 @@ ylabel(yName,'Interpreter','none')
 title(analysisTitle)
 
 
-%% Plot with better colormap
-
+% Plot with better colormap
 figure; 
 imagesc(xParamvec, yParamvec, log10(squeeze(op(1,:,:))'), 'AlphaData', ~isnan(squeeze(op(1,:,:))'))
 set(gca,'YDir','normal')
@@ -230,28 +250,17 @@ xlabel(xName,'Interpreter','none')
 ylabel(yName,'Interpreter','none')
 title(analysisTitle)
 
-
 N = 256; n = N/2;
 cm = NaN(N,3);
 cm(:,1) = [ones(n,1);linspace(1,0,N-n)';];
 cm(:,2) = [linspace(0,1,n)';linspace(1,0,N-n)']; 
 cm(:,3) = [linspace(0,1,n)';ones(N-n,1)]; 
-%{
-x = peaks(250);
-x = x - min(x, [], 'all'); x = x./max(x, [], 'all');
-figure; imagesc(log10(x));
-%}
+
 set(gca,'clim',[log10(.05)*2 0])
 set(gcf,'colormap',cm)
 colorbar
 colorbar('Direction','reverse','Ticks',[log10(.005),log10(.05),log10(.5)],'TickLabels',[.005,.05,.5])
 
-
-% caxis([prctile(op, 2.5, 'all'), prctile(op, 97.5, 'all')])
-
-% set(gca,'ColorScale','log')
-
-% hold on; plot(variedParam(1).range, exp(variedParam(1).range/1.1)-1); plot(variedParam(1).range, exp((variedParam(1).range-1)*5)+15);
 
 %%
 X = squeeze(op(1,:,:))';

@@ -264,19 +264,34 @@ if plotResults
     clear c1 c2 c3
 
     
+    
+    %% Plot directly from resultsStruct
+    for i = 1:numel(resultsStruct)
+        if ~isfield(resultsStruct(i).results, 'stdRate')
+            resultsStruct(i).results.stdRate = nan;
+        end
+    end
+    X = nanmean(arrayfun(@(x)mean(x.results.stdRate), resultsStruct), 3);
+    figure; imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, X', 'AlphaData', ~isnan(X'))
+    set(gca,'YDir','normal')
+    c2 = colorbar(); c2.Label.String = "Firing rate STD";
+    title('Additional plotting'); xlabel(variedParam(paramPlot1).name,'Interpreter','none'); ylabel(variedParam(paramPlot2).name,'Interpreter','none')
+
+    for i = 1:numel(resultsStruct)
+        if ~isfield(resultsStruct(i).results, 'meanCellnEventSpikes')
+            resultsStruct(i).results.meanCellnEventSpikes = nan;
+        end
+    end
+    X = nanmean(arrayfun(@(x)mean(x.results.meanCellnEventSpikes), resultsStruct), 3);
+    figure; imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, X', 'AlphaData', ~isnan(X'))
+    set(gca,'YDir','normal')
+    c2 = colorbar(); c2.Label.String = "Mean nSpikes/cell/event";
+    title('Additional plotting'); xlabel(variedParam(paramPlot1).name,'Interpreter','none'); ylabel(variedParam(paramPlot2).name,'Interpreter','none')
+
+    
 end
 
-%% Plot directly from resultsStruct
-%{
-paramPlot1 = 1;
-paramPlot2 = 2;
-% X = nanmean(arrayfun(@(x)mean(x.results.stdRate), resultsStruct), 3);
-X = nanmean(arrayfun(@(x)mean(x.results.frac_participation{1}), resultsStruct), 3);
-figure; imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, X', 'AlphaData', ~isnan(X'))
-set(gca,'YDir','normal')
-c2 = colorbar(); c2.Label.String = "Mean Frac participation";
-title('Additional plotting'); xlabel(variedParam(paramPlot1).name,'Interpreter','none'); ylabel(variedParam(paramPlot2).name,'Interpreter','none')
-%}
+
 
 %% Functions 
 function p = nUpdateWaitbar(data, h)

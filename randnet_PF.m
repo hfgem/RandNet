@@ -120,6 +120,9 @@ parameters.PFcontextFrac = 0.1; % scales E-cell's context cue input during PF tr
 parameters.t_max = 60; %maximum amount of time (s)
 
 
+parameters.del_G_syn_E_E = 150*10^(-12); %synaptic conductance step following spike (S)
+parameters.del_G_syn_E_I = 90*10^(-12); %synaptic conductance step following spike (S)
+
 
 %% Parameters for sequence analysis
 
@@ -130,6 +133,8 @@ parameters.PBE_min_dur = 30 * (1/1000); % minimum duration of a PBE
 parameters.PBE_window =  15 * (1/1000) *(1/parameters.dt); % width of gaussian kernel used to calculate mean pop activity rate
 parameters.PBE_max_combine = 10 * (1/1000); % Combine adjacent PBEs separaeted by less than this duration
 
+% parameters.PBE_zscore = 1.0; % minimum stds above mean rate to detect PBE
+% parameters.returnToMean = 1; % if 1, terminate events at leave/return to mean; else, leave/return to PBE_zscore
 
 %% __set/update Dependent Parameters__ %%
 
@@ -211,7 +216,8 @@ for ithNet = 1:parameters.nNets
     
     
     %% Place field simulation:
-    tic
+    startTime = now;
+    tic;
     if PFsimFlag
         G_in_PFs = zeros(parameters.n, numel(pfsim.t), pfsim.nEnvironments, pfsim.nTrials);
         for ithEnv = 1:pfsim.nEnvironments

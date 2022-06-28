@@ -17,6 +17,7 @@ variedParam(2).name
 
 minPeakRate = 2; % minimum peak PF rate to be considered a place cell
 
+plotPFs = 1; % if 1, plot place fields of every network
 
 xParamvec = variedParam(1).range;
 xName = variedParam(1).name;
@@ -69,7 +70,7 @@ for ithParam1 = 1:size(resultsStruct, 1)
                     linfields{day}{epoch}{tetrode}{ithCell}{tr}(:,5) = PFmat(ithCell,:);
                 end
             
-                PFscore = calculate_linfieldsScore(linfields, pfsim, pfsim, network);
+                PFscore = calculate_linfieldsScore(linfields, pfsim, pfsim, network, 'plotPFs', plotPFs);
                 fprintf('PF score %0.4f %1.0f %1.0f %1.0f \n', PFscore, ithParam1, ithParam2, ithNet)
                 temp(1, ithNet) = PFscore;
                 %temp(2, ithNet) = nan;

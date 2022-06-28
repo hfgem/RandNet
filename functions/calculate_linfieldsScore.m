@@ -1,4 +1,4 @@
-function PFScore = calculate_linfieldsScore(linfields, parameters, sim, network)
+function PFScore = calculate_linfieldsScore(linfields, parameters, sim, network, varargin)
 
 %% For each cells' place field, calculate KS-statistic (KSop) and other statistics
 day = 1; epoch = 1; tetrode = 1; tr = 1;
@@ -17,6 +17,22 @@ day = 1; epoch = 1; tetrode = 1; tr = 1;
 
 %sim.mainSeed
 %sim.gaussFO.Method
+
+%% Default parameters:
+plotPFs = 0;
+
+%% Read in optional parameters, to overwrite above defaults
+for i=1:2:length(varargin)
+    switch varargin{i}
+        case 'plotPFs'
+            plotPFs = varargin{i+1};
+        otherwise
+            error('plot_ixj_sequences: Unknown input')
+    end
+end
+
+
+%% Fit each PF to a constrained Gaussian
 
 % Defaults for TolFun and TolX are 1e-6
 gaussFO = fitoptions('Method','NonlinearLeastSquares', ...
@@ -68,5 +84,38 @@ for i = 1:numel(posBins)
 end
 PFScore = PFScore/numel(posBins);
 
+%% Plot place field
+if plotPFs
+        
+    PFmat = allPFs';
+    PFmat_E = PFmat(network.E_indices,:);
+
+    row_all_zeros1 = find(all( PFmat_E==0, 2)) ;
+    row_n_all_zeros1 = find(~all( PFmat_E==0, 2)) ;
+
+    [peakRate,peakRateLocation] = max(squeeze(PFmat_E(row_n_all_zeros1,:)), [], 2);
+    [B,sortedCellIndsbyPeakRateLocation] = sort(peakRateLocation, 'descend');
+    PFpeaksSequence = [row_n_all_zeros1(sortedCellIndsbyPeakRateLocation); row_all_zeros1];
+
+    [peakRate, peakRateLocation_all] = max(PFmat_E, [], 2);
+
+
+    normRates = 1;
+    if normRates
+        rateDenom1 = max(PFmat_E(PFpeaksSequence,:), [], 2);
+        caxmax = 1;
+    else
+        rateDenom1 = 1;
+        caxmax = max(PFmat_E, [], 'all');
+    end
+
+    figure; histogram(rateDenom1); 
+    xlabel('Peak PF rate (Hz)'); ylabel('E cells (count)');
+
+    figure; imagesc( PFmat_E(PFpeaksSequence,:)./rateDenom1 ); 
+    title(['Score=', num2str(PFScore)]); 
+    colorbar; caxis([0, caxmax])
+    xlabel('Position (2 cm bin)'); ylabel('Cell (sorted)');
+end
 
 end

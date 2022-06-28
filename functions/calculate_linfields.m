@@ -81,7 +81,7 @@ for ithCell = 1:parameters.n %increment through cells
 end
 
 
-% Extract place field order from linfields struct
+%% Extract place field order from linfields struct
 PFmat = [];
 for ithCell = 1:parameters.n
     PF = linfields{day}{epoch}{tetrode}{ithCell}{tr}(:,5);

@@ -23,6 +23,14 @@ function replaytrajectory = preplay_decoding_CA1_singleday(animalprefix,day,ep,c
 % Assumes all simulation data does not exclude any cells
 
 
+%% Analysis parameters
+
+tBinSz = 10; %ms, default temporal bin in ms [typically around 15ms], hard coded
+minEventDur = 50; % ms, exclude events shorter than this
+wellcutoff = 0; %cm, remove reward-well regions (15cm around start and end); or 0cm without exclusion
+minPeakRate = 5; %Hz, minimum peak rate to include cell
+
+
 %% set animal directory
 dir = [savedir, animalprefix, '_direct/'];
 exclude_list = [];
@@ -50,10 +58,7 @@ switch animalprefix
         hpidx = [repmat(numTets, numCells, 1), [1:numCells]'];
 end
 
-
 hpnum = length(hpidx(:,1));
-tBinSz = 10; %default temporal bin in ms [typically around 15ms], hard coded
-wellcutoff = 0; %cm, remove reward-well regions (15cm around start and end); or 0cm without exclusion
 
 %%
 %-----create the ratemaps [nPosBin x nHPCells]-----%
@@ -88,7 +93,7 @@ for i = 1:hpnum
                 pos_hp = [pos_hp;pos1];
                 lintrack_hp = [lintrack_hp;lintrack1];
            end
-           if (max(linfield_hp) >= 3) % peak firing rate max larger than 3 Hz
+           if (max(linfield_hp) >= minPeakRate) % peak firing rate max larger than 3 Hz
                a = find(isnan(linfield_hp));
                %pad nan
                if ~isempty(a)
@@ -142,7 +147,7 @@ end
 rip_starttime = 1000*riptimes(:,1);  % in ms
 
 dur = 1000*(riptimes(:,2) - riptimes(:,1)); % event duration
-keepidx = find(dur >= 5*tBinSz);%at least 5 bins, 50 ms for 10ms bins; exclude events < 50ms
+keepidx = find(dur >= minEventDur);%at least 5 bins, 50 ms for 10ms bins; exclude events < 50ms
 rip_starttime = rip_starttime(keepidx);
 riptimes = riptimes(keepidx,:);
 

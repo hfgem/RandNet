@@ -50,10 +50,11 @@ save([save_path, animalprefix, '_direct/', animalprefix, 'tetinfo.mat'], 'tetinf
 save([save_path, animalprefix, '_direct/', animalprefix, 'linfields01.mat'], 'linfields')
 save([save_path, animalprefix, '_direct/', animalprefix, 'rippletime01.mat'], 'ripple')
 save([save_path, animalprefix, '_direct/', animalprefix, 'spikes01.mat'], 'spikes')
-save([save_path, animalprefix, '_direct/', animalprefix, 'params.mat'], 'parameters', 'pfsim')
+% save([save_path, animalprefix, '_direct/', animalprefix, 'params.mat'], 'parameters', 'pfsim')
 
 
 %% Run preplay decoding analysis
+% animalprefix = '2022-06-29T12-40'
 
 day=1; ep=2;
 

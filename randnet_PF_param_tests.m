@@ -25,7 +25,7 @@
 %               ->randnet_calculator
 
 %% Save Path + Load Parameters
-addpath('functions')
+addpath(genpath('functions'))
 
 saveFlag = 1 % 1 to save simulation results
 selectSavePath = 0; % 1 to select save destination, 0 to save in results dir
@@ -70,6 +70,7 @@ parameters.max_avg_length = inf;
 % Simulation duration
 %parameters.t_max = 10;
 parameters.t_max = 60;
+parameters.t_max = 5;
 
 % __Necessary to override the loaded parameters__ %
 parameters.saveFlag = saveFlag;
@@ -95,7 +96,8 @@ test_n = 15; % Number of parameters to test (each)
 
 % % temp, for testing code
 
-num_nets = 3;
+test_n = 2;
+num_nets = 2;
 num_inits = 1;
 % test_n = 5;
 pfsim.PFscoreFlag = 0; disp(pfsim.PFscoreFlag)

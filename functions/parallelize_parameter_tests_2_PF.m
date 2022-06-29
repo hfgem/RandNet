@@ -145,7 +145,7 @@ function [avg_mat, allResults, PFresults] = parallelize_parameter_tests_2(parame
         
         for ithEnv = 1:pfsim.nEnvironments
             % [linfields, PFpeaksSequence, PFmat] = calculate_linfields(opS, pfsim, pfsim, network, true);
-            [~, ~, PFmat] = calculate_linfields(opS, pfsim, pfsim, network, true);
+            [linfields, ~, PFmat] = calculate_linfields(opS, pfsim, pfsim, network, true);
             PFresults{ithNet}{ithEnv}.linfields = PFmat;
 
             %{
@@ -246,7 +246,43 @@ function [avg_mat, allResults, PFresults] = parallelize_parameter_tests_2(parame
             % Save ranks_vec
             allResults{ithNet}{ithTest}.ranksVec = network_spike_sequences(ithTest).ranks_vec;
             
-            % Main output statistics
+            
+            %% Calculate and save preplay Bayesian decoding
+            % 1) save SJlab formated files to tmp dir
+            [filepath,name] = fileparts(tempname);
+            animalprefix = name; save_path = [filepath, filesep, animalprefix, '_direct']; 
+            mkdir(save_path)
+            
+            day = 1; eprun = 2; tet = 1;
+            tetinfo{day}{eprun}{tet}.numcells = parameters.n_E;
+            if numel(linfields{day})<eprun
+                linfields{day}{eprun} = linfields{day}{1};
+            end
+            if numel(linfields{day}{eprun}{:})==parameters.n
+                linfields{day}{eprun}{tet}(network.I_indices) = [];
+            end
+            ripple{day}{eprun}.starttime = trialResults.events(:,1).*parameters.dt;
+            ripple{day}{eprun}.endtime = trialResults.events(:,2).*parameters.dt;
+            for cellid = 1:numel(network.E_indices)
+                % spikes{day}{eprun}{tet}{cellid}.data(:,1) = V_m(network.E_indices(cellid),:)>= parameters.V_th; % spike times
+                spikes{day}{eprun}{tet}{cellid}.data(:,1) = find(E_spikes_V_m(cellid,:)).*parameters.dt; % spike times
+            end
+            save([filepath, filesep, animalprefix, '_direct/', animalprefix, 'tetinfo.mat'], 'tetinfo')
+            save([filepath, filesep, animalprefix, '_direct/', animalprefix, 'linfields01.mat'], 'linfields')
+            save([filepath, filesep, animalprefix, '_direct/', animalprefix, 'rippletime01.mat'], 'ripple')
+            save([filepath, filesep, animalprefix, '_direct/', animalprefix, 'spikes01.mat'], 'spikes')
+            clear tetinfo linfields ripple spikes
+            
+            % 2) Save results: 
+            day=1; ep=2; cellcountthresh = 5; savedata = 0; figopt = 0; shuffleIterations = 500;
+            warning off
+            decodingResults = preplay_decoding_CA1_singleday(animalprefix,day,ep,cellcountthresh,[filepath, filesep],savedata,figopt,shuffleIterations);
+            warning on
+            allResults{ithNet}{ithTest}.replaytrajectory = decodingResults{day}{ep}; 
+            % 3) Delete tmp dir files:
+            rmdir(save_path, 's')
+            
+            %% Main output statistics
             %outputVec(1) = allResults{ithNet}{ithTest}.fracFire; % fraction of spiking neurons over entire simulation
             outputVec(1) = allResults{ithNet}{ithTest}.frac_participation; % fraction of spiking neurons over identified events
             outputVec(2) = allResults{ithNet}{ithTest}.meanRate ; %average firing rate

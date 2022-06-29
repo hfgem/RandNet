@@ -131,6 +131,6 @@ if plotPFs
 end
 
 peakRate = max(PFmat_E(PFpeaksSequence,:), [], 2);
-PFpeaksSequence(peakRate<sim.minPeakRate) = nan;
+% PFpeaksSequence(peakRate<sim.minPeakRate) = nan;
 
 end

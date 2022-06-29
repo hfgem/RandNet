@@ -123,6 +123,12 @@ parameters.t_max = 60; %maximum amount of time (s)
 parameters.del_G_syn_E_E = 150*10^(-12); %synaptic conductance step following spike (S)
 parameters.del_G_syn_E_I = 90*10^(-12); %synaptic conductance step following spike (S)
 
+%{
+parameters.Win_var = (8e-12)^2;
+parameters.Win_mean = 73 *10^-12;
+parameters.del_G_syn_E_E = 120*10^(-12); %synaptic conductance step following spike (S)
+parameters.del_G_syn_E_I = 150*10^(-12); %synaptic conductance step following spike (S)
+%}
 
 %% Parameters for sequence analysis
 
@@ -244,7 +250,7 @@ for ithNet = 1:parameters.nNets
 
                     % Set up for simulation
                     V_m = zeros(parameters.n,numel(pfsim.t)); %membrane potential for each neuron at each timestep
-                    V_m(:,1) = -60e-3 + 1e-3*randn([parameters.n,1]); %set all neurons to baseline reset membrane potential with added noise
+                    V_m(:,1) = -60e-3 + 5e-3*randn([parameters.n,1]); %set all neurons to baseline reset membrane potential with added noise
                     pfsim.G_in = G_in_PFs(:,:,ithEnv,ithTrial); 
                     trialSeed = randi(10^6);
 
@@ -281,7 +287,9 @@ for ithNet = 1:parameters.nNets
         disp(['Mean score: ', num2str(score)])
     
     figure; plotSpikeRaster( logical( [ opS(network.E_indices,:,1,1); opS(network.I_indices,:,1,1) ]), 'TimePerBin', parameters.dt, 'PlotType', 'scatter');
-    
+    % rpermIcells = randperm(numel(network.I_indices));
+    % figure; plotSpikeRaster( logical( [ opS(network.E_indices(PFpeaksSequence),:,1,1); opS(network.I_indices(rpermIcells),:,1,1) ]), 'TimePerBin', parameters.dt, 'PlotType', 'scatter');
+
     figure; histogram( sum(opS, [2:4])./parameters.t_max./parameters.nTrials, 50 )
     xlabel('Mean rate (Hz, PF trials)'); ylabel('All cells')
     end

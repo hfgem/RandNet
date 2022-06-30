@@ -28,7 +28,7 @@ function replaytrajectory = preplay_decoding_CA1_singleday(animalprefix,day,ep,c
 tBinSz = 10; %ms, default temporal bin in ms [typically around 15ms], hard coded
 minEventDur = 50; % ms, exclude events shorter than this
 wellcutoff = 0; %cm, remove reward-well regions (15cm around start and end); or 0cm without exclusion
-minPeakRate = 5; %Hz, minimum peak rate to include cell
+minPeakRate = 3; %Hz, minimum peak rate to include cell
 
 
 %% set animal directory

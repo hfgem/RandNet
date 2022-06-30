@@ -18,15 +18,21 @@ parameters.del_G_sra
 variedParam(1).name
 variedParam(2).name
 
+combineNetData = 1 
 
 xParamvec = variedParam(1).range;
 xName = variedParam(1).name;
 yParamvec = variedParam(2).range;
 yName = variedParam(2).name;
 
-analysisTitle = 'PF score';
-cbLabel1 = 'Mean PF score';
-cbLabel2 = 'Best PF score';
+analysisTitle = 'Decoding KS-test';
+if combineNetData
+    cbLabel1 = 'combined p-val';
+    cbLabel2 = 'combined KS-stat';
+else
+    cbLabel1 = 'Median p-val';
+    cbLabel2 = 'Median KS-stat';
+end
 
 op = nan(2, numel(xParamvec), numel(yParamvec));
 
@@ -38,17 +44,19 @@ xlabel(xName,'Interpreter','none')
 ylabel(yName,'Interpreter','none')
 
 rng(1)
-gcp
+% gcp
 tic
-for ithParam1 = 1:size(resultsStruct, 1)
-    for ithParam2 = 1:size(resultsStruct, 2)
+for ithParam1 = 3%1:size(resultsStruct, 1)
+    for ithParam2 = 3%1:size(resultsStruct, 2)
         
         temp = nan(1, num_nets);
+        allRvecs = [];
+        allRvecs_shuff = [];
         for ithNet = 1:size(resultsStruct, 3)
             
             if ~isempty(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pMat)
                 
-                keyboard
+                % keyboard
                 %pvals = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pvalue(:,1);
                 %figure; histogram(pvals, 10)
 
@@ -57,12 +65,16 @@ for ithParam1 = 1:size(resultsStruct, 1)
 
                 rvals_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.rsquare(:,1);
                 rvals_shuffle = vertcat(allshuff_rvals{:,1});
-                figure; hold on; ecdf(rvals_preplay); ecdf(rvals_shuffle); legend({'Preplays', 'Shuffles'}, 'Location', 'Best')
+                 figure; hold on; ecdf(rvals_preplay); ecdf(rvals_shuffle); legend({'Preplays', 'Shuffles'}, 'Location', 'Best')
 
+                
                 [H,P,KSSTAT] = kstest2(rvals_preplay, rvals_shuffle);
-
                 temp(1, ithNet) = P;
                 temp(2, ithNet) = KSSTAT;
+                
+                
+                allRvecs = [allRvecs, rvals_preplay'];
+                allRvecs_shuff = [allRvecs_shuff, rvals_shuffle'];
 
             else
                 temp(1, ithNet) = nan;
@@ -70,9 +82,30 @@ for ithParam1 = 1:size(resultsStruct, 1)
             end
                 
         end
+        
+        if combineNetData
+            if ~isempty(allRvecs)
+                [~,p_kstest,KSSTAT] = kstest2(allRvecs, allRvecs_shuff);
+                op(1, ithParam1, ithParam2) = p_kstest;
+                op(2, ithParam1, ithParam2) = KSSTAT;
+            else
+                p_kstest = nan;
+                op(1, ithParam1, ithParam2) = nan;
+                op(2, ithParam1, ithParam2) = nan;
+            end
+            
+            figure; hold on; ecdf(allRvecs); ecdf(allRvecs_shuff); legend({'Preplays', 'Shuffles'}, 'Location', 'Best')
+            title(['ithParam1=', num2str(ithParam1) ' ithParam2=', num2str(ithParam2), ' pval=', num2str(p_kstest) ])
+            
+        else
+            op(1, ithParam1, ithParam2) = median(temp(1,:));
+            %op(1, ithParam1, ithParam2) = min(temp(1,:));
+            op(2, ithParam1, ithParam2) = nanmean(temp(2,:));
+        end
+        
 
-        op(1, ithParam1, ithParam2) = nanmean(temp(1,:));
-        op(2, ithParam1, ithParam2) = nanmean(temp(2,:));
+        %op(1, ithParam1, ithParam2) =  min(temp(1,:)); % nanmean(temp(1,:));
+        %op(2, ithParam1, ithParam2) = nanmean(temp(2,:));
     end
     
     figure(515)
@@ -107,3 +140,22 @@ title(analysisTitle)
 % hold on; plot(variedParam(1).range, exp(variedParam(1).range/1.1)-1); plot(variedParam(1).range, exp((variedParam(1).range-1)*5)+15);
 
 
+%% Plot with better colormap
+figure; 
+imagesc(xParamvec, yParamvec, log10(squeeze(op(1,:,:))'), 'AlphaData', ~isnan(squeeze(op(1,:,:))'))
+set(gca,'YDir','normal')
+cb = colorbar(); cb.Label.String = cbLabel2;
+xlabel(xName,'Interpreter','none')
+ylabel(yName,'Interpreter','none')
+title(analysisTitle)
+
+N = 256; n = N/2;
+cm = NaN(N,3);
+cm(:,1) = [ones(n,1);linspace(1,0,N-n)';];
+cm(:,2) = [linspace(0,1,n)';linspace(1,0,N-n)']; 
+cm(:,3) = [linspace(0,1,n)';ones(N-n,1)]; 
+
+set(gca,'clim',[log10(.05)*2 0])
+set(gcf,'colormap',cm)
+colorbar
+colorbar('Direction','reverse','Ticks',[log10(.005),log10(.05),log10(.5)],'TickLabels',[.005,.05,.5])

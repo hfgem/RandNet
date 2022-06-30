@@ -63,7 +63,7 @@ savedata = saveFlag % save data = 1; not save = 0
 figopt = 1 % 1 = plot decoding result for each event; 0 = no figure generated
 shuffleIterations = 500 % 1500 for standard decoding
 
-% savedata = 0 % save data = 1; not save = 0
+ savedata = 0 % save data = 1; not save = 0
 
 warning off
 replaytrajectory = preplay_decoding_CA1_singleday(animalprefix,day,ep,cellcountthresh, save_path, savedata, figopt, shuffleIterations);
@@ -135,6 +135,8 @@ end
 
 
 figure; imagesc(rvalThresh_vec, jumpThres_vec, op', 'AlphaData', ~isnan(op')); colorbar
+xlabel('max jump')
+ylabel('r^2')
 
 % Plot with better colormap
 figure; 

@@ -118,7 +118,7 @@ function [avg_mat, allResults, PFresults] = parallelize_parameter_tests_2(parame
                 end
             end
 
-            opV = zeros(parameters.n, numel(pfsim.t), pfsim.nEnvironments, pfsim.nTrials); % Voltage from all sims
+            %opV = zeros(parameters.n, numel(pfsim.t), pfsim.nEnvironments, pfsim.nTrials); % Voltage from all sims
             opS = zeros(parameters.n, numel(pfsim.t), pfsim.nEnvironments, pfsim.nTrials); % Spikes from all sims
             for ithEnv = 1:pfsim.nEnvironments
                 for ithTrial = 1:pfsim.nTrials
@@ -130,8 +130,8 @@ function [avg_mat, allResults, PFresults] = parallelize_parameter_tests_2(parame
                     trialSeed = randi(10^6);
 
                     % PF Simulation
-                    [V_m, G_sra, G_syn_E_E, G_syn_I_E, G_syn_E_I, G_syn_I_I, conns] = randnet_calculator(pfsim, trialSeed, network, V_m);
-                    opV(:,:,ithEnv,ithTrial) = V_m;
+                    [V_m, ~, ~, ~, ~, ~, ~] = randnet_calculator(pfsim, trialSeed, network, V_m);
+                    %opV(:,:,ithEnv,ithTrial) = V_m;
                     opS(:,:,ithEnv,ithTrial) = logical( V_m>parameters.V_th);
                     clear V_m 
                     rmfield(pfsim, 'G_in');
@@ -160,7 +160,7 @@ function [avg_mat, allResults, PFresults] = parallelize_parameter_tests_2(parame
             ylabel('Cell');
             %}
             if pfsim.PFscoreFlag % Calculating the score is computationally expensive (due to fitting gaussian curves)
-                allScores(i) = calculate_linfieldsScore(linfields, pfsim, pfsim, network)
+                allScores(ithEnv) = calculate_linfieldsScore(linfields, pfsim, pfsim, network)
                 %disp(['Env: ', num2str(i), ', Score: ', num2str(allScores(i))])
             end
         end
@@ -206,7 +206,7 @@ function [avg_mat, allResults, PFresults] = parallelize_parameter_tests_2(parame
             V_m = parameters.V_reset + randn([parameters.n,1])*parameters.V_m_noise; %set all neurons to baseline reset membrane potential with added noise
             spikeMat = randnet_calculator_memOpt(parameters, seed, network, V_m);
             parameters = rmfield(parameters, 'G_in');
-            E_spikes_V_m = spikeMat(network.E_indices,:); clear spikeMat
+            E_spikes_V_m = sparse(spikeMat(network.E_indices,:)); clear spikeMat
             
 
             % detect events and compute outputs

@@ -70,12 +70,12 @@ parameters.max_avg_length = inf;
 % Simulation duration
 %parameters.t_max = 10;
 parameters.t_max = 60;
-parameters.t_max = 5;
+% parameters.t_max = 5;
 
 % __Necessary to override the loaded parameters__ %
 parameters.saveFlag = saveFlag;
 parameters.plotResults = plotResults; 
-
+pfsim.PFscoreFlag = 0;
 
 %% __set/update dependent parameters__ %%
 parameters = set_depedent_parameters(parameters);
@@ -88,14 +88,14 @@ end
 %% Set Up Grid Search Parameters
 
 %Test parameters
-num_nets = 3;
+num_nets = 6;
 % num_nets = 4;
 num_inits = 1;
 test_n = 15; % Number of parameters to test (each)
 
 
 % % temp, for testing code
-
+%{
 test_n = 2;
 num_nets = 2;
 num_inits = 1;
@@ -103,7 +103,7 @@ num_inits = 1;
 pfsim.PFscoreFlag = 0; disp(pfsim.PFscoreFlag)
 % %
 assert(parameters.usePoisson==1)
-
+%}
 
 % Parameters must be a field in the parameter structure, and cannot be a
 % dependent parameter set in set_depedent_parameters
@@ -155,7 +155,8 @@ end
 
 %% Run Grid Search With Spike Stats Returned
 
-gcp; % starts parallel pool if not already running
+%gcp; % starts parallel pool if not already running
+nParPool = 2
 
 % Waitbar code
 D = parallel.pool.DataQueue;
@@ -168,7 +169,7 @@ tic
 resultsMatLinear = zeros(4, size(parameterSets_vec, 2));
 resultsStructLinear = cell(1, size(parameterSets_vec, 2));
 PFresultsStructLinear = cell(1, size(parameterSets_vec, 2));
-parfor ithParamSet = 1:size(parameterSets_vec, 2)
+parfor (ithParamSet = 1:size(parameterSets_vec, 2), nParPool)
     
     [resultsMatLinear(:,ithParamSet), resultsStructLinear{ithParamSet}, PFresultsStructLinear{ithParamSet}] = parallelize_parameter_tests_2_PF(...
                 parameters, pfsim, num_nets, num_inits, parameterSets_vec, ithParamSet, variedParam);

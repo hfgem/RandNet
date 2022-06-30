@@ -17,7 +17,7 @@ parameters.plotResults = 1; % 1 to plot basic simulation results
 if parameters.saveFlag & parameters.selectPath
     save_path = uigetdir('/Users/hannahgermaine/Documents/PhD/','Select Save Folder'); %Have user input where they'd like the output stored
 else
-    save_path = [pwd, '/results/randnet'];
+    save_path = [pwd, '/results/randnet_PF'];
 end
 addpath('functions')
 

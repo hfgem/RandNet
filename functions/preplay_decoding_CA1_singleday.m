@@ -30,6 +30,7 @@ minEventDur = 50; % ms, exclude events shorter than this
 wellcutoff = 0; %cm, remove reward-well regions (15cm around start and end); or 0cm without exclusion
 minPeakRate = 3; %Hz, minimum peak rate to include cell
 
+dispFlag = 0; % display event analysis progression
 
 %% set animal directory
 dir = [savedir, animalprefix, '_direct/'];
@@ -51,7 +52,9 @@ switch animalprefix
     case {'ER1','KL8','JS14','JS15','JS17','JS21'} % if non-sim, then find cells across ep
         [~, hpidx] = matchidx_acrossep_singleday(dir, animalprefix, day,exclude_list); %(tet, cell)
     otherwise % if sim data, all cells are correct
-        load(sprintf('%s%stetinfo.mat',dir,animalprefix)); % get num tets, get num cells
+        %load(sprintf('%s%stetinfo.mat',dir,animalprefix)); % get num tets, get num cells
+        tetinfo = load(sprintf('%s%stetinfo.mat',dir,animalprefix), 'tetinfo'); % get num tets, get num cells
+        tetinfo = tetinfo.tetinfo; 
         
         numTets = numel(tetinfo{1}{2});
         numCells = tetinfo{1}{2}{1}.numcells;
@@ -67,7 +70,9 @@ pm = []; % position matrix
 tm = []; % track matrix
 nTracks = 1;
 cellidxm = [];
-load(sprintf('%s%slinfields0%d.mat',dir,animalprefix,day)); % get linearized place fields
+%load(sprintf('%s%slinfields0%d.mat',dir,animalprefix,day)); % get linearized place fields
+linfields = load(sprintf('%s%slinfields0%d.mat',dir,animalprefix,day), 'linfields'); % get num tets, get num cells
+linfields = linfields.linfields; 
 for i = 1:hpnum
       cind = hpidx(i,:);
       if (length(linfields{day}{eprun})>= cind(1))
@@ -134,8 +139,12 @@ hpnum = length(rm(1,:)); % update cell number (cell with < 3Hz peak rate exclude
 %-----create the event matrix during SWRs-----%
 spikes = loaddatastruct(dir, animalprefix, 'spikes', day); % get spikes
 
+
 % get ripple time
-load(sprintf('%s%srippletime0%d.mat',dir,animalprefix,day));
+% load(sprintf('%s%srippletime0%d.mat',dir,animalprefix,day));
+ripple = load(sprintf('%s%srippletime0%d.mat',dir,animalprefix,day), 'ripple'); % get num tets, get num cells
+ripple = ripple.ripple; 
+
 rip = ripple{day}{ep}; 
 if numel(rip.starttime)>numel(rip.endtime)
     riptimes(:,1) = rip.starttime(1:numel(rip.endtime));
@@ -191,7 +200,9 @@ if ~isempty(riptimes)
     for event = 1:length(eventindex)
         
         % show current event number
-        disp(['Event ', num2str(event), ' of ', num2str(length(eventindex))])
+        if dispFlag
+            disp(['Event ', num2str(event), ' of ', num2str(length(eventindex))])
+        end
         
         cellsi = celldata(find(celldata(:,2)==eventindex(event)),3); 
         [cellsi,ia] = unique(cellsi,'first');

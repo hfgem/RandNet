@@ -8,6 +8,8 @@ function out = loaddatastruct(animaldir, animalprefix, datatype, days)
 % is omitted, all files are loaded.  Otherwise, only the files for the
 % specified days will be included.
 
+% JB 7/22: clean-up load() method, to prevent possible persistent data
+
 if (nargin < 4)
     days = [];
 end
@@ -24,12 +26,18 @@ end
 for i = 1:length(datafiles)
     if isempty(days)
         load([animaldir,datafiles(i).name]);
+        disp('TODO: fix load method in loaddatastruct')
         eval(['out = datavaradd(out,',datatype,');']);
     else
         s = datafiles(i).name;
         fileday = str2num(s(strfind(s,datatype)+length(datatype):strfind(s,'.')-1));  %get the experiment day from the filename
         if (isempty(fileday))|(ismember(fileday,days))
-            load([animaldir,datafiles(i).name]);
+            
+            %load([animaldir,datafiles(i).name]);
+            
+            loadedDataStruct = load([animaldir,datafiles(i).name], datatype);
+            eval([datatype, ' = loadedDataStruct.', datatype, ';']);
+            
             if strcmp(datatype,'ripplesep1'), % file ripplesep1 is already loaded
                 datatype = 'ripples';
             end

@@ -19,6 +19,7 @@ variedParam(1).name
 variedParam(2).name
 
 combineNetData = 1 
+plotAllCDFs = 0
 
 xParamvec = variedParam(1).range;
 xName = variedParam(1).name;
@@ -46,8 +47,8 @@ ylabel(yName,'Interpreter','none')
 rng(1)
 % gcp
 tic
-for ithParam1 = 3%1:size(resultsStruct, 1)
-    for ithParam2 = 3%1:size(resultsStruct, 2)
+for ithParam1 = 1:size(resultsStruct, 1)
+    for ithParam2 = 1:size(resultsStruct, 2)
         
         temp = nan(1, num_nets);
         allRvecs = [];
@@ -65,8 +66,10 @@ for ithParam1 = 3%1:size(resultsStruct, 1)
 
                 rvals_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.rsquare(:,1);
                 rvals_shuffle = vertcat(allshuff_rvals{:,1});
-                 figure; hold on; ecdf(rvals_preplay); ecdf(rvals_shuffle); legend({'Preplays', 'Shuffles'}, 'Location', 'Best')
-
+                
+                if plotAllCDFs
+                    figure; hold on; ecdf(rvals_preplay); ecdf(rvals_shuffle); legend({'Preplays', 'Shuffles'}, 'Location', 'Best')
+                end
                 
                 [H,P,KSSTAT] = kstest2(rvals_preplay, rvals_shuffle);
                 temp(1, ithNet) = P;
@@ -94,8 +97,10 @@ for ithParam1 = 3%1:size(resultsStruct, 1)
                 op(2, ithParam1, ithParam2) = nan;
             end
             
-            figure; hold on; ecdf(allRvecs); ecdf(allRvecs_shuff); legend({'Preplays', 'Shuffles'}, 'Location', 'Best')
-            title(['ithParam1=', num2str(ithParam1) ' ithParam2=', num2str(ithParam2), ' pval=', num2str(p_kstest) ])
+            if plotAllCDFs
+                figure; hold on; ecdf(allRvecs); ecdf(allRvecs_shuff); legend({'Preplays', 'Shuffles'}, 'Location', 'Best')
+                title(['ithParam1=', num2str(ithParam1) ' ithParam2=', num2str(ithParam2), ' pval=', num2str(p_kstest) ])
+            end
             
         else
             op(1, ithParam1, ithParam2) = median(temp(1,:));

@@ -145,7 +145,7 @@ function [avg_mat, allResults, PFresults] = parallelize_parameter_tests_2(parame
         
         for ithEnv = 1:pfsim.nEnvironments
             % [linfields, PFpeaksSequence, PFmat] = calculate_linfields(opS, pfsim, pfsim, network, true);
-            [linfields, ~, PFmat] = calculate_linfields(opS, pfsim, pfsim, network, true);
+            [linfields, ~, PFmat] = calculate_linfields(opS, pfsim, pfsim, network, false);
             PFresults{ithNet}{ithEnv}.linfields = PFmat;
 
             %{
@@ -206,7 +206,7 @@ function [avg_mat, allResults, PFresults] = parallelize_parameter_tests_2(parame
             V_m = parameters.V_reset + randn([parameters.n,1])*parameters.V_m_noise; %set all neurons to baseline reset membrane potential with added noise
             spikeMat = randnet_calculator_memOpt(parameters, seed, network, V_m);
             parameters = rmfield(parameters, 'G_in');
-            E_spikes_V_m = sparse(spikeMat(network.E_indices,:)); clear spikeMat
+            E_spikes_V_m = spikeMat(network.E_indices,:); clear spikeMat
             
 
             % detect events and compute outputs
@@ -267,6 +267,8 @@ function [avg_mat, allResults, PFresults] = parallelize_parameter_tests_2(parame
                 % spikes{day}{eprun}{tet}{cellid}.data(:,1) = V_m(network.E_indices(cellid),:)>= parameters.V_th; % spike times
                 spikes{day}{eprun}{tet}{cellid}.data(:,1) = find(E_spikes_V_m(cellid,:)).*parameters.dt; % spike times
             end
+            clear E_spikes_V_m
+            
             save([filepath, filesep, animalprefix, '_direct/', animalprefix, 'tetinfo.mat'], 'tetinfo')
             save([filepath, filesep, animalprefix, '_direct/', animalprefix, 'linfields01.mat'], 'linfields')
             save([filepath, filesep, animalprefix, '_direct/', animalprefix, 'rippletime01.mat'], 'ripple')
@@ -298,7 +300,7 @@ function [avg_mat, allResults, PFresults] = parallelize_parameter_tests_2(parame
     end % Network loop
     resp_mat(isnan(resp_mat)) = 0;
     avg_mat = sum(resp_mat,1)./sum(resp_mat > 0,1); %Only averaging those that had results
-
-    disp(['Parameter set ', num2str(ithParamSet), '/', num2str(size(parameterSets_vec, 2)), ' complete'])
+    
+    disp(append(['Parameter set ', num2str(ithParamSet), '/', num2str(size(parameterSets_vec, 2)), ' complete. '], string(datetime(now, 'ConvertFrom', 'datenum'))))
 
 end % Function

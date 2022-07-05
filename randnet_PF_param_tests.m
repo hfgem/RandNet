@@ -88,10 +88,10 @@ end
 %% Set Up Grid Search Parameters
 
 %Test parameters
-num_nets = 6;
+num_nets = 10;
 % num_nets = 4;
 num_inits = 1;
-test_n = 15; % Number of parameters to test (each)
+test_n = 8; % Number of parameters to test (each)
 
 
 % % temp, for testing code
@@ -156,7 +156,10 @@ end
 %% Run Grid Search With Spike Stats Returned
 
 %gcp; % starts parallel pool if not already running
-nParPool = 2
+nParPool = 4
+if isempty(gcp('nocreate'))
+    parpool(nParPool);
+end
 
 % Waitbar code
 D = parallel.pool.DataQueue;
@@ -169,7 +172,7 @@ tic
 resultsMatLinear = zeros(4, size(parameterSets_vec, 2));
 resultsStructLinear = cell(1, size(parameterSets_vec, 2));
 PFresultsStructLinear = cell(1, size(parameterSets_vec, 2));
-parfor (ithParamSet = 1:size(parameterSets_vec, 2), nParPool)
+parfor ithParamSet = 1:size(parameterSets_vec, 2)
     
     [resultsMatLinear(:,ithParamSet), resultsStructLinear{ithParamSet}, PFresultsStructLinear{ithParamSet}] = parallelize_parameter_tests_2_PF(...
                 parameters, pfsim, num_nets, num_inits, parameterSets_vec, ithParamSet, variedParam);

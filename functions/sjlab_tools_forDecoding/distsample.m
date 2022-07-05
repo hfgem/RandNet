@@ -6,5 +6,7 @@ function sampleind = distsample(numsamples,distribution)
 
 
 cumdist = cumsum(distribution)/sum(distribution);
-a = rand(numsamples,1);
+% a = rand(numsamples,1);
+a = randi([0, 1e7], numsamples,1) ./ 1e7;
+
 sampleind = lookup(a,cumdist,1);

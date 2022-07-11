@@ -301,6 +301,7 @@ function [avg_mat, allResults, PFresults] = parallelize_parameter_tests_2(parame
     resp_mat(isnan(resp_mat)) = 0;
     avg_mat = sum(resp_mat,1)./sum(resp_mat > 0,1); %Only averaging those that had results
     
-    disp(append(['Parameter set ', num2str(ithParamSet), '/', num2str(size(parameterSets_vec, 2)), ' complete. '], string(datetime(now, 'ConvertFrom', 'datenum'))))
+    disp(datetime(now, 'ConvertFrom', 'datenum'))
+    disp(['Parameter set ', num2str(ithParamSet), '/', num2str(size(parameterSets_vec, 2)), ' complete'])
 
 end % Function

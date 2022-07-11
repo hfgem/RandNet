@@ -69,7 +69,7 @@ parameters.max_avg_length = inf;
 
 % Simulation duration
 %parameters.t_max = 10;
-parameters.t_max = 60;
+parameters.t_max = 300;
 % parameters.t_max = 5;
 
 % __Necessary to override the loaded parameters__ %
@@ -91,7 +91,7 @@ end
 num_nets = 10;
 % num_nets = 4;
 num_inits = 1;
-test_n = 8; % Number of parameters to test (each)
+test_n = 4; % Number of parameters to test (each)
 
 
 % % temp, for testing code
@@ -134,10 +134,11 @@ variedParam(2).range = linspace( (135-25)*10^(-12), (135+25)*10^(-12), test_n); 
 
 
 variedParam(1).name = 'del_G_syn_E_E'; % 2nd parameter to be varied
-variedParam(1).range = linspace( (135-25)*10^(-12), (135+25)*10^(-12), test_n); % set of values to test param2 at
+variedParam(1).range = linspace( (150-30)*10^(-12), (150+30)*10^(-12), test_n); % set of values to test param2 at
+variedParam(1).range = linspace( (150)*10^(-12), (150+60)*10^(-12), test_n); % set of values to test param2 at
 
 variedParam(2).name = 'del_G_syn_I_E'; % 2nd parameter to be varied
-variedParam(2).range =  linspace( (80-25)*10^(-12), (80+25)*10^(-12), test_n); % set of values to test param2 at
+variedParam(2).range =  linspace( (90)*10^(-12), (90+60)*10^(-12), test_n); % set of values to test param2 at
 
 
 
@@ -156,7 +157,7 @@ end
 %% Run Grid Search With Spike Stats Returned
 
 %gcp; % starts parallel pool if not already running
-nParPool = 4
+nParPool = 3
 if isempty(gcp('nocreate'))
     parpool(nParPool);
 end

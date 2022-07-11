@@ -20,6 +20,7 @@ variedParam(2).name
 
 combineNetData = 1 
 plotAllCDFs = 0
+plotCombinedCDFs = 1
 
 xParamvec = variedParam(1).range;
 xName = variedParam(1).name;
@@ -55,8 +56,10 @@ for ithParam1 = 1:size(resultsStruct, 1)
         allRvecs_shuff = [];
         for ithNet = 1:size(resultsStruct, 3)
             
-            if ~isempty(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pMat)
-                
+            % if ~isempty(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pMat)
+            if [isfield(resultsStruct(ithParam1, ithParam2, ithNet).results, 'replaytrajectory') && ...
+                ~isempty(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pMat)]
+
                 % keyboard
                 %pvals = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pvalue(:,1);
                 %figure; histogram(pvals, 10)
@@ -97,9 +100,11 @@ for ithParam1 = 1:size(resultsStruct, 1)
                 op(2, ithParam1, ithParam2) = nan;
             end
             
-            if plotAllCDFs
+            if plotCombinedCDFs
+                try
                 figure; hold on; ecdf(allRvecs); ecdf(allRvecs_shuff); legend({'Preplays', 'Shuffles'}, 'Location', 'Best')
                 title(['ithParam1=', num2str(ithParam1) ' ithParam2=', num2str(ithParam2), ' pval=', num2str(p_kstest) ])
+                end
             end
             
         else
@@ -145,7 +150,7 @@ title(analysisTitle)
 % hold on; plot(variedParam(1).range, exp(variedParam(1).range/1.1)-1); plot(variedParam(1).range, exp((variedParam(1).range-1)*5)+15);
 
 
-%% Plot with better colormap
+% Plot with better colormap
 figure; 
 imagesc(xParamvec, yParamvec, log10(squeeze(op(1,:,:))'), 'AlphaData', ~isnan(squeeze(op(1,:,:))'))
 set(gca,'YDir','normal')

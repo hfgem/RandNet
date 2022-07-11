@@ -125,6 +125,12 @@ function [V_m, G_sra, G_syn_E_E, G_syn_I_E, G_syn_E_I, G_syn_I_I, conns] = randn
     I_bin = zeros(parameters.n,1);
     I_bin(network.I_indices) = 1;
     
+    if [isfield(parameters, 'inhSRA') && ~parameters.inhSRA]
+        inhSRA = 0;
+    else 
+        inhSRA = 1;
+    end
+    
     %Variables for STDP
     t_spike = zeros(parameters.n,1); %vector to store the time of each neuron's last spike, for use in STDP
     t_stdp = round(parameters.tau_stdp/parameters.dt);
@@ -138,7 +144,12 @@ function [V_m, G_sra, G_syn_E_E, G_syn_I_E, G_syn_E_I, G_syn_I_I, conns] = randn
         spikers_E = spikers(ismember(spikers,network.E_indices)); %indices of excitatory spiking presynaptic neurons
         %______________________________________
         %Adjust parameters dependent on spiking
-        G_sra(spikers,t) = G_sra(spikers,t) + parameters.del_G_sra; %set SRA conductance values
+        if inhSRA % all cells have SRA
+            G_sra(spikers,t) = G_sra(spikers,t) + parameters.del_G_sra; %set SRA conductance values
+        else % only E-cells have SRA
+            G_sra(spikers_E,t) = G_sra(spikers_E,t) + parameters.del_G_sra; %set SRA conductance values
+        end
+        
         %Synaptic conductance is stepped for postsynaptic neurons
         %   dependent on the number of presynaptic connections, and the
         %   current will depend on the presynaptic neuron type (E_syn_I and E_syn_E)

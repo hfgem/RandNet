@@ -123,11 +123,149 @@ parameters.t_max = 60; %maximum amount of time (s)
 parameters.del_G_syn_E_E = 150*10^(-12); %synaptic conductance step following spike (S)
 parameters.del_G_syn_E_I = 90*10^(-12); %synaptic conductance step following spike (S)
 
+
+parameters.del_G_syn_E_E = 135*10^(-12); %synaptic conductance step following spike (S)
+parameters.del_G_syn_E_I = 75*10^(-12); %synaptic conductance step following spike (S)
+
+
 %{
 parameters.Win_var = (8e-12)^2;
 parameters.Win_mean = 73 *10^-12;
 parameters.del_G_syn_E_E = 120*10^(-12); %synaptic conductance step following spike (S)
 parameters.del_G_syn_E_I = 150*10^(-12); %synaptic conductance step following spike (S)
+%}
+
+%% Add in cluster correlations to location input
+
+parameters.clusterCorrs = 1;
+parameters.inputBiasSigma = 25; 
+parameters.inhSRA = 0; 
+
+parameters.del_G_syn_E_E = 135*10^(-12); %synaptic conductance step following spike (S)
+parameters.del_G_syn_E_I = 90*10^(-12); %synaptic conductance step following spike (S)
+
+parameters.clusters = 10; % Number of clusters in the network
+parameters.mnc = 1.5; % mean number of clusters each neuron is a member of
+
+
+parameters.Win_mean = 72 *10^-12;
+parameters.Win_var = (5e-12)^2;
+
+PFsimFlag = 1;
+PFscoreFlag = 0;
+preplaySimFlag = 1;
+
+
+parameters.mnc = 1.5; % mean number of clusters each neuron is a member of
+parameters.del_G_syn_E_E = 220*10^(-12); %synaptic conductance step following spike (S)
+parameters.del_G_syn_E_I = 400*10^(-12); %synaptic conductance step following spike (S)
+parameters.t_max = 6;
+
+
+parameters.IcueScale_PF = 1.0; % scales strength of I cell cue input, if ~=1 then Icells receive no spatial inputs
+parameters.IcueScale =  0.75; % scales strength of I cell cue input, if ~=1 then Icells receive no spatial inputs
+
+%% Attempt at IS regime, rate of 500, no SRA for Inh cells
+
+% parameters.clusters = 10; % Number of clusters in the network
+% parameters.mnc = 1.5; % mean number of clusters each neuron is a member of
+% parameters.del_G_sra = 3.0e-012; %spike rate adaptation conductance step following spike %ranges from 1-200 *10^(-9) (S)
+% parameters.p_I = 0.5; % probability of an I cell connecting to any other cell
+
+%{
+parameters.inhSRA = 0; 
+%} 
+%{
+parameters.del_G_syn_E_E = 400*10^(-12); %synaptic conductance step following spike (S)
+parameters.del_G_syn_E_I = 500*10^(-12); %synaptic conductance step following spike (S)
+parameters.Win_mean = 600 *10^-12;
+parameters.rG = 500;
+parameters.IcueScale = 1.01;
+
+
+parameters.Win_mean = 590 *10^-12;
+parameters.del_G_syn_E_E = 470 *10^(-12); %synaptic conductance step following spike (S)
+parameters.del_G_syn_E_I = 525 *10^(-12); %synaptic conductance step following spike (S)
+parameters.clusters = 6; % Number of clusters in the network
+parameters.mnc = 1.25; % mean number of clusters each neuron is a member of
+
+
+parameters.Win_mean = 585 *10^-12;
+parameters.del_G_syn_E_E = 600 *10^(-12); %synaptic conductance step following spike (S)
+parameters.del_G_syn_E_I = parameters.del_G_syn_E_E; %synaptic conductance step following spike (S) E to I
+parameters.del_G_syn_I_E = 2.25 *parameters.del_G_syn_E_I; %synaptic conductance step following spike (S) I to E
+
+parameters.clusters = 8; % Number of clusters in the network
+parameters.mnc = 1.5; % mean number of clusters each neuron is a member of
+%}
+
+%{
+parameters.Win_mean = 585 *10^-12;
+parameters.del_G_syn_E_E = 620 *10^(-12); %synaptic conductance step following spike (S)
+parameters.del_G_syn_E_I = 630 *10^(-12); %synaptic conductance step following spike (S) E to I
+parameters.del_G_syn_I_E = 2.4* 600 *10^(-12); %synaptic conductance step following spike (S) I to E
+parameters.del_G_sra = 100.0e-012;
+%}
+
+
+%% Attempt at IS regime, rate of 1000, no SRA for Inh cells
+
+%{
+parameters.inhSRA = 0; 
+%} 
+
+%{
+parameters.rG = 1000;
+parameters.Win_mean = 315 *10^-12;
+
+parameters.del_G_syn_E_E = 350*10^(-12); %synaptic conductance step following spike (S)
+parameters.del_G_syn_E_I = 350*10^(-12); %synaptic conductance step following spike (S)
+parameters.del_G_syn_I_E = 3.0* parameters.del_G_syn_E_I; %synaptic conductance step following spike (S) I to E
+parameters.IcueScale = 0.75;
+
+parameters.Win_mean = 325 *10^-12;
+parameters.IcueScale_PF = 0.90; % scales strength of I cell cue input, if ~=1 then Icells receive no spatial inputs
+
+%}
+%{
+parameters.del_G_syn_E_E = 350*10^(-12); %synaptic conductance step following spike (S)
+parameters.del_G_syn_E_I = 2.5 *350*10^(-12); %synaptic conductance step following spike (S)
+parameters.del_G_syn_I_E = 1.0 *350*10^(-12); %synaptic conductance step following spike (S) I to E
+parameters.IcueScale = 0.5;
+%}
+%{
+parameters.del_G_syn_E_E = 400*10^(-12); %synaptic conductance step following spike (S)
+parameters.del_G_syn_E_I = 2.75 *350*10^(-12); %synaptic conductance step following spike (S)
+parameters.del_G_syn_I_E = 0.75 *350*10^(-12); %synaptic conductance step following spike (S) I to E
+parameters.IcueScale = 0.75;
+%}
+
+
+%% Lower GL, rG=5000, no SRA for Inh cells
+
+%{
+parameters.inhSRA = 0; 
+%} 
+
+%{
+parameters.G_L = 5*10^(-9); %leak conductance (S) %10 - 30 nS range
+
+parameters.Win_mean = 37 *10^-12;
+
+parameters.del_G_syn_E_E = 150*10^(-12); %synaptic conductance step following spike (S)
+parameters.del_G_syn_E_I = 150*10^(-12); %synaptic conductance step following spike (S)
+parameters.del_G_syn_I_E = 1.5* parameters.del_G_syn_E_I; %synaptic conductance step following spike (S) I to E
+parameters.IcueScale = 0.95;
+
+parameters.Win_mean = 37 *10^-12;
+parameters.del_G_syn_E_E = 0.5*parameters.del_G_syn_E_E; %synaptic conductance step following spike (S)
+parameters.IcueScale_PF = 1.4;
+
+
+PFsimFlag = 1;
+PFscoreFlag = 0;
+preplaySimFlag = 0;
+parameters.t_max = 1.5; %maximum amount of time (s)
 %}
 
 %% Parameters for sequence analysis
@@ -287,8 +425,8 @@ for ithNet = 1:parameters.nNets
         disp(['Mean score: ', num2str(score)])
     
     figure; plotSpikeRaster( logical( [ opS(network.E_indices,:,1,1); opS(network.I_indices,:,1,1) ]), 'TimePerBin', parameters.dt, 'PlotType', 'scatter');
-    % rpermIcells = randperm(numel(network.I_indices));
-    % figure; plotSpikeRaster( logical( [ opS(network.E_indices(PFpeaksSequence),:,1,1); opS(network.I_indices(rpermIcells),:,1,1) ]), 'TimePerBin', parameters.dt, 'PlotType', 'scatter');
+     rpermIcells = randperm(numel(network.I_indices));
+     figure; plotSpikeRaster( logical( [ opS(network.E_indices(PFpeaksSequence),:,1,1); opS(network.I_indices(rpermIcells),:,1,1) ]), 'TimePerBin', parameters.dt, 'PlotType', 'scatter');
 
     figure; histogram( sum(opS, [2:4])./parameters.t_max./parameters.nTrials, 50 )
     xlabel('Mean rate (Hz, PF trials)'); ylabel('All cells')
@@ -311,6 +449,7 @@ for ithNet = 1:parameters.nNets
             rng(ithTest)
             if parameters.usePoisson
                 G_in = zeros(parameters.n, parameters.t_steps+1);
+                G_in(:,1) = 1/2* parameters.Win_mean * 2*parameters.rG * parameters.tau_syn_E + sqrt(1/2*parameters.tau_syn_E*parameters.Win_mean.^2*2*parameters.rG).*randn(parameters.n, 1) ; 
                 for k = 2:(parameters.t_steps+1)
                     G_in(:,k) = G_in(:,k-1)*exp(-parameters.dt/parameters.tau_syn_E);
 
@@ -326,7 +465,10 @@ for ithNet = 1:parameters.nNets
 
             %Create Storage Variables
             V_m = zeros(parameters.n,parameters.t_steps+1); %membrane potential for each neuron at each timestep
-            V_m(:,1) = parameters.V_reset + randn([parameters.n,1])*(10^(-3))*sqrt(parameters.dt); %set all neurons to baseline reset membrane potential with added noise
+            V_m(:,1) = -60e-3 + 5e-3*randn([parameters.n,1]); %set all neurons to baseline reset membrane potential with added noise
+            %indSpike = randperm(numel(network.E_indices)); indSpike = indSpike(1:20);
+            %V_m(network.E_indices(indSpike),1) = parameters.V_th-0.01e-3;
+            %V_m(:,1) = parameters.V_reset + randn([parameters.n,1])*(10^(-3))*sqrt(parameters.dt); %set all neurons to baseline reset membrane potential with added noise
 
             seed = ithTest;
 

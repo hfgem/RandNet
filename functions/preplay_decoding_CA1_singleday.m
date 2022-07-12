@@ -30,7 +30,10 @@ minEventDur = 50; % ms, exclude events shorter than this
 wellcutoff = 0; %cm, remove reward-well regions (15cm around start and end); or 0cm without exclusion
 minPeakRate = 3; %Hz, minimum peak rate to include cell
 
-dispFlag = 0; % display event analysis progression
+downSampleCells = 0;
+downSampledFrac = 0.1;
+
+dispFlag = 1; % display event analysis progression
 
 %% set animal directory
 dir = [savedir, animalprefix, '_direct/'];
@@ -55,10 +58,15 @@ switch animalprefix
         %load(sprintf('%s%stetinfo.mat',dir,animalprefix)); % get num tets, get num cells
         tetinfo = load(sprintf('%s%stetinfo.mat',dir,animalprefix), 'tetinfo'); % get num tets, get num cells
         tetinfo = tetinfo.tetinfo; 
-        
         numTets = numel(tetinfo{1}{2});
-        numCells = tetinfo{1}{2}{1}.numcells;
-        hpidx = [repmat(numTets, numCells, 1), [1:numCells]'];
+        
+        if ~downSampleCells % keep all cells
+            numCells = tetinfo{1}{2}{1}.numcells;
+            hpidx = [repmat(numTets, numCells, 1), [1:numCells]'];
+        else % Use only fraction of cells for decoding
+            numCells = round(downSampledFrac * tetinfo{1}{2}{1}.numcells);
+            hpidx = [repmat(numTets, numCells, 1), [1:numCells]'];
+        end
 end
 
 hpnum = length(hpidx(:,1));

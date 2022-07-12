@@ -21,6 +21,46 @@ function [network_spike_sequences] = detect_PBE(spikes, parameters, varargin)
         end
     end
        
+    
+    %% Farooq et al method
+    %{
+    parameters.PBE_zscore = 2;
+    t = 0:parameters.dt:(size(spikes, 2)-1)*parameters.dt;
+    meanPopRate = smoothdata( mean(spikes, 1)/parameters.dt, 'gaussian', parameters.PBE_window);
+    PBEthresh = max(mean(meanPopRate)+(parameters.PBE_zscore*std(meanPopRate)), parameters.PBE_min_Hz); % threshold rate for PBE detection
+    PBEmean = mean(meanPopRate);
+    PBEcand = meanPopRate>PBEthresh;
+    figure; plot(t, meanPopRate); hold on; yline(PBEthresh); yline(PBEmean);
+    yyaxis right; plot(t, PBEcand)
+    
+    onsetinds = find( diff(PBEcand)==1)+1;
+    while ~isempty(onsetinds)
+        for i = numel(onsetinds):-1:1
+            if meanPopRate(onsetinds(i))>PBEmean
+                onsetinds(i) = onsetinds(i)-1;
+                PBEcand(onsetinds(i)) = 1;
+            else
+                onsetinds(i) = [];
+            end
+        end
+    end
+    
+    offsetinds = find( diff(PBEcand)==-1);
+    while ~isempty(offsetinds)
+        for i = numel(offsetinds):-1:1
+            if meanPopRate(offsetinds(i))>PBEmean
+                offsetinds(i) = offsetinds(i)+1;
+                PBEcand(offsetinds(i)) = 1;
+            else
+                offsetinds(i) = [];
+            end
+        end
+    end
+    figure; plot(t, meanPopRate); hold on; yline(PBEthresh); yline(PBEmean);
+    yyaxis right; plot(t, PBEcand)
+    PBE_candidate = PBEcand;
+    %}
+    
     %% Detect PBE timepoints
     t = 0:parameters.dt:(size(spikes, 2)-1)*parameters.dt;
     meanPopRate = smoothdata( mean(spikes, 1)/parameters.dt, 'gaussian', parameters.PBE_window);

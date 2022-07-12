@@ -123,9 +123,11 @@ parameters.t_max = 60; %maximum amount of time (s)
 parameters.del_G_syn_E_E = 150*10^(-12); %synaptic conductance step following spike (S)
 parameters.del_G_syn_E_I = 90*10^(-12); %synaptic conductance step following spike (S)
 
+% parameters.del_G_syn_E_E = 135*10^(-12); %synaptic conductance step following spike (S)
+% parameters.del_G_syn_E_I = 75*10^(-12); %synaptic conductance step following spike (S)
 
-parameters.del_G_syn_E_E = 135*10^(-12); %synaptic conductance step following spike (S)
-parameters.del_G_syn_E_I = 75*10^(-12); %synaptic conductance step following spike (S)
+parameters.clusterCorrs = 0; % old default
+parameters.inhSRA = 1; % old default
 
 
 %{
@@ -135,8 +137,27 @@ parameters.del_G_syn_E_E = 120*10^(-12); %synaptic conductance step following sp
 parameters.del_G_syn_E_I = 150*10^(-12); %synaptic conductance step following spike (S)
 %}
 
+
+%% Attempt at minimal changes for IS regime
+%{
+parameters.inhSRA = 0; % no SRA for I cells
+
+parameters.del_G_syn_E_E = 0*180*10^(-12); %synaptic conductance step following spike (S)
+parameters.del_G_syn_E_I = 0*350*10^(-12); %synaptic conductance step following spike (S)
+
+parameters.Win_mean = 71 *10^-12;
+parameters.IcueScale_PF = 0.75;
+parameters.IcueScale = 0.75; % scales strength of I cell cue input, if ~=1 then Icells receive no spatial inputs
+
+PFsimFlag = 0;
+PFscoreFlag = 0;
+preplaySimFlag = 1 ;
+parameters.t_max = 6; %maximum amount of time (s)
+%}
+
 %% Add in cluster correlations to location input
 
+%{
 parameters.clusterCorrs = 1;
 parameters.inputBiasSigma = 25; 
 parameters.inhSRA = 0; 
@@ -164,6 +185,7 @@ parameters.t_max = 6;
 
 parameters.IcueScale_PF = 1.0; % scales strength of I cell cue input, if ~=1 then Icells receive no spatial inputs
 parameters.IcueScale =  0.75; % scales strength of I cell cue input, if ~=1 then Icells receive no spatial inputs
+%}
 
 %% Attempt at IS regime, rate of 500, no SRA for Inh cells
 
@@ -212,9 +234,8 @@ parameters.del_G_sra = 100.0e-012;
 
 %{
 parameters.inhSRA = 0; 
-%} 
+parameters.t_max = 6;
 
-%{
 parameters.rG = 1000;
 parameters.Win_mean = 315 *10^-12;
 
@@ -225,7 +246,6 @@ parameters.IcueScale = 0.75;
 
 parameters.Win_mean = 325 *10^-12;
 parameters.IcueScale_PF = 0.90; % scales strength of I cell cue input, if ~=1 then Icells receive no spatial inputs
-
 %}
 %{
 parameters.del_G_syn_E_E = 350*10^(-12); %synaptic conductance step following spike (S)
@@ -245,9 +265,7 @@ parameters.IcueScale = 0.75;
 
 %{
 parameters.inhSRA = 0; 
-%} 
 
-%{
 parameters.G_L = 5*10^(-9); %leak conductance (S) %10 - 30 nS range
 
 parameters.Win_mean = 37 *10^-12;

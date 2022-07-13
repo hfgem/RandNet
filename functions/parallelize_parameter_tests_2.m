@@ -147,6 +147,10 @@ function [avg_mat, allResults] = parallelize_parameter_tests_2(parameters,...
         mat(isnan(mat)) = 0;
         resp_mat(ithNet,:) = sum(mat,1) ./ sum(mat > 0,1); %Only averaging those that did successfully produce data        
     end % Network loop
+    
+    %Test network for chaotic activity
+    [chaos_results] = test_chaos(parameters, allResults);
+    
     resp_mat(isnan(resp_mat)) = 0;
     avg_mat = sum(resp_mat,1)./sum(resp_mat > 0,1); %Only averaging those that had results
     avg_mat(isnan(avg_mat)) = 0;

@@ -57,17 +57,21 @@ parameters.saveFlag = saveFlag;
 parameters.plotResults = plotResults; 
 parameters.save_path = save_path; %In the case you'd like to save from within a function
 
+disp('Data Imported')
 %% Parameters that are different from the loaded parameters
 
 % Analysis parameters: insert below those parameters you want to ensure are
 % set for the parameter tests you'll be doing.
 
-% Network structure parameters
-parameters.n = 200; %number of neurons
-parameters.clusters = 10; % Number of clusters in the network
-parameters.mnc = 3; % mean number of clusters each neuron is a member of
+% % Network structure parameters
+% parameters.n = 200; %number of neurons
+% parameters.clusters = 10; % Number of clusters in the network
+% parameters.mnc = 3; % mean number of clusters each neuron is a member of
+parameters.p_I = 0.25; %Probabilty of blanket inhibition connectivity
 
 parameters.V_m_noise = 10^(-4); %magnitude of noise
+
+parameters.G_std = 20*10^(-9);
 
 try %Ensure that E_events_only = 1
     assert(parameters.E_events_only == 1)
@@ -103,6 +107,7 @@ else
     parameters.max_avg_length = 0.5;
 end
 
+disp('Parameters Updated')
 
 %% __set/update dependent parameters__ %%
 parameters = set_depedent_parameters(parameters);
@@ -111,6 +116,8 @@ if saveFlag
     save(strcat(save_path,'/parameters.mat'),'parameters')
 end
 
+disp('Parameters Saved')
+
 %% Set Up Grid Search Parameters
 % NOTE: Parameters selected for testing cannot be a dependent parameter set in 
 % set_depedent_parameters. See randnet.m "Initialize parameters" section
@@ -118,11 +125,11 @@ end
 
 %Use optimized calculator code or not
 %If 1 uses randnet_calculator_memOpt.m for calculations, if 0 uses randnet_calculator.m
-optFlag = 0; 
+optFlag = 1; 
 
 %Test parameters
 parameters.nTrials = 1; % How many tests of different initializations to run
-parameters.nNets = 3; % How many networks to run
+parameters.nNets = 2; % How many networks to run
 test_n = 10; % Number of values to test for each parameter
 
 % assert(parameters.usePoisson==1)
@@ -135,33 +142,38 @@ variedParam(2).name = 'del_G_syn_E_E'; % 2nd parameter to be varied
 variedParam(2).range = linspace(450*10^(-12), 1050*10^(-12), test_n); % set of values to test param2
 %}
 
-variedParam(1).name = 'del_G_syn_E_E'; % 2nd parameter to be varied
-variedParam(1).range = linspace(1*10^(-12), 1000*10^(-12), test_n); % set of values to test param1
-variedParam(2).name = 'del_G_syn_I_E'; % 2nd parameter to be varied
-variedParam(2).range =  linspace(1*10^(-12), 1000*10^(-12), test_n); % set of values to test param2
-variedParam(3).name = 'del_G_syn_E_I'; % 3rd parameter to be varied
-variedParam(3).range =  linspace(1*10^(-12), 1000*10^(-12), test_n); % set of values to test param3
-variedParam(4).name = 'p_I'; % 4th parameter to be varied
-variedParam(4).range =  linspace(0, 1, test_n); % set of values to test param4
-variedParam(5).name = 'G_std'; %5th parameter to be varied
-variedParam(5).range = linspace(1*10^(-9), 50*10^(-9), test_n); % set of values to test param5
-variedParam(6).name = 'del_G_sra'; %6th parameter to be varied
-variedParam(6).range = linspace(10*10^(-9),1000*10^(-9),test_n); % set of values to test param6
-%parameters.del_G_syn_I_I = 0;
+parameters.del_G_syn_E_E = 30*10^(-9);
+parameters.del_G_syn_I_E = 5*10^(-9);
+
+variedParam(1).name = 'del_G_syn_E_I';
+variedParam(1).range =  linspace(1*10^(-10), 20*10^(-9), test_n);
+variedParam(2).name = 'n';
+variedParam(2).range =  linspace(100, 500, test_n-1);
+variedParam(3).name = 'clusters';
+variedParam(3).range =  linspace(1, 10, test_n);
+%variedParam(4).name = 'mnc';
+%variedParam(4).range =  linspace(1, 10, test_n-1);
+parameters.mnc = 10;
 
 % Combine into one parameter vector to pass to parfor function
 parameterSets_vec = combvec(variedParam(:).range);
 
 % Exclude cases where mnc>clusters
-if isequal(variedParam(1).name, 'mnc') && isequal(variedParam(2).name, 'clusters')
-    parameterSets_vec = parameterSets_vec(:,~[parameterSets_vec(1,:)>parameterSets_vec(2,:)]);
+for i = 1:length(variedParam)
+    for j = 1:length(variedParam)
+        if isequal(variedParam(i).name, 'mnc') && isequal(variedParam(j).name, 'clusters')
+            parameterSets_vec = parameterSets_vec(:,~[parameterSets_vec(i,:)>parameterSets_vec(j,:)]);
+        end
+    end
 end
-
+   
 % Save cases and updated parameters
 if saveFlag
     save(strcat(save_path,'/parameters.mat'),'parameters')
     save(strcat(save_path,'/variedParam.mat'),'variedParam')
 end
+
+disp('Varied Parameters Set')
 
 %% Run Grid Search With Spike Stats Returned
 
@@ -181,10 +193,10 @@ parfor ithParamSet = 1:size(parameterSets_vec, 2) %Run through all parameter com
     %For each combination run parallelize_parameter_tests_2
     [resultsMatLinear(:,ithParamSet), resultsStructLinear{ithParamSet}] = parallelize_parameter_tests_2(...
                 parameters, parameterSets_vec, ithParamSet, variedParam, optFlag);
-    send(D, 1);
+    send(D, 1);   
 end
 runTime = toc;
-fprintf('Program Runtime (s) = %.2f\n',runTime)
+sprintf('Program Runtime (s) = %.2f',runTime)
 
 %% Format results matrix
 
@@ -231,6 +243,8 @@ if parameters.saveFlag
     end
 end
 
+disp('Results formatted and saved')
+
 %% Visualize Value Grid Search Results
 
 %All pairs of parameters to loop through
@@ -275,14 +289,14 @@ for i = 1:length(pair_param_comb)
         set(gca,'YDir','normal')
         c3 = colorbar(); c3.Label.String = "Seconds";
         title('Mean Event Length'); xlabel(variedParam(paramPlot1).name,'Interpreter','none'); ylabel(variedParam(paramPlot2).name,'Interpreter','none')
-        clear c1 c2 c3
 
         subplot(2,2,4)
         imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, squeeze(mean(avg_n_events,notparams))'/parameters.t_max, 'AlphaData', ~isnan(squeeze(mean(avg_n_events,notparams))'))
         set(gca,'YDir','normal')
-        c3 = colorbar(); c3.Label.String = "nEvents / s";
+        c4 = colorbar(); c4.Label.String = "nEvents / s";
         title('Mean event frequency'); xlabel(variedParam(paramPlot1).name,'Interpreter','none'); ylabel(variedParam(paramPlot2).name,'Interpreter','none')
-        clear c1 c2 c3
+        
+        clear c1 c2 c3 c4
 
         f.Units = 'normalized';
         f.Position = [0 0 1 1];
@@ -303,17 +317,45 @@ end
 
 
 if strcmp(parameters.eventType,'PBE') %Population burst event analysis
-    
-    
+    disp('WRITE SOME CODE!')
 else %Sequence analysis
+    mat_dim = size(frac_partic);
     %Find locations of criteria matching
     frac_partic_bin = frac_partic >= parameters.event_cutoff;
     avg_fr_bin = parameters.min_avg_fr <= avg_fr <= parameters.max_avg_fr;
-    avg_event_length = parameters.min_avg_length <= avg_event_length <= parameters.max_avg_length;
+    avg_event_length_bin = parameters.min_avg_length <= avg_event_length <= parameters.max_avg_length;
+    %Store ranges for each individual criterion
+    w = whos;
+    for a = 1:length(w)
+        name_criterion = w(a).name;
+        split_name = split(name_criterion,'_');
+        %Only perform analysis if ends in _bin
+        if strcmp(split_name{end},'bin')
+            ind_true = find(eval(name_criterion));
+            subsc_true = cell(size(mat_dim));
+            [subsc_true{:}] = ind2sub(mat_dim,ind_true);
+            range_true = zeros(length(mat_dim),2);
+            for i = 1:length(mat_dim)
+                dim_overlap = subsc_true{i};
+                min_ind = min(dim_overlap);
+                max_ind = max(dim_overlap);
+                try
+                    range_true(i,1) = min_ind;
+                catch
+                    range_true(i,1) = NaN;
+                end
+                try
+                    range_true(i,2) = max_ind;
+                catch
+                    range_true(i,2) = NaN;
+                end
+            end
+            eval(strcat(name_criterion,'_ranges = range_true;'))
+        end    
+    end
     %Find where criteria matching overlaps
-    overlap = frac_partic_bin.*avg_fr_bin.*avg_event_length;
+    overlap = frac_partic_bin.*avg_fr_bin.*avg_event_length_bin;
     indc_overlap = find(overlap);
-    mat_dim = size(overlap);
     subsc_overlap = cell(size(mat_dim));
     [subsc_overlap{:}] = ind2sub(mat_dim,indc_overlap);
     %Find ranges of overlap in parameter space
@@ -322,13 +364,122 @@ else %Sequence analysis
         dim_overlap = subsc_overlap{i};
         min_ind = min(dim_overlap);
         max_ind = max(dim_overlap);
-        range_overlap(i,:) = [min_ind,max_ind];
+        try
+            range_overlap(i,1) = min_ind;
+        catch
+            range_overlap(i,1) = NaN;
+        end
+        try
+            range_overlap(i,2) = max_ind;
+        catch
+            range_overlap(i,2) = NaN;
+        end
         param_name = variedParam(i).name;
         param_range = [variedParam(i).range(min_ind),variedParam(i).range(max_ind)];
-        disp(strcat(sprintf('Parameter %s successful range = ',param_name),string(param_range)))
+        disp(strcat(sprintf('Parameter %s successful range = [%0.2e, %0.2e]',param_name,param_range(1), param_range(2))))
     end   
 end    
 
+% Plot overlap success ranges
+%All pairs of parameters to loop through
+pair_param_comb = nchoosek(1:size(variedParam,2),2);
+
+%Create save path if plots are to be saved
+if parameters.saveFlag
+    fig_save_path = strcat(parameters.save_path,'/criterion_success_results');
+    if ~isfolder(fig_save_path)
+        mkdir(fig_save_path)
+    end
+end    
+
+for i = 1:size(pair_param_comb,1)
+
+    if parameters.plotResults
+
+        % select index of parameters to plot against each other
+        % Note: below code is not generalized to arbitrary n of variedParam
+        paramPlot1 = pair_param_comb(i,1);
+        paramPlot2 = pair_param_comb(i,2);
+
+        notparams = setdiff([1:size(variedParam,2)],[paramPlot1,paramPlot2]);
+
+        % paramPlot1 v paramPlot2 overlap space
+
+        f = figure;
+        if ~isempty(notparams)
+            imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, squeeze(mean(overlap,notparams))', 'AlphaData', ~isnan(squeeze(mean(overlap,notparams))'))
+        else
+            imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, overlap', 'AlphaData', ~isnan(overlap'))
+        end    
+        colormap(gray)
+        set(gca,'YDir','normal')
+        c1 = colorbar();
+        c1.Label.String = 'Fraction of overlap';
+        title('Overlap in Parameter Space'); xlabel(variedParam(paramPlot1).name,'Interpreter','none'); ylabel(variedParam(paramPlot2).name,'Interpreter','none')
+
+        f.Units = 'normalized';
+        f.Position = [1.75,0.292222222222222,0.215,0.234444444444444]; 
+
+        if parameters.saveFlag
+            fig_name = strcat('randnet_param_test_success_',variedParam(paramPlot1).name,'_v_',variedParam(paramPlot2).name);
+            savefig(f,strcat(fig_save_path,'/',fig_name,'.fig'))
+            saveas(f,strcat(fig_save_path,'/',fig_name,'.jpg'))
+            close(f)
+        end    
+    end
+    
+end
+
+%% Plot Criteria Matching Parameter Space with One Parameter Held
+
+%NOTE: written for when there are only 4 variedParam. Need to do some work
+%for it to handle other sizes automatically - in the meantime manually
+%update.
+
+%Parameter to hold
+param_ind = 4; %Parameter to hold index
+param_val_ind = 6; %Parameter value index to hold
+
+%All other parameters
+other_param_ind = setdiff([1:size(variedParam,2)],[param_ind]);
+
+%Pull Overlap
+if strcmp(parameters.eventType,'PBE') %Population burst event analysis
+    disp('WRITE SOME CODE!')
+else %Sequence analysis
+    mat_dim = size(frac_partic);
+    %Find locations of criteria matching
+    frac_partic_bin = permute(frac_partic_bin,[param_ind, other_param_ind]) >= parameters.event_cutoff;
+    avg_fr_bin = parameters.min_avg_fr <= permute(avg_fr,[param_ind, other_param_ind]) <= parameters.max_avg_fr;
+    avg_event_length_bin = parameters.min_avg_length <= permute(avg_event_length,[param_ind, other_param_ind]) <= parameters.max_avg_length;
+    no_global_inhib = squeeze(frac_partic_bin(param_val_ind,:,:,:)).* ...
+        squeeze(avg_fr_bin(param_val_ind,:,:,:)).* ...
+        squeeze(avg_event_length_bin(param_val_ind,:,:,:));
+    
+    pair_param_comb = nchoosek(1:size(other_param_ind,2),2);
+    
+    figure;
+    
+    for i = 1:size(pair_param_comb,1)
+        
+        paramPlot1 = pair_param_comb(i,1);
+        paramPlot2 = pair_param_comb(i,2);
+
+        notparams = setdiff([1:size(other_param_ind,2)],[paramPlot1,paramPlot2]);
+
+        % paramPlot1 v paramPlot2 overlap space
+
+        subplot(1,size(pair_param_comb,1),i)
+        imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, squeeze(mean(no_global_inhib,notparams))', 'AlphaData', ~isnan(squeeze(mean(no_global_inhib,notparams))'))
+        colormap(gray)
+        set(gca,'YDir','normal')
+        c1 = colorbar(); c1.Label.String = 'Fraction of overlap';
+        title('Overlap in Parameter Space');
+        xlabel(variedParam(paramPlot1).name,'Interpreter','none');
+        ylabel(variedParam(paramPlot2).name,'Interpreter','none');
+    end
+    
+end
 
 %% Plot directly from resultsStruct
 %{

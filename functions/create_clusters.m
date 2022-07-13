@@ -94,8 +94,8 @@ function [network] = create_clusters(parameters, varargin)
 
     % If global_inhib, overwrite all inhibitory outputs
     if global_inhib
-        conns(I_indices,:) = (rand([parameters.n*(1-parameters.p_E), parameters.n]) < parameters.p_I);
-        conns(:,I_indices) = (rand(parameters.n, [parameters.n*(1-parameters.p_E)]) < parameters.p_I);
+        conns(I_indices,:) = (rand([round(parameters.n*(1-parameters.p_E)), parameters.n]) < parameters.p_I);
+        conns(:,I_indices) = (rand([parameters.n, round(parameters.n*(1-parameters.p_E))]) < parameters.p_I);
     end
     
     %SAVE NETWORK STRUCTURE

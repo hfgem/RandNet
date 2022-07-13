@@ -21,12 +21,14 @@ elseif isnan(parameters.del_G_syn_E_I) & isnan(parameters.del_G_syn_I_E)
 end
 
 %Calculate connection probabilites
-% parameters.cluster_n = min(parameters.n*2/parameters.clusters,parameters.n); %number of neurons in a cluster (for small n round(n/3), for large n round(n/5)) 
-parameters.cluster_n = round((parameters.mnc*parameters.n) / parameters.clusters) ; % Rather than above method, explicitly declare mnc as a parameter
+parameters.cluster_n = min(round((parameters.mnc*parameters.n) / parameters.clusters),parameters.n) ; % Rather than above method, explicitly declare mnc as a parameter
 parameters.npairs = parameters.n*(parameters.n-1); %total number of possible neuron connections
 parameters.nclusterpairs = parameters.cluster_n*(parameters.cluster_n - 1)*parameters.clusters; %total number of possible intra-cluster connections
 parameters.cluster_prob = min(parameters.conn_prob*parameters.npairs/parameters.nclusterpairs,1); %0.2041; %intra-cluster connection probability
 parameters.n_I = round((1-parameters.p_E)*parameters.n); %number of inhibitory neurons
 parameters.n_E = parameters.n-parameters.n_I; %number of excitatory neurons
+
+%The following is a test run of a dependent parameter
+parameters.del_G_sra = 60*parameters.del_G_syn_E_E - 2*10^(-7);
 
 end

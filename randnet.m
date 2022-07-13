@@ -19,12 +19,12 @@ addpath('functions')
 %% Initialize parameters
 
 % Network structure parameters
-parameters.n = 500; %number of neurons
+parameters.n = 200; %number of neurons
 parameters.clusters = 10; % Number of clusters in the network
-parameters.mnc = 2; % mean number of clusters each neuron is a member of
+parameters.mnc = 3; % mean number of clusters each neuron is a member of
 
 % Time
-parameters.t_max = 3; %maximum amount of time (s)
+parameters.t_max = 0.5; %maximum amount of time (s)
 parameters.dt = 0.1*10^(-3); %timestep (s)
 
 % Basic model parameters
@@ -37,20 +37,20 @@ parameters.E_K = -80*10^(-3); %potassium reversal potential (V) %-75 or -80 mV
 parameters.E_L = -70*10^(-3); %leak reversal potential (V) %-60 - -70 mV range
 parameters.G_L = 25*10^(-9); %leak conductance (S) %10 - 30 nS range
 parameters.C_m = 0.4*10^(-9); %total membrane capacitance (F) %Huge range from 0.1 - 100 pF
-parameters.V_m_noise = 0.1*10^(-3); % 10^(-4); %magnitude of noise to use in membrane potential simulation (V)
+parameters.V_m_noise = 10^(-4); % 10^(-4); %magnitude of noise to use in membrane potential simulation (V)
 parameters.V_th = -50*10^(-3); %threshold membrane potential (V)
 parameters.V_reset = -70*10^(-3); %reset membrane potential (V)
 parameters.V_syn_E = 0; %synaptic reversal potential (excitatory)
 parameters.V_syn_I = -70*10^(-3); %synaptic reversal potential (inhibitory) %generally -70 pr -80 mV
 
 % Recurrent connection strengths
-parameters.del_G_syn_E_E = 750*10^(-12); %synaptic conductance step following spike (S)
+parameters.del_G_syn_E_E = 5*10^(-10); %synaptic conductance step following spike (S)
 parameters.del_G_syn_I_I = 0; %1.4*del_G_syn_E_E; %synaptic conductance step following spike (S)
-parameters.del_G_syn_E_I = 500*10^(-12); %synaptic conductance step following spike (S)
-parameters.del_G_syn_I_E = nan; %synaptic conductance step following spike (S)
+parameters.del_G_syn_E_I = 5*10^(-10); %synaptic conductance step following spike (S)
+parameters.del_G_syn_I_E = 10*10^(-10); %synaptic conductance step following spike (S)
 
 % SRA parameters
-parameters.del_G_sra = 30e-09; %spike rate adaptation conductance step following spike %ranges from 1-200 *10^(-9) (S)
+parameters.del_G_sra = 200e-09; %spike rate adaptation conductance step following spike %ranges from 1-200 *10^(-9) (S)
 parameters.tau_sra = 30*10^(-3); %spike rate adaptation time constant (s)
 
 % STDP parameters
@@ -64,7 +64,7 @@ if parameters.usePoisson == 1
     parameters.W_gin = 750*10^-12; % increase in conductance, if using poisson inputs
 else
     % Conductance input
-    parameters.G_std = 19*10^-9; % STD of the input conductance G_in, if using randn()
+    parameters.G_std = 20*10^-9; % STD of the input conductance G_in, if using randn()
     parameters.G_mean = 0* 10^-12; % mean of the input conductance G_in, if using randn()
 end
 

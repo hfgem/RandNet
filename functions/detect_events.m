@@ -110,15 +110,23 @@ function [network_spike_sequences, overallResults] = detect_events(parameters, .
                     any_success = 1;
                 end
                 
-                %plot only  if meets criteria
+                %plot only if meets criteria 25% of the time
                 if parameters.plotResults == 1
-                    if overall_check ~= 0
-                        subplot(1,num_events,ithEvent)
-                        plotSpikeRaster(event_spikes, 'TimePerBin', parameters.dt, 'PlotType', 'scatter');
-                        title(sprintf('Event %i Raster',ithEvent))
-                    else
-                        subplot(1,num_events,ithEvent)
-                        title(sprintf('Event %i Does Not Meet Criteria',ithEvent))
+                    if rand() < 0.25
+                        if overall_check ~= 0
+                            subplot(1,num_events,ithEvent)
+                            %Plot the re-ordered spike event
+                            plotSpikeRaster(event_spikes(spike_order,:), 'TimePerBin', parameters.dt, 'PlotType', 'scatter');
+                            %Label a few of the reordered indices for comparison
+                            ind_plt = round(linspace(1,length(spike_order),4));
+                            yticks(ind_plt)
+                            spike_order_subsample = spike_order(ind_plt);
+                            yticklabels(string(spike_order_subsample))
+                            title(sprintf('Event %i Raster',ithEvent))
+                        else
+                            subplot(1,num_events,ithEvent)
+                            title(sprintf('Event %i Does Not Meet Criteria',ithEvent))
+                        end
                     end
                 end
             end    

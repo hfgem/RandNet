@@ -20,7 +20,11 @@ variedParam(2).name
 
 combineNetData = 1 
 plotAllCDFs = 0
-plotCombinedCDFs = 1
+plotCombinedCDFs = 0
+
+maxNEvents = inf % downsample number of replay events for kstest to maxNEvents, use inf for no downsampling
+%downSample = 0
+%downSampleFracEvents = 0.5;
 
 xParamvec = variedParam(1).range;
 xName = variedParam(1).name;
@@ -91,6 +95,8 @@ for ithParam1 = 1:size(resultsStruct, 1)
         
         if combineNetData
             if ~isempty(allRvecs)
+                allRvecs = allRvecs(1:min(numel(allRvecs), maxNEvents));
+                
                 [~,p_kstest,KSSTAT] = kstest2(allRvecs, allRvecs_shuff);
                 op(1, ithParam1, ithParam2) = p_kstest;
                 op(2, ithParam1, ithParam2) = KSSTAT;
@@ -104,6 +110,10 @@ for ithParam1 = 1:size(resultsStruct, 1)
                 try
                 figure; hold on; ecdf(allRvecs); ecdf(allRvecs_shuff); legend({'Preplays', 'Shuffles'}, 'Location', 'Best')
                 title(['ithParam1=', num2str(ithParam1) ' ithParam2=', num2str(ithParam2), ' pval=', num2str(p_kstest) ])
+                % [Fcdf,Xcdf] = ecdf(allRvecs); [Fcdfshuff,Xcdfshuff] = ecdf(allRvecs_shuff);
+                N = ecdfhist(Fcdf, Xcdf);
+                Nshuff = ecdfhist(Fcdfshuff, Xcdf);
+
                 end
             end
             

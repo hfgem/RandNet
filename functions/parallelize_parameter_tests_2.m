@@ -22,6 +22,9 @@ function [avg_mat, allResults] = parallelize_parameter_tests_2(parameters,...
     %       nNets = number of network initializations to test
     %       nTrials = number of simulation initializations to test   
     %       E_events_only = flag to analyze only excitatory neuron behavior
+    %       check_criticality = flag to check chaos in network. If == 0, then
+    %                   won't check, and the 5th value of the avg_mat will 
+    %                   be 0 by default.
     %   parameterSets_vec = a matrix of that contains parameter values to
     %       test: rows = number of parameters, columns = number of sets.
     %   ithParamSet = index of which parameter set to test
@@ -37,6 +40,7 @@ function [avg_mat, allResults] = parallelize_parameter_tests_2(parameters,...
     %       2. average firing rate
     %       3. average event length
     %       4. average number of identified events
+    %       5. critical (=1) or not(=0)
     %   allResults = Cell structure storing all results
     %_________
 
@@ -51,6 +55,9 @@ function [avg_mat, allResults] = parallelize_parameter_tests_2(parameters,...
     %Run network initialization code
     resp_mat = zeros(parameters.nNets, 4);
     allResults = cell(1, parameters.nNets) ;
+    
+    avalanche_lengths = []; %For testing chaos through avalanches
+    avalanche_counts = []; %For testing chaos through avalanches
     for ithNet = 1:parameters.nNets
         
         network = create_clusters(parameters, 'seed', ithNet, 'include_all', parameters.include_all, 'global_inhib', parameters.global_inhib);
@@ -109,6 +116,11 @@ function [avg_mat, allResults] = parallelize_parameter_tests_2(parameters,...
                 [trialResults] = detect_PBE(used_spikes_mat, parameters);
             else
                 [trialResults, outputVec] = detect_events(parameters, used_spikes_mat, ithParamSet, ithNet, ithTest);
+                if parameters.check_criticality == 1 %If chaos is to be checked for
+                    [av_lengths, av_counts] = pull_avalanches(used_spikes_mat);
+                    avalanche_lengths = [avalanche_lengths, av_lengths];
+                    avalanche_counts = [avalanche_counts, av_counts];
+                end    
             end
             
             % append trialResults struct to network results struct
@@ -149,11 +161,19 @@ function [avg_mat, allResults] = parallelize_parameter_tests_2(parameters,...
     end % Network loop
     
     %Test network for chaotic activity
-    [chaos_results] = test_chaos(parameters, allResults);
+    if parameters.check_criticality == 1
+        criticality_result = test_criticality(avalanche_lengths, avalanche_counts);
+    end
     
     resp_mat(isnan(resp_mat)) = 0;
     avg_mat = sum(resp_mat,1)./sum(resp_mat > 0,1); %Only averaging those that had results
     avg_mat(isnan(avg_mat)) = 0;
+    
+    if parameters.check_criticality == 1
+        avg_mat = [avg_mat, criticality_result];
+    else
+        avg_mat = [avg_mat, 0];
+    end
     
     disp(['Parameter set ', num2str(ithParamSet), '/', num2str(size(parameterSets_vec, 2)), ' complete'])
 

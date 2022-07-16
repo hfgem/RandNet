@@ -18,11 +18,11 @@ function criticality = test_criticality(avalanche_lengths, avalanche_counts)
     
     %Grab numbers of events and appropriate histogram bin numbers based on
     %Freedman-Diaconis rule
-    N = len(avalanche_lengths); %Number of events
+    N = length(avalanche_lengths); %Number of events
     iqr_len = iqr(avalanche_lengths); %Interquartile range of lengths
-    iqr_count = iqt(avalanche_counts); %Interquartile range of counts
+    iqr_count = iqr(avalanche_counts); %Interquartile range of counts
     len_bin_wid = 2*iqr_len/(N^(1/3));
-    len_bins = [0:len_bin_wid:max(avalanche_lenghts)];
+    len_bins = [0:len_bin_wid:max(avalanche_lengths)];
     count_bin_wid = 2*iqr_count/(N^(1/3));
     count_bins = [0:count_bin_wid:max(avalanche_counts)];
     
@@ -33,13 +33,11 @@ function criticality = test_criticality(avalanche_lengths, avalanche_counts)
     avg_sz_per_len = zeros(size(unique_len));
     for u_l = 1:length(unique_len)
         %Write some code finding the average size per length
+        len_ind = sort_ava_len == unique_len(u_l);
+        sizes_per_len = avalanche_counts(sort_ind(len_ind));
+        avg_sz_per_len(u_l) = mean(sizes_per_len);
     end
-    
-    %Grab counts per bins
-    len_num_hist = histogram(avalanche_lengths,len_bins);
-    count_num_hist = histogram(avalanche_counts,count_bins);
-    len_num_counts = len_num_hist.Values;
-    count_num_counts = count_num_hist.Values;
+    clear u_l len_ind sizes_per_len
     
     %Test for linear relationships
     

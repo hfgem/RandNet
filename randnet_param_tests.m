@@ -68,10 +68,9 @@ disp('Data Imported')
 % parameters.clusters = 10; % Number of clusters in the network
 % parameters.mnc = 3; % mean number of clusters each neuron is a member of
 parameters.p_I = 0.25; %Probabilty of blanket inhibition connectivity
-
 parameters.V_m_noise = 10^(-4); %magnitude of noise
-
 parameters.G_std = 20*10^(-9);
+parameters.check_criticality = 1; %=1 if want to test network for chaos
 
 try %Ensure that E_events_only = 1
     assert(parameters.E_events_only == 1)
@@ -202,7 +201,7 @@ sprintf('Program Runtime (s) = %.2f',runTime)
 
 saveAll = 0; %Flag to save all Workspace variables after results are saved
 
-resultsMat = nan([cellfun(@length, {variedParam.range}), 4]);
+resultsMat = nan([cellfun(@length, {variedParam.range}), 5]);
 resultsStruct = struct;
 for i = 1:size(resultsMatLinear, 2)
     
@@ -227,6 +226,7 @@ frac_partic = resultsMat(nSlices{:},1);
 avg_fr = resultsMat(nSlices{:},2);
 avg_event_length = resultsMat(nSlices{:},3);
 avg_n_events = resultsMat(nSlices{:},4);
+event_criticality = resultsMat(nSlices{:},5); %Not an average value - equal to 1 if parameter set results in critical activity, and 0 if not.
 
 
 if parameters.saveFlag
@@ -324,6 +324,7 @@ else %Sequence analysis
     frac_partic_bin = frac_partic >= parameters.event_cutoff;
     avg_fr_bin = parameters.min_avg_fr <= avg_fr <= parameters.max_avg_fr;
     avg_event_length_bin = parameters.min_avg_length <= avg_event_length <= parameters.max_avg_length;
+    criticality_bin = event_criticality < 1;  %Where NOT critical. Can change to look for where it IS critical by setting == 1.
     %Store ranges for each individual criterion
     w = whos;
     for a = 1:length(w)
@@ -354,7 +355,7 @@ else %Sequence analysis
         end    
     end
     %Find where criteria matching overlaps
-    overlap = frac_partic_bin.*avg_fr_bin.*avg_event_length_bin;
+    overlap = frac_partic_bin.*avg_fr_bin.*avg_event_length_bin.*criticality_bin;
     indc_overlap = find(overlap);
     subsc_overlap = cell(size(mat_dim));
     [subsc_overlap{:}] = ind2sub(mat_dim,indc_overlap);

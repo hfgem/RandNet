@@ -130,6 +130,9 @@ parameters.clusterCorrs = 0; % old default
 parameters.inhSRA = 1; % old default
 
 
+parameters.clusterCorrs = 1
+parameters.inputBiasSigma = 25
+
 %{
 parameters.Win_var = (8e-12)^2;
 parameters.Win_mean = 73 *10^-12;

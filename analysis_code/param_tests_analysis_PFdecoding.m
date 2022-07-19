@@ -68,7 +68,7 @@ for ithParam1 = 1:size(resultsStruct, 1)
         for ithNet = 1:size(resultsStruct, 3)
             
             % if ~isempty(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pMat)
-            if [isfield(resultsStruct(ithParam1, ithParam2, ithNet).results, 'replaytrajectory') && ...
+            if [isfield(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory, 'pMat') && ...
                 ~isempty(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pMat)]
 
                 % keyboard

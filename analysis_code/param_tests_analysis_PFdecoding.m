@@ -23,6 +23,8 @@ plotAllCDFs = 0
 plotCombinedCDFs = 0
 
 maxNEvents = inf % downsample number of replay events for kstest to maxNEvents, use inf for no downsampling
+% maxNEvents = 500 
+
 %downSample = 0
 %downSampleFracEvents = 0.5;
 
@@ -42,6 +44,11 @@ end
 
 op = nan(2, numel(xParamvec), numel(yParamvec));
 
+allNetPvals = zeros(numel(xParamvec), numel(yParamvec), num_nets);
+allNetKSstat = zeros(numel(xParamvec), numel(yParamvec), num_nets);
+allNetMedianDiff = zeros(numel(xParamvec), numel(yParamvec), num_nets);
+allNetGroupID = nan(numel(xParamvec), numel(yParamvec), num_nets);
+
 figure(515); hold on
 imagesc(xParamvec, yParamvec, squeeze(op(1,:,:))', 'AlphaData', ~isnan(squeeze(op(1,:,:))')); drawnow
 set(gca,'YDir','normal')
@@ -49,7 +56,7 @@ cb = colorbar();
 xlabel(xName,'Interpreter','none')
 ylabel(yName,'Interpreter','none')
 
-rng(1)
+rng(2)
 % gcp
 tic
 for ithParam1 = 1:size(resultsStruct, 1)
@@ -82,6 +89,18 @@ for ithParam1 = 1:size(resultsStruct, 1)
                 temp(1, ithNet) = P;
                 temp(2, ithNet) = KSSTAT;
                 
+                allNetPvals(ithParam1, ithParam2, ithNet) = P;
+                allNetKSstat(ithParam1, ithParam2, ithNet) = KSSTAT;
+
+                
+                %[F_cdfAactual,X_cdfAactual] = ecdf(rvals_preplay); [F_cdfShuff,XcdfShuff] = ecdf(rvals_shuffle);
+                %F_cdfAactualInterp = interp1(X_cdfAactual(2:end), F_cdfAactual(2:end), XcdfShuff(2:end));
+                %allNetAUCdiff(ithParam1, ithParam2, ithNet) = trapz(F_cdfAactualInterp,XcdfShuff(2:end)) - trapz(F_cdfShuff,XcdfShuff);
+                
+                allNetMedianDiff(ithParam1, ithParam2, ithNet) = median(rvals_preplay) - median(rvals_shuffle);
+                allNetGroupID(ithParam1, ithParam2, ithNet) = sub2ind( size(resultsStruct, [1 2]), ithParam1, ithParam2) ;
+                
+                % if allNetMedianDiff(ithParam1, ithParam2, ithNet)>0.04; keyboard; end
                 
                 allRvecs = [allRvecs, rvals_preplay'];
                 allRvecs_shuff = [allRvecs_shuff, rvals_shuffle'];
@@ -95,7 +114,9 @@ for ithParam1 = 1:size(resultsStruct, 1)
         
         if combineNetData
             if ~isempty(allRvecs)
+                allRvecs = allRvecs(randperm(numel(allRvecs))); % permute, to mix networks' events
                 allRvecs = allRvecs(1:min(numel(allRvecs), maxNEvents));
+                numel(allRvecs)
                 
                 [~,p_kstest,KSSTAT] = kstest2(allRvecs, allRvecs_shuff);
                 op(1, ithParam1, ithParam2) = p_kstest;
@@ -179,3 +200,28 @@ set(gca,'clim',[log10(.05)*2 0])
 set(gcf,'colormap',cm)
 colorbar
 colorbar('Direction','reverse','Ticks',[log10(.005),log10(.05),log10(.5)],'TickLabels',[.005,.05,.5])
+
+%% Plot net-wise scatter, if single parameter point was run above
+
+figure; scatterhist(allNetMedianDiff(:), allNetPvals(:), 'Group', allNetGroupID(:), 'Kernel','on')
+xlabel('median(actual R^2)-median(shuff R^2)')
+ylabel('KStest p-value')
+
+figure; scatterhist(allNetKSstat(:), allNetPvals(:), 'Group', allNetGroupID(:), 'Kernel','on')
+xlabel('KS-statistic')
+ylabel('KStest p-value')
+
+%% Plot net-wise scatter, if multiple parameter points were run
+
+[a, b] = find(squeeze(op(1,:,:))'<0.05); ind1 = [a]; ind2 = [b];
+ind1 = [3]; ind2 = [3];
+
+X = squeeze(allNetMedianDiff(ind1,ind2,:));
+Y = squeeze(allNetPvals(ind1,ind2,:)); 
+ID = squeeze(allNetGroupID(ind1,ind2,:));
+figure; scatterhist(X(:), Y(:), 'Group', ID(:), 'Kernel','on')
+xlabel('median(actual R^2)-median(shuff R^2)')
+ylabel('KStest p-value')
+
+
+

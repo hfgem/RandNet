@@ -92,6 +92,10 @@ function [avg_mat, allResults, PFresults] = parallelize_parameter_tests_2(parame
         
         network = create_clusters(parameters, 'seed', ithNet, 'include_all', parameters.include_all, 'global_inhib', parameters.global_inhib);
         
+        PFresults{ithNet}{1}.E_indices = network.E_indices;
+        PFresults{ithNet}{1}.netSeed = ithNet;
+        PFresults{ithNet}{1}.cluster_mat = network.cluster_mat;
+        
         mat = zeros(num_inits,4);
         network_spike_sequences = struct; 
         
@@ -99,8 +103,6 @@ function [avg_mat, allResults, PFresults] = parallelize_parameter_tests_2(parame
         G_in_PFs = zeros(parameters.n, numel(pfsim.t), pfsim.nEnvironments, pfsim.nTrials);
         for ithEnv = 1:pfsim.nEnvironments
             
-            PFresults{ithNet}{ithEnv}.E_indices = network.E_indices;
-            PFresults{ithNet}{ithEnv}.cluster_mat = network.cluster_mat;
                     
             for ithTrial = 1:pfsim.nTrials
                 %rng(ithTrial)

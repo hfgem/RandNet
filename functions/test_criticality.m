@@ -37,14 +37,16 @@ function criticality = test_criticality(avalanche_lengths, avalanche_counts)
     len_bins = (0:len_bin_wid:max(avalanche_lengths));
     len_bin_avgs = (len_bins(1:end-1) + len_bins(2:end))/2;
     [len_hist,~] = histcounts(avalanche_lengths,len_bins);
+    len_nonzero = find(len_hist);
     count_bin_wid = 2*iqr_count/(N^(1/3));
     count_bins = (0:count_bin_wid:max(avalanche_counts));
     count_bin_avgs = (count_bins(1:end-1) + count_bins(2:end))/2;
     [count_hist,~] = histcounts(avalanche_counts,count_bins);
+    count_nonzero = find(count_hist);
     
     %First Test: Power law of #avalanches of given duration as a function
     %           of duration
-    len_dataset = table(log(len_bin_avgs'),log(len_hist'));
+    len_dataset = table(log(len_bin_avgs(len_nonzero)'),log(len_hist(len_nonzero)'));
     len_mdl = fitlm(len_dataset);
     resid = len_mdl.Residuals.Standardized;
     h = kstest(resid); %Test 1 that residuals are standard-normally distributed
@@ -60,7 +62,7 @@ function criticality = test_criticality(avalanche_lengths, avalanche_counts)
     
     %Second Test: Power law of #avalanches of a given size as a function of
     %           size
-    count_dataset = table(log(count_bin_avgs'),log(count_hist'));
+    count_dataset = table(log(count_bin_avgs(count_nonzero)'),log(count_hist(count_nonzero)'));
     count_mdl = fitlm(count_dataset);
     resid = count_mdl.Residuals.Standardized;
     h = kstest(resid); %Test 1 that residuals are standard-normally distributed
@@ -85,8 +87,9 @@ function criticality = test_criticality(avalanche_lengths, avalanche_counts)
         sizes_per_len = avalanche_counts(sort_ind(len_ind));
         avg_sz_per_len(u_l) = mean(sizes_per_len);
     end
+    nonzero_avg_sz = find(avg_sz_per_len.*unique_len);
     clear u_l len_ind sizes_per_len
-    avg_sz_dataset = table(log(unique_len'),log(avg_sz_per_len'));
+    avg_sz_dataset = table(log(unique_len(nonzero_avg_sz)'),log(avg_sz_per_len(nonzero_avg_sz)'));
     avg_sz_mdl = fitlm(avg_sz_dataset);
     resid = avg_sz_mdl.Residuals.Standardized;
     h = kstest(resid); %Test 1 that residuals are standard-normally distributed

@@ -127,7 +127,7 @@ disp('Parameters Saved')
 optFlag = 1; 
 
 %Test parameters
-parameters.nTrials = 1; % How many tests of different initializations to run
+parameters.nTrials = 5; % How many tests of different initializations to run
 parameters.nNets = 2; % How many networks to run
 test_n = 10; % Number of values to test for each parameter
 
@@ -152,7 +152,7 @@ variedParam(3).name = 'clusters';
 variedParam(3).range =  linspace(1, 10, test_n);
 %variedParam(4).name = 'mnc';
 %variedParam(4).range =  linspace(1, 10, test_n-1);
-parameters.mnc = 10;
+parameters.mnc = 1;
 
 % Combine into one parameter vector to pass to parfor function
 parameterSets_vec = combvec(variedParam(:).range);
@@ -186,7 +186,7 @@ nUpdateWaitbar(num_files, h); % Dummy call to nUpdateWaitbar to initialise
 afterEach(D, @nUpdateWaitbar);
 
 tic
-resultsMatLinear = zeros(4, size(parameterSets_vec, 2));
+resultsMatLinear = zeros(5, size(parameterSets_vec, 2));
 resultsStructLinear = cell(1, size(parameterSets_vec, 2));
 parfor ithParamSet = 1:size(parameterSets_vec, 2) %Run through all parameter combinations
     %For each combination run parallelize_parameter_tests_2

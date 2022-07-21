@@ -1,6 +1,7 @@
 
 %% Plot combined place fields at a particular parameter point
 % load('C:\Users\Jordan\Box\Data\Replay project\RandNet\temp, new PF sim code grids\results_2022-07-12T06-58.mat')
+% load('C:\Users\Jordan\Box\Data\Replay project\RandNet\temp, new PF sim code grids\results_2022-07-21T15-05.mat')
 
 if isfolder('functions')
     addpath('functions')
@@ -21,9 +22,9 @@ variedParam(2).name
 minPeakRate = 2; % minimum peak PF rate to be considered a place cell
 calcScore = 0
 plotExtraPlots = 0 % if 1, plot place fields of every network
-nEventsToPlot = 3
+nEventsToPlot = 25
 useMeanPFDensity = true
-
+plotNetsBest = false
 
 %% Loop over parameter sets
 rng(1); tic
@@ -40,34 +41,35 @@ for ithParamSet = 1:size(paramSetInds, 1)
     netInd_all = []; % Index of which net each cell came from
     nClustMemb_all = []; % number of clusters each cell is a member of
     PFscores_all = [];
-    
+    bestEventpVals = inf(nEventsToPlot, 1); % nEventsToPlot best event pvals
+    bestEvents = cell(nEventsToPlot, 1);
+    nEvents = 0;
+    cluster_matAll = [];
     for ithNet = 1:size(resultsStruct, 3)
 
         % Get matrix of PFs
         PFmat = PFresultsStruct(ithParam1, ithParam2, ithNet).results{1}.linfields;
         E_indices = PFresultsStruct(ithParam1, ithParam2, ithNet).results{1}.E_indices;
+        netSeed = PFresultsStruct(ithParam1, ithParam2, ithNet).results{1}.netSeed
 
         PFmatE_all = [PFmatE_all; PFmat(E_indices,:)];
         netInd_all = [netInd_all; repmat(ithNet, numel(E_indices), 1)];
-        % nClustMemb_all = [];
 
+        % Recreate network
+        netParams=parameters;
+        for i = 1:size(variedParam, 2)
+            netParams.(variedParam(i).name) = variedParam(i).range(paramSetInds(i));
+        end
+        netParams = set_depedent_parameters(netParams);
+        network = create_clusters(netParams, 'seed', netSeed, 'include_all', netParams.include_all, 'global_inhib', netParams.global_inhib);
+        if ~all(network.E_indices==E_indices); error('Incorrect network'); end
         
+        nClustMemb_all = [nClustMemb_all; sum(network.cluster_mat(:,E_indices), 1)'];
+        cluster_matAll = [cluster_matAll; network.cluster_mat(:,E_indices)'] ;
+
         % PF: plot and calculate score
         if calcScore
-            
-            %{
-            netParams=parameters;
-            for i = 1:size(variedParam, 2)
-                netParams.(variedParam(i).name) = variedParam(i).range(paramSetInds(i));
-            end
-            netParams = set_depedent_parameters(netParams);
-            networkEst = create_clusters(netParams, 'seed', ithNet, 'include_all', netParams.include_all, 'global_inhib', netParams.global_inhib);
-            %}
-            network = struct; 
-            linfields = {};
-            network.E_indices = E_indices;
-            network.all_indices = 1:parameters.n;
-            
+            % network = struct; linfields = {}; network.E_indices = E_indices; network.all_indices = 1:parameters.n;
             day = 1; epoch = 1; tetrode = 1; tr = 1;
             linfields{day}{epoch}{tetrode}{1}{tr}(:,1) = pfsim.gridxvals*100; % convert to cm
             for ithCell = network.E_indices
@@ -77,51 +79,51 @@ for ithParamSet = 1:size(paramSetInds, 1)
             PFscores_all = [PFscores_all, PFscore];
         end
         
+        
         if nEventsToPlot>0
+            if isempty(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pvalue); continue; end
             
-            % PF Peak sequence
-            PFmat_E = PFmat(E_indices,:);
-            [peakRate,peakRateLocation] = max(PFmat_E, [], 2);
-            %{
-            row_all_zeros1 = find(all( PFmat_E==0, 2)) ;
-            row_n_all_zeros1 = find(~all( PFmat_E==0, 2)) ;
-            [peakRate,peakRateLocation] = max(squeeze(PFmat_E(row_n_all_zeros1,:)), [], 2);
-            [B,sortedCellIndsbyPeakRateLocation] = sort(peakRateLocation, 'descend');
-            PFpeaksSequence = [row_n_all_zeros1(sortedCellIndsbyPeakRateLocation); row_all_zeros1];
-            %}
-            %[M,I] = max(PFmat(E_indices,:), [], 2); 
-            
-            if 1% useMeanPFDensity % Sort by location of mean PF density
-                PFexpectedLocation = sum( PFmat_E./sum(PFmat_E, 2) .*([1:size(PFmat_E, 2)]), 2); % units of space bins
-                %PFexpectedLocation(peakRate<minPeakRate)=nan;
-                [B,sortedCellIndsbyExpectedLocation] = sort(PFexpectedLocation, 'descend');
-                PFpeaksSequence = sortedCellIndsbyExpectedLocation;
-            else % Sort by location of PF peak
-                %peakRateLocation(peakRate<minPeakRate)=nan;
-                [B,sortedCellIndsbyPeakRateLocation] = sort(peakRateLocation, 'descend');
-                PFpeaksSequence = sortedCellIndsbyPeakRateLocation;
-            end
-            
-                
-            % Get best events
+            % Accumulate best events
             pvals_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pvalue(:,1); % pvalue
             % rvals_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.rsquare(:,1); % pvalue
             % fitPvals_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.FitpVal(:,1); % pvalue
-            eventLengths = resultsStruct(ithParam1, ithParam2, ithNet).results.eventLength;
-            mat = resultsStruct(ithParam1, ithParam2, ithNet).results.ranksVec;
-            x = mat./max(mat);
-            x = x(:, eventLengths>0.05); % temp line, since decoding has different min length
+            for ithEvent = 1:size(pvals_preplay)
+                if any(pvals_preplay(ithEvent) < bestEventpVals )
+                   [~, minInd] = max(bestEventpVals);
+                   bestEventpVals(minInd) = pvals_preplay(ithEvent);
+                   bestEvents{minInd} = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pMat{ithEvent}{1}.pMat;
+                end
+            end
+            nEvents = nEvents+numel(pvals_preplay);
             
-            x(peakRate<minPeakRate,:)=nan; % Exclude non high-rate cells
+            % Plot ithNet's best event
+            if plotNetsBest
+                % PF Peak sequence
+                PFmat_E = PFmat(E_indices,:);
+                [peakRate,peakRateLocation] = max(PFmat_E, [], 2);
+
+                if 1 useMeanPFDensity % Sort by location of mean PF density
+                    PFexpectedLocation = sum( PFmat_E./sum(PFmat_E, 2) .*([1:size(PFmat_E, 2)]), 2); % units of space bins
+                    %PFexpectedLocation(peakRate<minPeakRate)=nan;
+                    [B,sortedCellIndsbyExpectedLocation] = sort(PFexpectedLocation, 'descend');
+                    PFpeaksSequence = sortedCellIndsbyExpectedLocation;
+                else % Sort by location of PF peak
+                    %peakRateLocation(peakRate<minPeakRate)=nan;
+                    [B,sortedCellIndsbyPeakRateLocation] = sort(peakRateLocation, 'descend');
+                    PFpeaksSequence = sortedCellIndsbyPeakRateLocation;
+                end
             
-            [a, pvals_sorted ]= sort(pvals_preplay);
+                eventLengths = resultsStruct(ithParam1, ithParam2, ithNet).results.eventLength;
+                mat = resultsStruct(ithParam1, ithParam2, ithNet).results.ranksVec;
+                x = mat./max(mat);
+                x = x(:, eventLengths>0.05); % temp line, since decoding has different min length
+                x(peakRate<minPeakRate,:)=nan; % Exclude non high-rate cells
+
+                [pvals_preplay_sorted, pvals_sorted ]= sort(pvals_preplay);
+                figure; scatter(1:parameters.n_E, x(PFpeaksSequence,pvals_sorted(1))); title(['Best event of network ', num2str(ithNet)])
+                figure; imagesc(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pMat{pvals_sorted(1)}{1}.pMat )
+            end
             
-            figure; scatter(1:parameters.n_E, x(PFpeaksSequence,pvals_sorted(1)) )
-            title(['Best event of network ', num2str(ithNet)])
-            
-            figure; imagesc(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pMat{pvals_sorted(1)}{1}.pMat )
-            
-            keyboard
         end
         
 
@@ -130,8 +132,19 @@ for ithParamSet = 1:size(paramSetInds, 1)
     
     %% Plot best sequences
 
+    if nEventsToPlot>0
+        [pvals_sorted, eventSortInd] = sort(bestEventpVals);
+        figure; tfig = tiledlayout('flow');
+        title(tfig, ['Best ', num2str(numel(bestEvents)), ' of ', num2str(nEvents), ' events'])
+        for ithEventToPlot = eventSortInd'
+            nexttile
+            imagesc(bestEvents{ithEventToPlot})
+            title(['pval=', num2str(bestEventpVals(ithEventToPlot))])
+            %caxis(([0, 0.5*max(bestEvents{ithEventToPlot}, [], 'all')]))
+        end
+    end
+
     keyboard
-    
     
 
     %% Plot combined place fields
@@ -155,6 +168,20 @@ for ithParamSet = 1:size(paramSetInds, 1)
     xlabel('Position (2 cm bin)'); ylabel('Cell (sorted)');
     % colormap(flipud(bone))
     
+    %% Plot cluster-wise place fields
+    figure; tiledlayout(parameters.clusters,1);
+    singularMembership = 0;
+    for ithCluster = parameters.clusters:-1:1
+        if singularMembership
+            isClusterMember = [sum(cluster_matAll(PFpeaksSequence(rateDenomAll>minPeakRate), :), 2)==1] .* [cluster_matAll(PFpeaksSequence(rateDenomAll>minPeakRate),ithCluster)==1];
+        else
+            isClusterMember = [cluster_matAll(PFpeaksSequence(rateDenomAll>minPeakRate),ithCluster)==1];
+        end
+        clusterPF = isClusterMember .* PFmatE_all(PFpeaksSequence(rateDenomAll>minPeakRate),:)./rateDenomAll(rateDenomAll>minPeakRate);
+        zeroInds = all(clusterPF==0, 2);
+        nexttile; imagesc( clusterPF(~zeroInds,:) ); %title('All nets'); colorbar; caxis([0, caxmax])
+        %xlabel('Position (2 cm bin)'); ylabel('Cell (sorted)');
+    end
 
     %% Extra plots      
     if plotExtraPlots
@@ -186,6 +213,11 @@ for ithParamSet = 1:size(paramSetInds, 1)
         %{
         figure; scatter(cellSparsity, spatialInfo)
         figure; scatter(meanPeakRate, spatialInfo)
+        
+        mdl1 = fitlm(nClustMemb_all, spatialInfo); figure; plotAdded(mdl1); xlabel('n cluster membership'); ylabel('Spatial info.'); mdl1
+        mdl2 = fitlm(nClustMemb_all, cellSparsity); figure; plot(mdl2); xlabel('n cluster membership'); ylabel('PF sparsity'); mdl2
+        mdl3 = fitlm(nClustMemb_all, meanPeakRate); figure; plot(mdl3); xlabel('n cluster membership'); ylabel('Peak rate (Hz)'); mdl3
+        
 
         cellsToPlot = [spatialInfo>1.87]; % [rateDenomAll>2];
         figure; imagesc( PFmatE_all(PFpeaksSequence(cellsToPlot),:)./rateDenomAll(cellsToPlot)); title('All nets'); colorbar; caxis([0, caxmax])

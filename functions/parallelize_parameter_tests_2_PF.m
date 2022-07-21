@@ -89,12 +89,11 @@ function [avg_mat, allResults, PFresults] = parallelize_parameter_tests_2(parame
     allResults = cell(1, num_nets) ;
     PFresults = cell(1, num_nets) ;
     for ithNet = 1:num_nets
-        
         network = create_clusters(parameters, 'seed', ithNet, 'include_all', parameters.include_all, 'global_inhib', parameters.global_inhib);
         
-        PFresults{ithNet}{1}.E_indices = network.E_indices;
+        PFresults{ithNet}{1}.E_indices = network.E_indices; % only collect E_indices to verify that create_clusters with netSeed is successful at recreating networks posthoc
         PFresults{ithNet}{1}.netSeed = ithNet;
-        PFresults{ithNet}{1}.cluster_mat = network.cluster_mat;
+        PFresults{ithNet}{1}.variedParamVals = parameterSets_vec(:,ithParamSet);
         
         mat = zeros(num_inits,4);
         network_spike_sequences = struct; 
@@ -105,7 +104,7 @@ function [avg_mat, allResults, PFresults] = parallelize_parameter_tests_2(parame
             
                     
             for ithTrial = 1:pfsim.nTrials
-                %rng(ithTrial)
+                %rng(ithTrial, , 'twister')
                 % G_in_PFs(:,1,ithEnv,ithTrial) = 1/10* dI(:,ithEnv) * 2*parameters.rGmax * parameters.tau_syn_E + sqrt(1/2*parameters.tau_syn_E*dI(:,ithEnv).^2*2*parameters.rGmax).*randn(parameters.n, 1) ; 
                 G_in_PFs(:,1,ithEnv,ithTrial) = zeros(parameters.n, 1) ; 
                 for i = 2:numel(pfsim.t)

@@ -46,7 +46,7 @@ function [network] = create_clusters(parameters, varargin)
 
     
     %% Main:
-    rng(seed)
+    rng(seed, 'twister');
     
     %Decide which neurons are inhib and excit 
     all_indices = [1:parameters.n];

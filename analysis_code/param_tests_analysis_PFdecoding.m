@@ -1,4 +1,10 @@
 
+if isfolder('functions')
+    addpath('functions')
+else
+    addpath( fullfile( '..', 'functions' ) )
+end
+
 
 %% Plot preplay decoding results across grid search
 %

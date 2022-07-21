@@ -179,11 +179,15 @@ clear c1 c2 c3
 % hold on; plot(variedParam(1).range, exp(variedParam(1).range/1.1)-1); plot(variedParam(1).range, exp((variedParam(1).range-1)*5)+15);
 
 %%
+
+%{
 X = squeeze(op(1,:,:))';
 figure; plot(X); set(gca,'YScale','log')
+%}
 
 %% Detect threshold crossing, then plot fitted exponential curve
 
+%{
 thresh = 0.4;
 x = squeeze(op(2,:,:))>thresh; 
 % figure; imagesc(mncVec, nClustersVec, x'); set(gca, 'YDir', 'normal')
@@ -196,3 +200,4 @@ ft = fittype('a*exp(b*x) + c');
 
 hold on; scatter(xParamvec(xvalinds), yParamvec(yvalinds), 'r')
 plot(xParamvec, fexp(xParamvec), 'r')
+%}

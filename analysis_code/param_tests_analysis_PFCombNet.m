@@ -20,7 +20,9 @@ variedParam(2).name
 
 minPeakRate = 2; % minimum peak PF rate to be considered a place cell
 calcScore = 0
-plotExtraPlots = 1 % if 1, plot place fields of every network
+plotExtraPlots = 0 % if 1, plot place fields of every network
+nEventsToPlot = 3
+useMeanPFDensity = true
 
 
 %% Loop over parameter sets
@@ -51,10 +53,20 @@ for ithParamSet = 1:size(paramSetInds, 1)
         
         % PF: plot and calculate score
         if calcScore
+            
+            %{
+            netParams=parameters;
+            for i = 1:size(variedParam, 2)
+                netParams.(variedParam(i).name) = variedParam(i).range(paramSetInds(i));
+            end
+            netParams = set_depedent_parameters(netParams);
+            networkEst = create_clusters(netParams, 'seed', ithNet, 'include_all', netParams.include_all, 'global_inhib', netParams.global_inhib);
+            %}
             network = struct; 
             linfields = {};
             network.E_indices = E_indices;
             network.all_indices = 1:parameters.n;
+            
             day = 1; epoch = 1; tetrode = 1; tr = 1;
             linfields{day}{epoch}{tetrode}{1}{tr}(:,1) = pfsim.gridxvals*100; % convert to cm
             for ithCell = network.E_indices
@@ -64,18 +76,63 @@ for ithParamSet = 1:size(paramSetInds, 1)
             PFscores_all = [PFscores_all, PFscore];
         end
         
+        if nEventsToPlot>0
+            
+            % PF Peak sequence
+            PFmat_E = PFmat(E_indices,:);
+            [peakRate,peakRateLocation] = max(PFmat_E, [], 2);
+            %{
+            row_all_zeros1 = find(all( PFmat_E==0, 2)) ;
+            row_n_all_zeros1 = find(~all( PFmat_E==0, 2)) ;
+            [peakRate,peakRateLocation] = max(squeeze(PFmat_E(row_n_all_zeros1,:)), [], 2);
+            [B,sortedCellIndsbyPeakRateLocation] = sort(peakRateLocation, 'descend');
+            PFpeaksSequence = [row_n_all_zeros1(sortedCellIndsbyPeakRateLocation); row_all_zeros1];
+            %}
+            %[M,I] = max(PFmat(E_indices,:), [], 2); 
+            
+            if 1% useMeanPFDensity % Sort by location of mean PF density
+                PFexpectedLocation = sum( PFmat_E./sum(PFmat_E, 2) .*([1:size(PFmat_E, 2)]), 2); % units of space bins
+                %PFexpectedLocation(peakRate<minPeakRate)=nan;
+                [B,sortedCellIndsbyExpectedLocation] = sort(PFexpectedLocation, 'descend');
+                PFpeaksSequence = sortedCellIndsbyExpectedLocation;
+            else % Sort by location of PF peak
+                %peakRateLocation(peakRate<minPeakRate)=nan;
+                [B,sortedCellIndsbyPeakRateLocation] = sort(peakRateLocation, 'descend');
+                PFpeaksSequence = sortedCellIndsbyPeakRateLocation;
+            end
+            
+                
+            % Get best events
+            pvals_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pvalue(:,1); % pvalue
+            % rvals_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.rsquare(:,1); % pvalue
+            % fitPvals_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.FitpVal(:,1); % pvalue
+            ventLengths = resultsStruct(ithParam1, ithParam2, ithNet).results.eventLength;
+            mat = resultsStruct(ithParam1, ithParam2, ithNet).results.ranksVec;
+            x = mat./max(mat);
+            x = x(:, eventLengths>0.05); % temp line, since decoding has different min length
+            
+            x(peakRate<minPeakRate,:)=nan; % Exclude non high-rate cells
+            
+            [a, pvals_sorted ]= sort(pvals_preplay);
+            
+            figure; scatter(1:parameters.n_E, x(PFpeaksSequence,pvals_sorted(1)) )
+            title(['Best event of network ', num2str(ithNet)])
+            
+            keyboard
+        end
+        
 
     end
 
     
     %% Plot best sequences
-    %{
-    pvals_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pvalue(:,1); % pvalue
-    % figure; scatter(rvals_preplay, pvals_preplay)
-    mat = resultsStruct(ithParam1, ithParam2, ithNet).results.ranksVec;
-    x = mat./max(mat);
-    figure; scatter
-    %}
+
+    keyboard
+    
+    
+
+    
+    
     
     
     %% Plot combined place fields

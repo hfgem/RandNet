@@ -10,7 +10,7 @@ end
 
 % paramSetInds = [3, 3; 3 4; 4,2]
 % paramSetInds = combvec([1:size(resultsStruct, 1)], [1:size(resultsStruct, 2)])'
-paramSetInds = combvec([3], [3])'
+paramSetInds = combvec([2], [2])'
 
 parameters.n
 parameters.del_G_sra
@@ -40,6 +40,7 @@ for ithParamSet = 1:size(paramSetInds, 1)
     netInd_all = []; % Index of which net each cell came from
     nClustMemb_all = []; % number of clusters each cell is a member of
     PFscores_all = [];
+    
     for ithNet = 1:size(resultsStruct, 3)
 
         % Get matrix of PFs
@@ -106,7 +107,7 @@ for ithParamSet = 1:size(paramSetInds, 1)
             pvals_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pvalue(:,1); % pvalue
             % rvals_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.rsquare(:,1); % pvalue
             % fitPvals_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.FitpVal(:,1); % pvalue
-            ventLengths = resultsStruct(ithParam1, ithParam2, ithNet).results.eventLength;
+            eventLengths = resultsStruct(ithParam1, ithParam2, ithNet).results.eventLength;
             mat = resultsStruct(ithParam1, ithParam2, ithNet).results.ranksVec;
             x = mat./max(mat);
             x = x(:, eventLengths>0.05); % temp line, since decoding has different min length
@@ -117,6 +118,8 @@ for ithParamSet = 1:size(paramSetInds, 1)
             
             figure; scatter(1:parameters.n_E, x(PFpeaksSequence,pvals_sorted(1)) )
             title(['Best event of network ', num2str(ithNet)])
+            
+            figure; imagesc(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pMat{pvals_sorted(1)}{1}.pMat )
             
             keyboard
         end
@@ -131,10 +134,6 @@ for ithParamSet = 1:size(paramSetInds, 1)
     
     
 
-    
-    
-    
-    
     %% Plot combined place fields
     row_all_zeros1 = find(all( PFmatE_all==0, 2)) ;
     row_n_all_zeros1 = find(~all( PFmatE_all==0, 2)) ;

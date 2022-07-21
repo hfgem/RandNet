@@ -272,29 +272,35 @@ for i = 1:length(pair_param_comb)
         % paramPlot1 v paramPlot2 across 4 average results
 
         f = figure;
-        subplot(2,2,1)
+        subplot(3,2,1)
         imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, squeeze(mean(frac_partic,notparams))', 'AlphaData', ~isnan(squeeze(mean(frac_partic,notparams))'))
         set(gca,'YDir','normal')
         c1 = colorbar(); c1.Label.String = 'Fraction of neurons';
-        title('Frac. firing (event)'); xlabel(variedParam(paramPlot1).name,'Interpreter','none'); ylabel(variedParam(paramPlot2).name,'Interpreter','none')
+        title('Fraction of Firing (event)'); xlabel(variedParam(paramPlot1).name,'Interpreter','none'); ylabel(variedParam(paramPlot2).name,'Interpreter','none')
 
-        subplot(2,2,2)
+        subplot(3,2,2)
         imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, squeeze(mean(avg_fr,notparams))', 'AlphaData', ~isnan(squeeze(mean(avg_fr,notparams))'))
         set(gca,'YDir','normal')
         c2 = colorbar(); c2.Label.String = "Hz";
-        title('Mean spike rate (trial)'); xlabel(variedParam(paramPlot1).name,'Interpreter','none'); ylabel(variedParam(paramPlot2).name,'Interpreter','none')
+        title('Mean Spike Rate (trial)'); xlabel(variedParam(paramPlot1).name,'Interpreter','none'); ylabel(variedParam(paramPlot2).name,'Interpreter','none')
 
-        subplot(2,2,3)
+        subplot(3,2,3)
         imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, squeeze(mean(avg_event_length,notparams))', 'AlphaData', ~isnan(squeeze(mean(avg_event_length,notparams))'))
         set(gca,'YDir','normal')
         c3 = colorbar(); c3.Label.String = "Seconds";
         title('Mean Event Length'); xlabel(variedParam(paramPlot1).name,'Interpreter','none'); ylabel(variedParam(paramPlot2).name,'Interpreter','none')
 
-        subplot(2,2,4)
+        subplot(3,2,4)
         imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, squeeze(mean(avg_n_events,notparams))'/parameters.t_max, 'AlphaData', ~isnan(squeeze(mean(avg_n_events,notparams))'))
         set(gca,'YDir','normal')
         c4 = colorbar(); c4.Label.String = "nEvents / s";
-        title('Mean event frequency'); xlabel(variedParam(paramPlot1).name,'Interpreter','none'); ylabel(variedParam(paramPlot2).name,'Interpreter','none')
+        title('Mean Event Frequency'); xlabel(variedParam(paramPlot1).name,'Interpreter','none'); ylabel(variedParam(paramPlot2).name,'Interpreter','none')
+        
+        subplot(3,2,5)
+        imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, squeeze(mean(event_criticality,notparams))'/parameters.t_max, 'AlphaData', ~isnan(squeeze(mean(event_criticality,notparams))'))
+        set(gca,'YDir','normal')
+        c4 = colorbar(); c4.Label.String = "nEvents / s";
+        title('Mean Criticality'); xlabel(variedParam(paramPlot1).name,'Interpreter','none'); ylabel(variedParam(paramPlot2).name,'Interpreter','none')
         
         clear c1 c2 c3 c4
 

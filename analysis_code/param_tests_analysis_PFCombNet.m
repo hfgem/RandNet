@@ -27,6 +27,7 @@ plotExtraPlots = 0 % if 1, plot place fields of every network
 nEventsToPlot = 25
 useMeanPFDensity = true
 plotNetsBest = 0
+plotPvalMat = true
 
 %% Loop over parameter sets
 rng(1); tic
@@ -49,6 +50,10 @@ for ithParamSet = 1:size(paramSetInds, 1)
     bestEvents_relRankColor = cell(nEventsToPlot, 1);
     nEvents = 0;
     cluster_matAll = [];
+    allEventRs = [];
+    allEventMaxJumps = [];
+    allShuffleRs = [];
+    allShuffleMaxJumps = [];
     for ithNet = 1:size(resultsStruct, 3)
 
         % Get matrix of PFs
@@ -71,6 +76,19 @@ for ithParamSet = 1:size(paramSetInds, 1)
         nClustMemb_all = [nClustMemb_all; sum(network.cluster_mat(:,E_indices), 1)'];
         cluster_matAll = [cluster_matAll; network.cluster_mat(:,E_indices)'] ;
 
+        %keyboard
+        rsqrs_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.rsquare(:,1); 
+        maxJumps_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.maxJump(:,1); 
+        rsqrs_shuffle = vertcat(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.shuffle_rsquare{:}); 
+        rsqrs_shuffle = rsqrs_shuffle(:,1);
+        maxJumps_shuffle = vertcat(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.shuffle_maxJump{:}); 
+        maxJumps_shuffle = maxJumps_shuffle(:,1);
+        allEventRs = [allEventRs; rsqrs_preplay];
+        allEventMaxJumps = [allEventMaxJumps; maxJumps_preplay];
+        allShuffleRs = [allShuffleRs; rsqrs_shuffle];
+        allShuffleMaxJumps = [allShuffleMaxJumps; maxJumps_shuffle];
+        
+        
         % PF: plot and calculate score
         if calcScore
             % network = struct; linfields = {}; network.E_indices = E_indices; network.all_indices = 1:parameters.n;
@@ -145,6 +163,59 @@ for ithParamSet = 1:size(paramSetInds, 1)
 
     end
 
+    %% Plot p-value matrix
+    
+    if plotPvalMat
+        rvalThresh_vec = 0:0.1:1;
+        jumpThres_vec = 0:0.1:1;
+
+        op = zeros(numel(jumpThres_vec), numel(rvalThresh_vec));
+        for ij = 1:numel(jumpThres_vec)
+
+            for ir = 1:numel(rvalThresh_vec)
+                nActPass = mean( [allEventRs>rvalThresh_vec(ir)] & [allEventMaxJumps<jumpThres_vec(ij)]);
+                nShuffPass = zeros(1, size(allShuffleMaxJumps{1}, 2));
+                for ithShuf = 1:size(allShuffleMaxJumps{1}, 2)
+                    nShuff_jump = cellfun(@(x) [x(ithShuf)<jumpThres_vec(ij)], allShuffleMaxJumps);
+                    nShuff_rval = cellfun(@(x) [x(ithShuf)>rvalThresh_vec(ir)], allShuffleRs);
+                    nShuffPass(ithShuf) = mean( nShuff_jump & nShuff_rval );
+                end
+
+                op(ij, ir) = 1 - mean(nActPass>nShuffPass);
+                if [sum(nShuffPass)==0] & [sum(nActPass)==0]
+                    op(ij, ir) = nan;
+                end
+            end
+            ij
+        end
+
+        % Plot with linear colormap
+        figure; imagesc(rvalThresh_vec, jumpThres_vec, op', 'AlphaData', ~isnan(op')); colorbar
+        xlabel('max jump')
+        ylabel('r^2')
+
+        % Plot with better colormap
+        figure; 
+        imagesc(rvalThresh_vec, jumpThres_vec, log10(op'), 'AlphaData', ~isnan(op'))
+        % set(gca,'YDir','normal')
+        cb = colorbar(); %cb.Label.String = cbLabel2;
+        xlabel('max jump')
+        ylabel('r^2')
+        %title(analysisTitle)
+        N = 256; n = N/2;
+        cm = NaN(N,3);
+        cm(:,1) = [ones(n,1);linspace(1,0,N-n)';];
+        cm(:,2) = [linspace(0,1,n)';linspace(1,0,N-n)']; 
+        cm(:,3) = [linspace(0,1,n)';ones(N-n,1)]; 
+        set(gca,'clim',[log10(.05)*2 0])
+        set(gcf,'colormap',cm)
+        colorbar
+        colorbar('Direction','reverse','Ticks',[log10(.005),log10(.05),log10(.5)],'TickLabels',[.005,.05,.5])
+        hold on; 
+        [xnan, ynan] = find(isnan(op));
+        scatter(rvalThresh_vec(xnan), jumpThres_vec(ynan), 300, 'x')
+    end
+
     
     %% Plot best sequences
     
@@ -175,8 +246,6 @@ for ithParamSet = 1:size(paramSetInds, 1)
             %caxis(([0, 0.5*max(bestEvents{ithEventToPlot}, [], 'all')]))
         end
     end
-
-    keyboard
     
 
     %% Plot combined place fields

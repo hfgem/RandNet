@@ -48,7 +48,7 @@ else
     cbLabel2 = 'Median KS-stat';
 end
 
-op = nan(2, numel(xParamvec), numel(yParamvec));
+op = nan(3, numel(xParamvec), numel(yParamvec));
 
 allNetPvals = zeros(numel(xParamvec), numel(yParamvec), num_nets);
 allNetKSstat = zeros(numel(xParamvec), numel(yParamvec), num_nets);
@@ -71,6 +71,8 @@ for ithParam1 = 1:size(resultsStruct, 1)
         temp = nan(1, num_nets);
         allRvecs = [];
         allRvecs_shuff = [];
+        nEvents_accum = 0;
+        nSigEvents_accum = 0;
         for ithNet = 1:size(resultsStruct, 3)
             
             % if ~isempty(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pMat)
@@ -110,10 +112,17 @@ for ithParam1 = 1:size(resultsStruct, 1)
                 
                 allRvecs = [allRvecs, rvals_preplay'];
                 allRvecs_shuff = [allRvecs_shuff, rvals_shuffle'];
+                
+                pvals_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pvalue(:,1);
+                nEvents_accum = nEvents_accum + numel(pvals_preplay);
+                nSigEvents_accum = nSigEvents_accum + sum(pvals_preplay<0.05);
+                
+                temp(3, ithNet) = numel(pvals_preplay) / sum(pvals_preplay<0.05) ;
 
             else
                 temp(1, ithNet) = nan;
-                temp(2, ithNet) = KSSTAT;
+                temp(2, ithNet) = nan;
+                temp(3, ithNet) = nan;
             end
                 
         end
@@ -127,10 +136,12 @@ for ithParam1 = 1:size(resultsStruct, 1)
                 [~,p_kstest,KSSTAT] = kstest2(allRvecs, allRvecs_shuff);
                 op(1, ithParam1, ithParam2) = p_kstest;
                 op(2, ithParam1, ithParam2) = KSSTAT;
+                op(3, ithParam1, ithParam2) = nSigEvents_accum/nEvents_accum;
             else
                 p_kstest = nan;
                 op(1, ithParam1, ithParam2) = nan;
                 op(2, ithParam1, ithParam2) = nan;
+                op(3, ithParam1, ithParam2) = nan;
             end
             
             if plotCombinedCDFs
@@ -148,6 +159,7 @@ for ithParam1 = 1:size(resultsStruct, 1)
             op(1, ithParam1, ithParam2) = median(temp(1,:));
             %op(1, ithParam1, ithParam2) = min(temp(1,:));
             op(2, ithParam1, ithParam2) = nanmean(temp(2,:));
+            op(3, ithParam1, ithParam2) = nanmean(temp(3,:));
         end
         
 
@@ -175,6 +187,15 @@ figure;
 imagesc(xParamvec, yParamvec, squeeze(op(2,:,:))', 'AlphaData', ~isnan(squeeze(op(2,:,:))'))
 set(gca,'YDir','normal')
 cb = colorbar(); cb.Label.String = cbLabel2;
+xlabel(xName,'Interpreter','none')
+ylabel(yName,'Interpreter','none')
+title(analysisTitle)
+
+
+figure; 
+imagesc(xParamvec, yParamvec, squeeze(op(3,:,:))', 'AlphaData', ~isnan(squeeze(op(3,:,:))'))
+set(gca,'YDir','normal')
+cb = colorbar(); cb.Label.String = 'Frac Sig';
 xlabel(xName,'Interpreter','none')
 ylabel(yName,'Interpreter','none')
 title(analysisTitle)
@@ -219,15 +240,16 @@ ylabel('KStest p-value')
 
 %% Plot net-wise scatter, if multiple parameter points were run
 
-[a, b] = find(squeeze(op(1,:,:))'<0.05); ind1 = [a]; ind2 = [b];
-ind1 = [3]; ind2 = [3];
+try
+    [a, b] = find(squeeze(op(1,:,:))'<0.05); ind1 = [a]; ind2 = [b];
+    ind1 = [3]; ind2 = [3];
 
-X = squeeze(allNetMedianDiff(ind1,ind2,:));
-Y = squeeze(allNetPvals(ind1,ind2,:)); 
-ID = squeeze(allNetGroupID(ind1,ind2,:));
-figure; scatterhist(X(:), Y(:), 'Group', ID(:), 'Kernel','on')
-xlabel('median(actual R^2)-median(shuff R^2)')
-ylabel('KStest p-value')
-
+    X = squeeze(allNetMedianDiff(ind1,ind2,:));
+    Y = squeeze(allNetPvals(ind1,ind2,:)); 
+    ID = squeeze(allNetGroupID(ind1,ind2,:));
+    figure; scatterhist(X(:), Y(:), 'Group', ID(:), 'Kernel','on')
+    xlabel('median(actual R^2)-median(shuff R^2)')
+    ylabel('KStest p-value')
+end
 
 

@@ -24,7 +24,7 @@ calcScore = 0
 plotExtraPlots = 0 % if 1, plot place fields of every network
 nEventsToPlot = 25
 useMeanPFDensity = true
-plotNetsBest = false
+plotNetsBest = 1
 
 %% Loop over parameter sets
 rng(1); tic
@@ -120,8 +120,17 @@ for ithParamSet = 1:size(paramSetInds, 1)
                 x(peakRate<minPeakRate,:)=nan; % Exclude non high-rate cells
 
                 [pvals_preplay_sorted, pvals_sorted ]= sort(pvals_preplay);
-                figure; scatter(1:parameters.n_E, x(PFpeaksSequence,pvals_sorted(1))); title(['Best event of network ', num2str(ithNet)])
+                %figure; scatter(1:parameters.n_E, x(PFpeaksSequence,pvals_sorted(1))); title(['Best event of network ', num2str(ithNet)])
                 figure; imagesc(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pMat{pvals_sorted(1)}{1}.pMat )
+                xlabel('Time bin (10 ms)'); ylabel('Space bin (2 cm)'); title(['Best event of network ', num2str(ithNet)])
+                                
+                % Cluster-wise coloring of raster
+                seqMat = x(PFpeaksSequence,pvals_sorted(1));
+                clustMat = network.cluster_mat(:,E_indices)'; 
+                clustColor = clustMat*[1:netParams.clusters]' ./ sum(clustMat, 2);
+                figure; scatter(1:parameters.n_E, x(PFpeaksSequence,pvals_sorted(1)), [], clustColor(PFpeaksSequence), 'filled'); colorbar; 
+                xlabel('Neuron (sort by PF expected location)'); ylabel('Event relative rank'); title(['Best event of network ', num2str(ithNet)])
+                
             end
             
         end
@@ -186,13 +195,13 @@ for ithParamSet = 1:size(paramSetInds, 1)
     %% Extra plots      
     if plotExtraPlots
         % Example network PFs    
-        cellsToPlot = [rateDenomAll>minPeakRate] & [netInd_all(PFpeaksSequence)==10];
+        cellsToPlot = [rateDenomAll>minPeakRate] & [netInd_all(PFpeaksSequence)==2];
         figure; imagesc( PFmatE_all(PFpeaksSequence(cellsToPlot),:)./rateDenomAll(cellsToPlot)); title('Example net'); colorbar; caxis([0, caxmax])
         xlabel('Position (2 cm bin)'); ylabel('Cell (sorted)');
 
         % 'Peak Rate'
-        meanPeakRate= max(PFmatE_all, [], 2);
-        figure; histogram(meanPeakRate(rateDenomAll>minPeakRate)); xlabel('Peak PF rate (Hz)'); ylabel('E cells (count)');
+        peakRate= max(PFmatE_all, [], 2);
+        figure; histogram(peakRate(peakRate>minPeakRate)); xlabel('Peak PF rate (Hz)'); ylabel('E cells (count)');
 
         % 'kstest'
         ksstat_vec = [];
@@ -200,35 +209,37 @@ for ithParamSet = 1:size(paramSetInds, 1)
             [~,p,ksstat,~] = kstest( ( PFmatE_all(i,:)-mean(PFmatE_all(i,:), 2) )./(std(PFmatE_all(i,:), [], 2)+eps  ) );
             ksstat_vec(i) = ksstat;
         end   
-        figure; histogram(ksstat_vec(rateDenomAll>minPeakRate)); xlabel('kstest stat'); ylabel('E cells (count)');
+        figure; histogram(ksstat_vec(peakRate>minPeakRate)); xlabel('kstest stat'); ylabel('E cells (count)');
 
         % 'sparsity'                
         cellSparsity = mean( PFmatE_all<=[0.25*max(PFmatE_all, [], 2)], 2 );
-        figure; histogram(cellSparsity(rateDenomAll>minPeakRate)); xlabel('PF sparsity'); ylabel('E cells (count)');
+        figure; histogram(cellSparsity(peakRate>minPeakRate)); xlabel('PF sparsity'); ylabel('E cells (count)');
 
         % 'information'
         spatialInfo = nanmean( [PFmatE_all./mean(PFmatE_all, 2)] .* log(( PFmatE_all+eps )./mean(PFmatE_all, 2) ), 2 );
-        figure; histogram(spatialInfo(rateDenomAll>minPeakRate)); xlabel('PF information'); ylabel('E cells (count)');
+        figure; histogram(spatialInfo(peakRate>minPeakRate)); xlabel('PF information'); ylabel('E cells (count)');
 
-        %{
-        figure; scatter(cellSparsity, spatialInfo)
-        figure; scatter(meanPeakRate, spatialInfo)
         
-        mdl1 = fitlm(nClustMemb_all, spatialInfo); figure; plotAdded(mdl1); xlabel('n cluster membership'); ylabel('Spatial info.'); mdl1
-        mdl2 = fitlm(nClustMemb_all, cellSparsity); figure; plot(mdl2); xlabel('n cluster membership'); ylabel('PF sparsity'); mdl2
-        mdl3 = fitlm(nClustMemb_all, meanPeakRate); figure; plot(mdl3); xlabel('n cluster membership'); ylabel('Peak rate (Hz)'); mdl3
+        figure; scatter(cellSparsity, spatialInfo); xlabel('PF sparsity'); ylabel('Spatial info.')
+        figure; scatter(peakRate, spatialInfo); xlabel('Peak rate (Hz)'); ylabel('Spatial info.')
         
+        mdl1 = fitlm(nClustMemb_all, spatialInfo); figure; plot(mdl1); xlabel('n cluster membership'); ylabel('Spatial info.'); 
+        title(['pval=', num2str(mdl1.Coefficients.pValue(2)), ', rsqr=', num2str(mdl1.Rsquared.Ordinary)]); mdl1
+        mdl2 = fitlm(nClustMemb_all, cellSparsity); figure; plot(mdl2); xlabel('n cluster membership'); ylabel('PF sparsity'); 
+        title(['pval=', num2str(mdl2.Coefficients.pValue(2)), ', rsqr=', num2str(mdl2.Rsquared.Ordinary)]); mdl2
+        mdl3 = fitlm(nClustMemb_all, peakRate); figure; plot(mdl3); xlabel('n cluster membership'); ylabel('Peak rate (Hz)'); 
+        title(['pval=', num2str(mdl3.Coefficients.pValue(2)), ', rsqr=', num2str(mdl3.Rsquared.Ordinary)]); mdl3
 
         cellsToPlot = [spatialInfo>1.87]; % [rateDenomAll>2];
         figure; imagesc( PFmatE_all(PFpeaksSequence(cellsToPlot),:)./rateDenomAll(cellsToPlot)); title('All nets'); colorbar; caxis([0, caxmax])
         xlabel('Position (2 cm bin)'); ylabel('Cell (sorted)');
-        %}
+        
         
         % 'Example best place fields'
-        [~, SIind] = sort( ksstat_vec' .* [peakRateLocation_all>10&peakRateLocation_all<40] .* [meanPeakRate>4] .* [cellSparsity>0.5], 'descend' );
+        [~, SIind] = sort( ksstat_vec' .* [peakRateLocation_all>10&peakRateLocation_all<40] .* [peakRate>4] .* [cellSparsity>0.5], 'descend' );
         % [~, SIind] = sort( spatialInfo' .* [peakRateLocation_all>10&peakRateLocation_all<40] .* [meanPeakRate>4] .* [cellSparsity>0.5], 'descend' );
         figure; plot(1:size(PFmatE_all, 2), PFmatE_all(SIind(1:4),:))
-        xlabel('Location (2 cm bins)'); ylabel('Firing rate (Hz)'); title('Example place fields')
+        xlabel('Location (2 cm bins)'); ylabel('Firing rate (Hz)'); title('Good example place fields')
         
     end
     

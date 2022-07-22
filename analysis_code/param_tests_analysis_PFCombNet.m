@@ -2,6 +2,8 @@
 %% Plot combined place fields at a particular parameter point
 % load('C:\Users\Jordan\Box\Data\Replay project\RandNet\temp, new PF sim code grids\results_2022-07-12T06-58.mat')
 % load('C:\Users\Jordan\Box\Data\Replay project\RandNet\temp, new PF sim code grids\results_2022-07-21T15-05.mat')
+% load('../results/randnet_PF_param_tests/results_2022-07-21T15-05.mat')
+
 
 if isfolder('functions')
     addpath('functions')
@@ -24,7 +26,7 @@ calcScore = 0
 plotExtraPlots = 0 % if 1, plot place fields of every network
 nEventsToPlot = 25
 useMeanPFDensity = true
-plotNetsBest = 1
+plotNetsBest = 0
 
 %% Loop over parameter sets
 rng(1); tic
@@ -42,7 +44,9 @@ for ithParamSet = 1:size(paramSetInds, 1)
     nClustMemb_all = []; % number of clusters each cell is a member of
     PFscores_all = [];
     bestEventpVals = inf(nEventsToPlot, 1); % nEventsToPlot best event pvals
-    bestEvents = cell(nEventsToPlot, 1);
+    bestEvents_decode = cell(nEventsToPlot, 1);
+    bestEvents_relRank = cell(nEventsToPlot, 1);
+    bestEvents_relRankColor = cell(nEventsToPlot, 1);
     nEvents = 0;
     cluster_matAll = [];
     for ithNet = 1:size(resultsStruct, 3)
@@ -83,54 +87,57 @@ for ithParamSet = 1:size(paramSetInds, 1)
         if nEventsToPlot>0
             if isempty(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pvalue); continue; end
             
-            % Accumulate best events
             pvals_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pvalue(:,1); % pvalue
             % rvals_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.rsquare(:,1); % pvalue
             % fitPvals_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.FitpVal(:,1); % pvalue
+            
+            % PF Peak sequence
+            PFmat_E = PFmat(E_indices,:);
+            [peakRate,peakRateLocation] = max(PFmat_E, [], 2);
+
+            if useMeanPFDensity % Sort by location of mean PF density
+                PFexpectedLocation = sum( PFmat_E./sum(PFmat_E, 2) .*([1:size(PFmat_E, 2)]), 2); % units of space bins
+                %PFexpectedLocation(peakRate<minPeakRate)=nan;
+                [B,sortedCellIndsbyExpectedLocation] = sort(PFexpectedLocation, 'descend');
+                PFpeaksSequence = sortedCellIndsbyExpectedLocation;
+            else % Sort by location of PF peak
+                %peakRateLocation(peakRate<minPeakRate)=nan;
+                [B,sortedCellIndsbyPeakRateLocation] = sort(peakRateLocation, 'descend');
+                PFpeaksSequence = sortedCellIndsbyPeakRateLocation;
+            end
+
+            eventLengths = resultsStruct(ithParam1, ithParam2, ithNet).results.eventLength;
+            mat = resultsStruct(ithParam1, ithParam2, ithNet).results.ranksVec;
+            x = mat./max(mat);
+            x = x(:, eventLengths>0.05); % temp line, since decoding has different min length
+            x(peakRate<minPeakRate,:)=nan; % Exclude non high-rate cells
+
+            [pvals_preplay_sorted, pvals_sorted ]= sort(pvals_preplay);
+
+            % Cluster-wise coloring of raster
+            % seqMat = x(PFpeaksSequence,pvals_sorted(1));
+            clustMat = network.cluster_mat(:,E_indices)'; 
+            clustColor = clustMat*[1:netParams.clusters]' ./ sum(clustMat, 2);
+
+            % Accumulate best events
             for ithEvent = 1:size(pvals_preplay)
                 if any(pvals_preplay(ithEvent) < bestEventpVals )
-                   [~, minInd] = max(bestEventpVals);
-                   bestEventpVals(minInd) = pvals_preplay(ithEvent);
-                   bestEvents{minInd} = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pMat{ithEvent}{1}.pMat;
+                    [~, minInd] = max(bestEventpVals);
+                    bestEventpVals(minInd) = pvals_preplay(ithEvent);
+                    bestEvents_decode{minInd} = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pMat{ithEvent}{1}.pMat;
+                    bestEvents_relRank{minInd} = x(PFpeaksSequence,ithEvent);
+                    bestEvents_relRankColor{minInd} = clustColor(PFpeaksSequence);
                 end
             end
             nEvents = nEvents+numel(pvals_preplay);
             
             % Plot ithNet's best event
             if plotNetsBest
-                % PF Peak sequence
-                PFmat_E = PFmat(E_indices,:);
-                [peakRate,peakRateLocation] = max(PFmat_E, [], 2);
-
-                if 1 useMeanPFDensity % Sort by location of mean PF density
-                    PFexpectedLocation = sum( PFmat_E./sum(PFmat_E, 2) .*([1:size(PFmat_E, 2)]), 2); % units of space bins
-                    %PFexpectedLocation(peakRate<minPeakRate)=nan;
-                    [B,sortedCellIndsbyExpectedLocation] = sort(PFexpectedLocation, 'descend');
-                    PFpeaksSequence = sortedCellIndsbyExpectedLocation;
-                else % Sort by location of PF peak
-                    %peakRateLocation(peakRate<minPeakRate)=nan;
-                    [B,sortedCellIndsbyPeakRateLocation] = sort(peakRateLocation, 'descend');
-                    PFpeaksSequence = sortedCellIndsbyPeakRateLocation;
-                end
-            
-                eventLengths = resultsStruct(ithParam1, ithParam2, ithNet).results.eventLength;
-                mat = resultsStruct(ithParam1, ithParam2, ithNet).results.ranksVec;
-                x = mat./max(mat);
-                x = x(:, eventLengths>0.05); % temp line, since decoding has different min length
-                x(peakRate<minPeakRate,:)=nan; % Exclude non high-rate cells
-
-                [pvals_preplay_sorted, pvals_sorted ]= sort(pvals_preplay);
                 %figure; scatter(1:parameters.n_E, x(PFpeaksSequence,pvals_sorted(1))); title(['Best event of network ', num2str(ithNet)])
                 figure; imagesc(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pMat{pvals_sorted(1)}{1}.pMat )
-                xlabel('Time bin (10 ms)'); ylabel('Space bin (2 cm)'); title(['Best event of network ', num2str(ithNet)])
-                                
-                % Cluster-wise coloring of raster
-                seqMat = x(PFpeaksSequence,pvals_sorted(1));
-                clustMat = network.cluster_mat(:,E_indices)'; 
-                clustColor = clustMat*[1:netParams.clusters]' ./ sum(clustMat, 2);
+                  xlabel('Time bin (10 ms)'); ylabel('Space bin (2 cm)'); title(['Best event of network ', num2str(ithNet)])
                 figure; scatter(1:parameters.n_E, x(PFpeaksSequence,pvals_sorted(1)), [], clustColor(PFpeaksSequence), 'filled'); colorbar; 
-                xlabel('Neuron (sort by PF expected location)'); ylabel('Event relative rank'); title(['Best event of network ', num2str(ithNet)])
-                
+                  xlabel('Neuron (sort by PF expected location)'); ylabel('Event relative rank'); title(['Best event of network ', num2str(ithNet)])
             end
             
         end
@@ -140,14 +147,30 @@ for ithParamSet = 1:size(paramSetInds, 1)
 
     
     %% Plot best sequences
-
+    
+    % Decodes
     if nEventsToPlot>0
         [pvals_sorted, eventSortInd] = sort(bestEventpVals);
         figure; tfig = tiledlayout('flow');
-        title(tfig, ['Best ', num2str(numel(bestEvents)), ' of ', num2str(nEvents), ' events'])
+        title(tfig, ['Best ', num2str(numel(bestEvents_decode)), ' of ', num2str(nEvents), ' events'])
         for ithEventToPlot = eventSortInd'
             nexttile
-            imagesc(bestEvents{ithEventToPlot})
+            imagesc(bestEvents_decode{ithEventToPlot})
+            title(['pval=', num2str(bestEventpVals(ithEventToPlot))])
+            %caxis(([0, 0.5*max(bestEvents{ithEventToPlot}, [], 'all')]))
+        end
+    end
+    
+    % Relative ranks (corresponding to decodes)
+    if nEventsToPlot>0
+        [pvals_sorted, eventSortInd] = sort(bestEventpVals);
+        figure; tfig = tiledlayout('flow');
+        title(tfig, ['Best ', num2str(numel(bestEvents_relRank)), ' of ', num2str(nEvents), ' events'])
+        for ithEventToPlot = eventSortInd'
+            nexttile
+            eventSeq = bestEvents_relRank{ithEventToPlot};
+            scatter(1:sum(~isnan(eventSeq)), eventSeq(~isnan(eventSeq)), [], bestEvents_relRankColor{ithEventToPlot}(~isnan(eventSeq)), 'filled')
+            %scatter(1:parameters.n_E, bestEvents_relRank{ithEventToPlot})
             title(['pval=', num2str(bestEventpVals(ithEventToPlot))])
             %caxis(([0, 0.5*max(bestEvents{ithEventToPlot}, [], 'all')]))
         end

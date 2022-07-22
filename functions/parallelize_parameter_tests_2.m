@@ -43,6 +43,9 @@ function [avg_mat, allResults] = parallelize_parameter_tests_2(parameters,...
     %       5. critical (=1) or not(=0)
     %   allResults = Cell structure storing all results
     %_________
+    
+    % For debugging only, output which parameter set is in progress:
+    disp(['Parameter set ', num2str(ithParamSet), '/', num2str(size(parameterSets_vec, 2)), ' started'])
 
     % Set up parameter values for current parameter set
     for i = 1:size(variedParam, 2)

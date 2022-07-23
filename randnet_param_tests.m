@@ -297,9 +297,9 @@ for i = 1:length(pair_param_comb)
         title('Mean Event Frequency'); xlabel(variedParam(paramPlot1).name,'Interpreter','none'); ylabel(variedParam(paramPlot2).name,'Interpreter','none')
         
         subplot(3,2,5)
-        imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, squeeze(mean(event_criticality,notparams))'/parameters.t_max, 'AlphaData', ~isnan(squeeze(mean(event_criticality,notparams))'))
+        imagesc(variedParam(paramPlot1).range, variedParam(paramPlot2).range, squeeze(mean(event_criticality,notparams))', 'AlphaData', ~isnan(squeeze(mean(event_criticality,notparams))'))
         set(gca,'YDir','normal')
-        c4 = colorbar(); c4.Label.String = "nEvents / s";
+        c4 = colorbar(); c4.Label.String = "Criticality";
         title('Mean Criticality'); xlabel(variedParam(paramPlot1).name,'Interpreter','none'); ylabel(variedParam(paramPlot2).name,'Interpreter','none')
         
         clear c1 c2 c3 c4
@@ -330,7 +330,7 @@ else %Sequence analysis
     frac_partic_bin = frac_partic >= parameters.event_cutoff;
     avg_fr_bin = parameters.min_avg_fr <= avg_fr <= parameters.max_avg_fr;
     avg_event_length_bin = parameters.min_avg_length <= avg_event_length <= parameters.max_avg_length;
-    criticality_bin = event_criticality < 1;  %Where NOT critical. Can change to look for where it IS critical by setting == 1.
+    criticality_bin = event_criticality == 1;  %Where IS critical. Can change to look for where it IS critical by setting == 1.
     %Store ranges for each individual criterion
     w = whos;
     for a = 1:length(w)

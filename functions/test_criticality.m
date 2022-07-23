@@ -31,7 +31,7 @@ function criticality = test_criticality(avalanche_lengths, avalanche_counts)
     %Grab numbers of events and appropriate histogram bin numbers based on
     %Freedman-Diaconis rule
     N = length(avalanche_lengths); %Number of events
-    if N > 5
+    if N > 1000 %% Need to modify to be a much higher count (thousands)
         iqr_len = iqr(avalanche_lengths); %Interquartile range of lengths
         iqr_count = iqr(avalanche_counts); %Interquartile range of counts
         len_bin_wid = 2*iqr_len/(N^(1/3));
@@ -55,6 +55,9 @@ function criticality = test_criticality(avalanche_lengths, avalanche_counts)
 
             %First Test: Power law of #avalanches of given duration as a function
             %           of duration
+            
+            
+            %Test Results
             len_dataset = table(log(len_bin_avgs(len_nonzero)'),log(len_hist(len_nonzero)'));
             len_mdl = fitlm(len_dataset);
             resid = len_mdl.Residuals.Standardized;
@@ -71,6 +74,7 @@ function criticality = test_criticality(avalanche_lengths, avalanche_counts)
 
             %Second Test: Power law of #avalanches of a given size as a function of
             %           size
+            
             count_dataset = table(log(count_bin_avgs(count_nonzero)'),log(count_hist(count_nonzero)'));
 
             count_mdl = fitlm(count_dataset);
@@ -99,6 +103,35 @@ function criticality = test_criticality(avalanche_lengths, avalanche_counts)
             end
             nonzero_avg_sz = find(avg_sz_per_len.*unique_len);
             clear u_l len_ind sizes_per_len
+            
+            %Plot Results
+            if parameters.plotResults == 1
+                f = figure;
+                subplot(1,3,1) %Test 1
+                scatter(log(len_bin_avgs(len_nonzero)),log(len_hist(len_nonzero)))
+                xlabel('Log(Length)')
+                ylabel('Log(Length Counts)')
+                
+                subplot(1,3,2)
+                scatter(log(count_bin_avgs(count_nonzero)),log(count_hist(count_nonzero)))
+                xlabel('Log(Size)')
+                ylabel('Log(Size Counts)')
+                
+                subplot(1,3,3)
+                scatter(log(unique_len(nonzero_avg_sz)),log(avg_sz_per_len(nonzero_avg_sz)))
+                xlabel('Log(Length)')
+                ylabel('Log(Average Size Per Length)')
+                
+                f.Units = 'Normalized';
+                f.OuterPosition = [0 0 1 1];
+                if ~isfolder(strcat(parameters.save_path,'/crit_plots'))
+                    mkdir(parameters.save_path,'/crit_plots')
+                end
+                savefig(f,strcat(parameters.save_path,'/crit_plots','/sim_',string(ithParamSet),'_',string(ithNet),'_',string(ithTest),'_plaw.fig'))
+                saveas(f,strcat(parameters.save_path,'/crit_plots','/sim_',string(ithParamSet),'_',string(ithNet),'_',string(ithTest),'_plaw.jpg'))
+                close(f)
+            end    
+            
             avg_sz_dataset = table(log(unique_len(nonzero_avg_sz)'),log(avg_sz_per_len(nonzero_avg_sz)'));
             avg_sz_mdl = fitlm(avg_sz_dataset);
             resid = avg_sz_mdl.Residuals.Standardized;

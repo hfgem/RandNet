@@ -13,7 +13,9 @@ end
 
 % paramSetInds = [3, 3; 3 4; 4,2]
 % paramSetInds = combvec([1:size(resultsStruct, 1)], [1:size(resultsStruct, 2)])'
-paramSetInds = combvec([2], [2])'
+variedParam(:).name
+variedParam(:).range
+paramSetInds = combvec([2], [4])'
 
 parameters.n
 parameters.del_G_sra
@@ -23,11 +25,11 @@ variedParam(2).name
 
 minPeakRate = 2; % minimum peak PF rate to be considered a place cell
 calcScore = 0
-plotExtraPlots = 0 % if 1, plot place fields of every network
+plotExtraPlots = true % if 1, plot place fields of every network
 nEventsToPlot = 25
 useMeanPFDensity = true
-plotNetsBest = 0
-plotPvalMat = true
+plotNetsBest = false
+plotPvalMat = false % true
 
 %% Loop over parameter sets
 rng(1); tic
@@ -35,8 +37,13 @@ for ithParamSet = 1:size(paramSetInds, 1)
     
     ithParamSet
 	ithParam1 = paramSetInds(ithParamSet,1);
+    disp(['Param1=', num2str(ithParam1), ': ', variedParam(1).name, '=', num2str(variedParam(1).range(ithParam1))])
 	ithParam2 = paramSetInds(ithParamSet,2);
-    
+    disp(['Param2=', num2str(ithParam2), ': ', variedParam(2).name, '=', num2str(variedParam(2).range(ithParam2))])
+        
+    for i = 1:size(variedParam, 2)
+    	parameters.(variedParam(i).name) = variedParam(i).range(paramSetInds(i));
+    end
         
     temp = nan(1, num_nets);
     
@@ -59,7 +66,7 @@ for ithParamSet = 1:size(paramSetInds, 1)
         % Get matrix of PFs
         PFmat = PFresultsStruct(ithParam1, ithParam2, ithNet).results{1}.linfields;
         E_indices = PFresultsStruct(ithParam1, ithParam2, ithNet).results{1}.E_indices;
-        netSeed = PFresultsStruct(ithParam1, ithParam2, ithNet).results{1}.netSeed
+        netSeed = PFresultsStruct(ithParam1, ithParam2, ithNet).results{1}.netSeed;
 
         PFmatE_all = [PFmatE_all; PFmat(E_indices,:)];
         netInd_all = [netInd_all; repmat(ithNet, numel(E_indices), 1)];
@@ -76,17 +83,19 @@ for ithParamSet = 1:size(paramSetInds, 1)
         nClustMemb_all = [nClustMemb_all; sum(network.cluster_mat(:,E_indices), 1)'];
         cluster_matAll = [cluster_matAll; network.cluster_mat(:,E_indices)'] ;
 
-        %keyboard
-        rsqrs_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.rsquare(:,1); 
-        maxJumps_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.maxJump(:,1); 
-        rsqrs_shuffle = vertcat(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.shuffle_rsquare{:}); 
-        rsqrs_shuffle = rsqrs_shuffle(:,1);
-        maxJumps_shuffle = vertcat(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.shuffle_maxJump{:}); 
-        maxJumps_shuffle = maxJumps_shuffle(:,1);
-        allEventRs = [allEventRs; rsqrs_preplay];
-        allEventMaxJumps = [allEventMaxJumps; maxJumps_preplay];
-        allShuffleRs = [allShuffleRs; rsqrs_shuffle];
-        allShuffleMaxJumps = [allShuffleMaxJumps; maxJumps_shuffle];
+        %Accumulate best events, if there are any
+        if ~isempty(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pvalue)
+            rsqrs_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.rsquare(:,1); 
+            maxJumps_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.maxJump(:,1); 
+            rsqrs_shuffle = vertcat(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.shuffle_rsquare{:}); 
+            rsqrs_shuffle = rsqrs_shuffle(:,1);
+            maxJumps_shuffle = vertcat(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.shuffle_maxJump{:}); 
+            maxJumps_shuffle = maxJumps_shuffle(:,1);
+            allEventRs = [allEventRs; rsqrs_preplay];
+            allEventMaxJumps = [allEventMaxJumps; maxJumps_preplay];
+            allShuffleRs = [allShuffleRs; rsqrs_shuffle];
+            allShuffleMaxJumps = [allShuffleMaxJumps; maxJumps_shuffle];
+        end
         
         
         % PF: plot and calculate score
@@ -127,7 +136,7 @@ for ithParamSet = 1:size(paramSetInds, 1)
             eventLengths = resultsStruct(ithParam1, ithParam2, ithNet).results.eventLength;
             mat = resultsStruct(ithParam1, ithParam2, ithNet).results.ranksVec;
             x = mat./max(mat);
-            x = x(:, eventLengths>0.05); % temp line, since decoding has different min length
+            x = x(:, eventLengths>=0.05); % temp line, since decoding has different min length
             x(peakRate<minPeakRate,:)=nan; % Exclude non high-rate cells
 
             [pvals_preplay_sorted, pvals_sorted ]= sort(pvals_preplay);
@@ -163,6 +172,7 @@ for ithParamSet = 1:size(paramSetInds, 1)
 
     end
 
+    
     %% Plot p-value matrix
     
     if plotPvalMat
@@ -171,13 +181,17 @@ for ithParamSet = 1:size(paramSetInds, 1)
 
         op = zeros(numel(jumpThres_vec), numel(rvalThresh_vec));
         for ij = 1:numel(jumpThres_vec)
-
+            allEventRs_pvalmat = sqrt(allEventRs);
+            allShuffleRs_pvalmat = cellfun(@sqrt, allShuffleRs, 'UniformOutput', false);
+            %allEventRs_pvalmat = allEventRs;
+            %allShuffleRs_pvalmat = allShuffleRs;
+            
             for ir = 1:numel(rvalThresh_vec)
-                nActPass = mean( [allEventRs>rvalThresh_vec(ir)] & [allEventMaxJumps<jumpThres_vec(ij)]);
+                nActPass = mean( [allEventRs_pvalmat>rvalThresh_vec(ir)] & [allEventMaxJumps<jumpThres_vec(ij)]);
                 nShuffPass = zeros(1, size(allShuffleMaxJumps{1}, 2));
                 for ithShuf = 1:size(allShuffleMaxJumps{1}, 2)
                     nShuff_jump = cellfun(@(x) [x(ithShuf)<jumpThres_vec(ij)], allShuffleMaxJumps);
-                    nShuff_rval = cellfun(@(x) [x(ithShuf)>rvalThresh_vec(ir)], allShuffleRs);
+                    nShuff_rval = cellfun(@(x) [x(ithShuf)>rvalThresh_vec(ir)], allShuffleRs_pvalmat);
                     nShuffPass(ithShuf) = mean( nShuff_jump & nShuff_rval );
                 end
 
@@ -185,22 +199,25 @@ for ithParamSet = 1:size(paramSetInds, 1)
                 if [sum(nShuffPass)==0] & [sum(nActPass)==0]
                     op(ij, ir) = nan;
                 end
+                keyboard
             end
             ij
         end
 
         % Plot with linear colormap
         figure; imagesc(rvalThresh_vec, jumpThres_vec, op', 'AlphaData', ~isnan(op')); colorbar
-        xlabel('max jump')
-        ylabel('r^2')
+        xlabel('<|Max Jump Distance|')
+        ylabel('>|Correlation|')
+        caxis([0, 0.1])
 
         % Plot with better colormap
         figure; 
         imagesc(rvalThresh_vec, jumpThres_vec, log10(op'), 'AlphaData', ~isnan(op'))
         % set(gca,'YDir','normal')
         cb = colorbar(); %cb.Label.String = cbLabel2;
-        xlabel('max jump')
-        ylabel('r^2')
+        xlabel('<|Max Jump Distance|')
+        ylabel('>|Correlation|')
+        
         %title(analysisTitle)
         N = 256; n = N/2;
         cm = NaN(N,3);
@@ -216,10 +233,23 @@ for ithParamSet = 1:size(paramSetInds, 1)
         scatter(rvalThresh_vec(xnan), jumpThres_vec(ynan), 300, 'x')
     end
 
+    keyboard
+    %% Plot ECDF of r values
+    
+    allEventRs_ecdf = (allEventRs);
+    rvals_ecdf= (vertcat(allShuffleRs{:}));
+                
+    figure; hold on; ecdf(sqrt(allEventRs_ecdf)); ecdf(sqrt(rvals_ecdf))
+    % figure; hold on; ecdf(allEventRs_ecdf); ecdf(rvals_ecdf)
+    legend({'Preplays', 'Shuffles'}, 'Location', 'Best')
+    xlabel('|Correlation|'); ylabel('Cumulative proportion');
+    %title(['ithParam1=', num2str(ithParam1) ' ithParam2=', num2str(ithParam2), ' pval=', num2str(p_kstest) ])
+    [H,P,KSSTAT] = kstest2(sqrt(allEventRs_ecdf), sqrt(rvals_ecdf) )
     
     %% Plot best sequences
     
     % Decodes
+    myPlotSettings(7, 6)
     if nEventsToPlot>0
         [pvals_sorted, eventSortInd] = sort(bestEventpVals);
         figure; tfig = tiledlayout('flow');
@@ -228,9 +258,11 @@ for ithParamSet = 1:size(paramSetInds, 1)
             nexttile
             imagesc(bestEvents_decode{ithEventToPlot})
             title(['pval=', num2str(bestEventpVals(ithEventToPlot))])
-            %caxis(([0, 0.5*max(bestEvents{ithEventToPlot}, [], 'all')]))
+            % caxis(([0, 0.75*max(bestEvents_decode{ithEventToPlot}, [], 'all')]))
+             caxis(([0, 0.25]))
         end
     end
+    myPlotSettings
     
     % Relative ranks (corresponding to decodes)
     if nEventsToPlot>0
@@ -267,12 +299,12 @@ for ithParamSet = 1:size(paramSetInds, 1)
     
     figure; imagesc( PFmatE_all(PFpeaksSequence(rateDenomAll>minPeakRate),:)./rateDenomAll(rateDenomAll>minPeakRate)); title('All nets'); colorbar; caxis([0, caxmax])
     xlabel('Position (2 cm bin)'); ylabel('Cell (sorted)');
-    % colormap(flipud(bone))
+    % colormap(flipud(bone)); title ''
     
     %% Plot cluster-wise place fields
-    figure; tiledlayout(parameters.clusters,1);
-    singularMembership = 0;
-    for ithCluster = parameters.clusters:-1:1
+    figure; tiledlayout(parameters.clusters/2,1);
+    singularMembership = 1;
+    for ithCluster = parameters.clusters:-2:1
         if singularMembership
             isClusterMember = [sum(cluster_matAll(PFpeaksSequence(rateDenomAll>minPeakRate), :), 2)==1] .* [cluster_matAll(PFpeaksSequence(rateDenomAll>minPeakRate),ithCluster)==1];
         else
@@ -280,8 +312,12 @@ for ithParamSet = 1:size(paramSetInds, 1)
         end
         clusterPF = isClusterMember .* PFmatE_all(PFpeaksSequence(rateDenomAll>minPeakRate),:)./rateDenomAll(rateDenomAll>minPeakRate);
         zeroInds = all(clusterPF==0, 2);
-        nexttile; imagesc( clusterPF(~zeroInds,:) ); %title('All nets'); colorbar; caxis([0, caxmax])
-        %xlabel('Position (2 cm bin)'); ylabel('Cell (sorted)');
+        nexttile; imagesc( clusterPF(~zeroInds,:) ); 
+        %xaxis('off')
+        set(gca,'xtick',[])
+
+        % title('All nets'); colorbar; caxis([0, caxmax])
+        % xlabel('Position (2 cm bin)'); ylabel('Cell (sorted)');
     end
 
     %% Extra plots      
@@ -304,7 +340,7 @@ for ithParamSet = 1:size(paramSetInds, 1)
         figure; histogram(ksstat_vec(peakRate>minPeakRate)); xlabel('kstest stat'); ylabel('E cells (count)');
 
         % 'sparsity'                
-        cellSparsity = mean( PFmatE_all<=[0.25*max(PFmatE_all, [], 2)], 2 );
+        cellSparsity =  mean( PFmatE_all>[0.25*max(PFmatE_all, [], 2)], 2 );
         figure; histogram(cellSparsity(peakRate>minPeakRate)); xlabel('PF sparsity'); ylabel('E cells (count)');
 
         % 'information'
@@ -332,12 +368,34 @@ for ithParamSet = 1:size(paramSetInds, 1)
         % [~, SIind] = sort( spatialInfo' .* [peakRateLocation_all>10&peakRateLocation_all<40] .* [meanPeakRate>4] .* [cellSparsity>0.5], 'descend' );
         figure; plot(1:size(PFmatE_all, 2), PFmatE_all(SIind(1:4),:))
         xlabel('Location (2 cm bins)'); ylabel('Firing rate (Hz)'); title('Good example place fields')
-        
+        figure; plot(1:size(PFmatE_all, 2), PFmatE_all(SIind(5:8),:))
+        xlabel('Location (2 cm bins)'); ylabel('Firing rate (Hz)'); title('Good example place fields')
+        figure; plot(1:size(PFmatE_all, 2), PFmatE_all(SIind(9:12),:))
+        xlabel('Location (2 cm bins)'); ylabel('Firing rate (Hz)'); title('Good example place fields')
     end
     
     %% Plot PF score, if it was calculated
     if calcScore
         figure; histogram(PFscores_all); xlabel('Place field score (lower is better)'); ylabel('Network (count)');
+    end
+    
+    % Plots for comparison to Shin et al., 2019
+    if 0
+        
+        % 'Peak Rate'
+        peakRate= max(PFmatE_all, [], 2);
+        figure; histogram(peakRate(peakRate>minPeakRate), 10, 'Normalization', 'probability'); xlabel('Place field peak (Hz)'); ylabel('Place cells (Prob.)');
+        xlim([-2, 45]); ylim([0, 0.4]); box off
+
+        % 'sparsity'                
+        cellSparsity =  mean( PFmatE_all>[0.25*max(PFmatE_all, [], 2)], 2 );
+        figure; histogram(cellSparsity(peakRate>minPeakRate), 10, 'Normalization', 'probability'); xlabel('Spatial sparsity'); ylabel('E cells (count)'); ylabel('Place cells (Prob.)');
+        xlim([-0.05, 1.05]); ylim([0, 0.3]); box off
+
+        % 'information'
+        spatialInfo = nanmean( [PFmatE_all./mean(PFmatE_all, 2)] .* log(( PFmatE_all+eps )./mean(PFmatE_all, 2) ), 2 );
+        figure; histogram(spatialInfo(peakRate>minPeakRate), 10, 'Normalization', 'probability'); xlabel('Spatial Information (bits)'); ylabel('E cells (count)'); ylabel('Place cells (Prob.)');
+        xlim([-0.05, 3.45]); ylim([0, 0.3]); box off
     end
     
 end

@@ -242,7 +242,7 @@ ylabel('KStest p-value')
 
 try
     [a, b] = find(squeeze(op(1,:,:))'<0.05); ind1 = [a]; ind2 = [b];
-    ind1 = [3]; ind2 = [3];
+    ind1 = [2]; ind2 = [4];
 
     X = squeeze(allNetMedianDiff(ind1,ind2,:));
     Y = squeeze(allNetPvals(ind1,ind2,:)); 

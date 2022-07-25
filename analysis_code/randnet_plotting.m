@@ -23,10 +23,13 @@ plot_ixj_sequences(network_spike_sequences, plotIDs, spikes_V_m, parameters, net
 
 %% Use dimensionality reduction techniques to plot network structure
 E_only = 1; % only plot E-E connections
-dimRedInput = 'W'; % 'W', 'WW', 'normClust', 'clust' 
+dimRedInput = 'WW'; % 'W', 'WW', 'normClust', 'clust' 
 scatterSize = [1, 1];
 plot_dimRedNet(network, dimRedInput, 'seed', seed, 'E_only', E_only, 'scatterSize', scatterSize);
 
+figure; histogram(sum(network.cluster_mat(:,network.E_indices), 1)); xlabel('Number of clusters'); ylabel('Cell (count)'); box off
+figure; histogram(sum(network.cluster_mat(:,network.E_indices), 2)); xlabel('Number of neurons'); ylabel('Cluster (count)'); box off
+figure; histogram(network.spatialInput{2}(network.E_indices).*10^12); xlabel('Connection strength (pS)'); ylabel('Cell (count)'); box off
 
 %% Plot cluster-wise activation, for each event
 [network_spike_sequences] = detect_PBE(E_spikes_V_m, parameters);

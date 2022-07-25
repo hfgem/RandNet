@@ -111,12 +111,12 @@ subplot(1,3,1);
 plot(digraph(W), 'XData', Y_tsne(:,1),'YData', Y_tsne(:,2), ...
     'MarkerSize',sz, 'NodeColor', c, 'EdgeColor', 0.3*[1 1 1], 'EdgeAlpha',0.2)
 title('tsne');
-
+try
 subplot(1,3,2); 
 plot(digraph(W), 'XData', Y_mds(:,1),'YData', Y_mds(:,2), ...
     'MarkerSize',sz, 'NodeColor', c, 'EdgeColor', 0.3*[1 1 1], 'EdgeAlpha',0.2)
 title('mds');
-
+end
 subplot(1,3,3);
 plot(digraph(W), 'XData', Y_PCA(:,1),'YData', Y_PCA(:,2), ...
     'MarkerSize',sz, 'NodeColor', c, 'EdgeColor', 0.3*[1 1 1], 'EdgeAlpha',0.2)

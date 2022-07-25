@@ -116,7 +116,7 @@ variedParam(1).name = 'mnc'; % 2nd parameter to be varied
 variedParam(1).range = linspace(1, 6, 21); % set of values to test param2 at
 %variedParam(1).range = linspace(1, 25, 5); % set of values to test param2 at
 variedParam(1).range = 1.0:0.25:3.0; %linspace(1, 8, 29); % set of values to test param2 at
-variedParam(1).range = 1.0:0.25:1.25; %linspace(1, 8, 29); % set of values to test param2 at
+% variedParam(1).range = 1.0:0.25:1.25; %linspace(1, 8, 29); % set of values to test param2 at
 
 variedParam(2).name = 'clusters'; % 2nd parameter to be varied
 %variedParam(2).range = [2:1:21]; % set of values to test param2 at
@@ -124,7 +124,7 @@ variedParam(2).range = [2:2:36]; % set of values to test param2 at
 %variedParam(2).range = [2:5:25]; % set of values to test param2 at
 variedParam(2).range = [2:2:50]; % set of values to test param2 at
 variedParam(2).range = [5:5:60]; % set of values to test param2 at
-variedParam(2).range = [5:5:10]; % set of values to test param2 at
+% variedParam(2).range = [5:5:10]; % set of values to test param2 at
 
 
 %{

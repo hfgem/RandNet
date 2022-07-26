@@ -112,7 +112,7 @@ function [network_spike_sequences, overallResults] = detect_events(parameters, .
                 
                 %plot only if meets criteria 25% of the time
                 if parameters.plotResults == 1
-                    if rand() < 0.25
+                    if randi(1000)/1000 < 0.25
                         if overall_check ~= 0
                             subplot(1,num_events,ithEvent)
                             %Plot the re-ordered spike event

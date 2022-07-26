@@ -107,6 +107,7 @@ parameters.del_G_syn_E_I = 550*10^(-12); %synaptic conductance step following sp
 parameters.del_G_syn_I_E = 550*10^(-12); %synaptic conductance step following spike (S)
 %}
 
+disp("Set Base Parameters")
 
 %% Parameters for sequence analysis
 
@@ -139,6 +140,8 @@ else
     parameters.max_avg_length = 0.5;
 end
 
+disp("Set Sequence Analysis Parameters")
+
 
 %% __set/update Dependent Parameters__ %%
 parameters = set_depedent_parameters(parameters);
@@ -147,6 +150,8 @@ parameters = set_depedent_parameters(parameters);
 if parameters.saveFlag == 1
     save(strcat(save_path,'/parameters.mat'),'parameters')
 end
+
+disp("Set Dependent Parameters")
 
 %% Create Networks and Check Spike Progression
 %Runs through a series of different random number generator seeds to change

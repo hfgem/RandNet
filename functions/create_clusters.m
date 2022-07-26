@@ -83,7 +83,7 @@ function [network] = create_clusters(parameters, varargin)
     for i = 1:parameters.clusters
         ord = find(cluster_mat(i,:));
         ord_len = length(ord);
-        conns(ord,ord) = conns(ord,ord) + (rand(ord_len,ord_len) <= parameters.cluster_prob);
+        conns(ord,ord) = conns(ord,ord) + (randi(10000,ord_len,ord_len)/10000 <= parameters.cluster_prob);
     end
     
     %Remove self-connectivity
@@ -94,8 +94,8 @@ function [network] = create_clusters(parameters, varargin)
 
     % If global_inhib, overwrite all inhibitory outputs
     if global_inhib
-        conns(I_indices,:) = (rand([round(parameters.n*(1-parameters.p_E)), parameters.n]) < parameters.p_I);
-        conns(:,I_indices) = (rand([parameters.n, round(parameters.n*(1-parameters.p_E))]) < parameters.p_I);
+        conns(I_indices,:) = (randi(10000,round(parameters.n*(1-parameters.p_E)), parameters.n)/10000 < parameters.p_I);
+        conns(:,I_indices) = (randi(10000,parameters.n, round(parameters.n*(1-parameters.p_E)))/10000 < parameters.p_I);
     end
     
     %SAVE NETWORK STRUCTURE

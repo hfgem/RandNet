@@ -44,8 +44,8 @@ function [avg_mat, allResults] = parallelize_parameter_tests_2(parameters,...
     %   allResults = Cell structure storing all results
     %_________
     
-    % For debugging only, output which parameter set is in progress:
-    disp(['Parameter set ', num2str(ithParamSet), '/', num2str(size(parameterSets_vec, 2)), ' started'])
+%     % For debugging only, output which parameter set is in progress:
+%     disp(['Parameter set ', num2str(ithParamSet), '/', num2str(size(parameterSets_vec, 2)), ' started'])
 
     % Set up parameter values for current parameter set
     for i = 1:size(variedParam, 2)
@@ -84,8 +84,10 @@ function [avg_mat, allResults] = parallelize_parameter_tests_2(parameters,...
                 G_in = single(zeros(parameters.n, parameters.t_steps+1));
                 for k = 2:(parameters.t_steps+1)
                     G_in(:,k) = G_in(:,k-1)*exp(-parameters.dt/parameters.tau_syn_E);
-                    G_in(:,k) = G_in(:,k) + parameters.W_gin * [rand(parameters.n, 1) < (parameters.dt*parameters.rG)];
+                    
+                    G_in(:,k) = G_in(:,k) + parameters.W_gin * [randi(10000, parameters.n, 1)/10000 < (parameters.dt*parameters.rG)];
                 end
+                clear k
             else
                 G_in = (parameters.G_std*randn(parameters.n,parameters.t_steps+1))+parameters.G_mean;
                 G_in(G_in<0) = 0;
@@ -105,7 +107,9 @@ function [avg_mat, allResults] = parallelize_parameter_tests_2(parameters,...
                 V_m(:,1) = parameters.V_reset + randn([parameters.n,1])*parameters.V_m_noise; %set all neurons to baseline reset membrane potential with added noise
                 [V_m, ~, ~, ~, ~] = randnet_calculator(parameters, seed, network, V_m);
                 spikes_V_m = V_m >= parameters.V_th;
+                parameters = rmfield(parameters, 'G_in');
             end
+            clear optFlag seed
             
             %Set which spikes are analyzed based on E_events_only flag
             if parameters.E_events_only == 1 %Use only excitatory neurons in analyses
@@ -113,6 +117,7 @@ function [avg_mat, allResults] = parallelize_parameter_tests_2(parameters,...
             else %Use all neurons in analyses
                 used_spikes_mat = spikes_V_m;
             end
+            clear spikes_V_m V_m network
             
             % detect events and compute outputs
 %             if strcmp(parameters.eventType,'PBE')
@@ -127,6 +132,7 @@ function [avg_mat, allResults] = parallelize_parameter_tests_2(parameters,...
                 avalanche_lengths = [avalanche_lengths, av_lengths]; %#ok<AGROW>
                 avalanche_counts = [avalanche_counts, av_counts]; %#ok<AGROW>
             end
+            clear av_lenghts av_counts
             
             % append trialResults struct to network results struct
 %             if ithTest == 1
@@ -134,6 +140,7 @@ function [avg_mat, allResults] = parallelize_parameter_tests_2(parameters,...
 %             else
 %                 network_spike_sequences = [network_spike_sequences, trialResults];  %#ok<*AGROW>
 %             end
+%             clear trialResults
             
             % Overall simulation statistics
 %             allResults{ithNet}{ithTest}.ithInit = ithTest;
@@ -142,7 +149,8 @@ function [avg_mat, allResults] = parallelize_parameter_tests_2(parameters,...
 %             allResults{ithNet}{ithTest}.frac_participation = mean([network_spike_sequences(ithTest).frac_spike{:}]); % mean fraction of cells firing per event
 %             allResults{ithNet}{ithTest}.meanRate = mean(sum(used_spikes_mat, 2)/parameters.t_max); % mean over cells' average firing rate
 %             allResults{ithNet}{ithTest}.stdRate = std(sum(used_spikes_mat, 2)/parameters.t_max); % STD over cells' average firing rate
-% 
+%
+%
 %             % Stats for each detected event
 %             allResults{ithNet}{ithTest}.eventLength = network_spike_sequences(ithTest).event_lengths; % duration in seconds of all detected events
 %             allResults{ithNet}{ithTest}.eventParticipation = [network_spike_sequences(ithTest).frac_spike{:}]; % fraction of cells that fired in each event
@@ -151,6 +159,8 @@ function [avg_mat, allResults] = parallelize_parameter_tests_2(parameters,...
 %             allResults{ithNet}{ithTest}.spike_order = network_spike_sequences(ithTest).spike_order;
 %             allResults{ithNet}{ithTest}.ranksVec = network_spike_sequences(ithTest).ranks_vec;
 %             
+%             clear used_spikes_mat network_spike_sequences
+
 %             % Main output statistics
 %             %outputVec(1) = allResults{ithNet}{ithTest}.fracFire; % fraction of spiking neurons over entire simulation
 %             outputVec(1) = allResults{ithNet}{ithTest}.frac_participation; % fraction of spiking neurons over identified events
@@ -159,15 +169,19 @@ function [avg_mat, allResults] = parallelize_parameter_tests_2(parameters,...
 %             outputVec(4) = allResults{ithNet}{ithTest}.numEvents; % Number of events
 % 
 %             mat(ithTest,:) = outputVec; 
+%             clear outputVec
             %allResults{ithNet}{j} = allTrialResults;
         end % trial loop
+        clear ithTest
 %         mat(isnan(mat)) = 0;
-%         resp_mat(ithNet,:) = sum(mat,1) ./ sum(mat > 0,1); %Only averaging those that did successfully produce data        
+%         resp_mat(ithNet,:) = sum(mat,1) ./ sum(mat > 0,1); %Only averaging those that did successfully produce data  
+%         clear mat
     end % Network loop
-    
+    clear parameters
+    sprintf('Parameter set %i avalanche count = %i',ithParamSet,length(avalanche_lengths))
     %Test network for chaotic activity
     if parameters.check_criticality == 1
-        criticality_result = test_criticality(avalanche_lengths, avalanche_counts);
+        criticality_result = test_criticality(avalanche_lengths, avalanche_counts, parameters, ithParamSet);
     end
     
     resp_mat(isnan(resp_mat)) = 0;

@@ -30,6 +30,7 @@ nEventsToPlot = 25
 useMeanPFDensity = true
 plotNetsBest = false
 plotPvalMat = false % true
+plotClusterPFs = false
 
 %% Loop over parameter sets
 rng(1); tic
@@ -302,30 +303,34 @@ for ithParamSet = 1:size(paramSetInds, 1)
     % colormap(flipud(bone)); title ''
     
     %% Plot cluster-wise place fields
-    figure; tiledlayout(parameters.clusters/2,1);
-    singularMembership = 1;
-    for ithCluster = parameters.clusters:-2:1
-        if singularMembership
-            isClusterMember = [sum(cluster_matAll(PFpeaksSequence(rateDenomAll>minPeakRate), :), 2)==1] .* [cluster_matAll(PFpeaksSequence(rateDenomAll>minPeakRate),ithCluster)==1];
-        else
-            isClusterMember = [cluster_matAll(PFpeaksSequence(rateDenomAll>minPeakRate),ithCluster)==1];
+    if plotClusterPFs
+        figure; tiledlayout(parameters.clusters/2,1);
+        singularMembership = 1;
+        for ithCluster = parameters.clusters:-2:1
+            if singularMembership
+                isClusterMember = [sum(cluster_matAll(PFpeaksSequence(rateDenomAll>minPeakRate), :), 2)==1] .* [cluster_matAll(PFpeaksSequence(rateDenomAll>minPeakRate),ithCluster)==1];
+            else
+                isClusterMember = [cluster_matAll(PFpeaksSequence(rateDenomAll>minPeakRate),ithCluster)==1];
+            end
+            clusterPF = isClusterMember .* PFmatE_all(PFpeaksSequence(rateDenomAll>minPeakRate),:)./rateDenomAll(rateDenomAll>minPeakRate);
+            zeroInds = all(clusterPF==0, 2);
+            nexttile; imagesc( clusterPF(~zeroInds,:) ); 
+            %xaxis('off')
+            set(gca,'xtick',[])
+
+            % title('All nets'); colorbar; caxis([0, caxmax])
+            % xlabel('Position (2 cm bin)'); ylabel('Cell (sorted)');
         end
-        clusterPF = isClusterMember .* PFmatE_all(PFpeaksSequence(rateDenomAll>minPeakRate),:)./rateDenomAll(rateDenomAll>minPeakRate);
-        zeroInds = all(clusterPF==0, 2);
-        nexttile; imagesc( clusterPF(~zeroInds,:) ); 
-        %xaxis('off')
-        set(gca,'xtick',[])
-
-        % title('All nets'); colorbar; caxis([0, caxmax])
-        % xlabel('Position (2 cm bin)'); ylabel('Cell (sorted)');
     end
-
+    
     %% Extra plots      
     if plotExtraPlots
         % Example network PFs    
-        cellsToPlot = [rateDenomAll>minPeakRate] & [netInd_all(PFpeaksSequence)==2];
-        figure; imagesc( PFmatE_all(PFpeaksSequence(cellsToPlot),:)./rateDenomAll(cellsToPlot)); title('Example net'); colorbar; caxis([0, caxmax])
-        xlabel('Position (2 cm bin)'); ylabel('Cell (sorted)');
+        for ithNet = 1:10
+            cellsToPlot = [rateDenomAll>minPeakRate] & [netInd_all(PFpeaksSequence)==ithNet];
+            figure; imagesc( PFmatE_all(PFpeaksSequence(cellsToPlot),:)./rateDenomAll(cellsToPlot)); title('Example net'); colorbar; caxis([0, caxmax])
+            xlabel('Position (2 cm bin)'); ylabel('Cell (sorted)');
+        end
 
         % 'Peak Rate'
         peakRate= max(PFmatE_all, [], 2);
@@ -351,12 +356,12 @@ for ithParamSet = 1:size(paramSetInds, 1)
         figure; scatter(cellSparsity, spatialInfo); xlabel('PF sparsity'); ylabel('Spatial info.')
         figure; scatter(peakRate, spatialInfo); xlabel('Peak rate (Hz)'); ylabel('Spatial info.')
         
-        mdl1 = fitlm(nClustMemb_all, spatialInfo); figure; plot(mdl1); xlabel('n cluster membership'); ylabel('Spatial info.'); 
-        title(['pval=', num2str(mdl1.Coefficients.pValue(2)), ', rsqr=', num2str(mdl1.Rsquared.Ordinary)]); mdl1
-        mdl2 = fitlm(nClustMemb_all, cellSparsity); figure; plot(mdl2); xlabel('n cluster membership'); ylabel('PF sparsity'); 
-        title(['pval=', num2str(mdl2.Coefficients.pValue(2)), ', rsqr=', num2str(mdl2.Rsquared.Ordinary)]); mdl2
+        mdl1 = fitlm(nClustMemb_all, spatialInfo); figure; plot(mdl1); xlabel('n cluster membership'); ylabel('Spatial information'); 
+        title(['pval=', num2str(mdl1.Coefficients.pValue(2), 2), ', rsqr=', num2str(mdl1.Rsquared.Ordinary, 2)]); legend off; mdl1
+        mdl2 = fitlm(nClustMemb_all, cellSparsity); figure; plot(mdl2); xlabel('n cluster membership'); ylabel('Spatial sparsity'); 
+        title(['pval=', num2str(mdl2.Coefficients.pValue(2), 2), ', rsqr=', num2str(mdl2.Rsquared.Ordinary, 2)]); legend off; mdl2
         mdl3 = fitlm(nClustMemb_all, peakRate); figure; plot(mdl3); xlabel('n cluster membership'); ylabel('Peak rate (Hz)'); 
-        title(['pval=', num2str(mdl3.Coefficients.pValue(2)), ', rsqr=', num2str(mdl3.Rsquared.Ordinary)]); mdl3
+        title(['pval=', num2str(mdl3.Coefficients.pValue(2), 2), ', rsqr=', num2str(mdl3.Rsquared.Ordinary, 2)]); legend off; mdl3
 
         cellsToPlot = [spatialInfo>1.87]; % [rateDenomAll>2];
         figure; imagesc( PFmatE_all(PFpeaksSequence(cellsToPlot),:)./rateDenomAll(cellsToPlot)); title('All nets'); colorbar; caxis([0, caxmax])
@@ -364,7 +369,7 @@ for ithParamSet = 1:size(paramSetInds, 1)
         
         
         % 'Example best place fields'
-        [~, SIind] = sort( ksstat_vec' .* [peakRateLocation_all>10&peakRateLocation_all<40] .* [peakRate>4] .* [cellSparsity>0.5], 'descend' );
+        [~, SIind] = sort( ksstat_vec' .* [peakRateLocation_all>10&peakRateLocation_all<40] .* [peakRate>4] .* [cellSparsity<0.5], 'descend' );
         % [~, SIind] = sort( spatialInfo' .* [peakRateLocation_all>10&peakRateLocation_all<40] .* [meanPeakRate>4] .* [cellSparsity>0.5], 'descend' );
         figure; plot(1:size(PFmatE_all, 2), PFmatE_all(SIind(1:4),:))
         xlabel('Location (2 cm bins)'); ylabel('Firing rate (Hz)'); title('Good example place fields')

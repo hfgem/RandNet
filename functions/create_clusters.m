@@ -79,6 +79,8 @@ function [network] = create_clusters(parameters, varargin)
         end
     elseif include_all==2
         % Same as include_all==1, but ind_high threshold is changed to 1
+        % Note: if mnc=1, then by chance there may still be some neurons
+        % in 2 clusters (if by chance mean mnc of cluster mat > 1)
         ind_non = find(sum(cluster_mat) == 0);
         ind_high = find(sum(cluster_mat) > 1);
         for i = ind_non
@@ -91,6 +93,19 @@ function [network] = create_clusters(parameters, varargin)
                 ind_high = find(sum(cluster_mat) > 1);
             end
         end
+    elseif include_all==3
+        % All neurons assigned to one cluster, then mnc-1 is the new mnc
+        % for assigning membership to additional clusters. 
+        % Overwrites above created cluster_mat.
+        % Assumes mnc>=1.
+        firstClusts=zeros(parameters.clusters, parameters.n);
+        initialClusterInds =  randi(parameters.clusters, 1, parameters.n);
+        initialClusterInds = sub2ind(size(firstClusts), initialClusterInds, 1:parameters.n);
+        firstClusts(initialClusterInds) = 1;
+        pMem = (parameters.mnc-1)/(parameters.clusters-1); % probability a given neuron is a member of a given (additional) cluster
+        randClusts = [rand(parameters.clusters, parameters.n)<pMem];
+        cluster_mat = firstClusts|randClusts; % Combine first and additional cluster membership matrices
+        % mean(sum(cluster_mat,1))
     end
     
     %Find the matrix of total connectivity - it will have integer values of

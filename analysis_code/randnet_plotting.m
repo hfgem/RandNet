@@ -11,6 +11,19 @@ t = [0:parameters.dt:parameters.t_max];
 rng(1)
 % PFpeaksSequence = randperm(parameters.n_E)'; % dummy data, for testing
 
+%% Plot sequences against PF sequence
+
+for ithEvent = 1:size(events, 1);
+% spike_ranks = network_spike_sequences(ithTrial).ranks_vec(:,ithEvent);
+events = network_spike_sequences.events;
+reordered_spikes = [E_spikes_V_m(PFpeaksSequence,events(ithEvent,1):events(ithEvent,2))];
+reordered_spikes = reordered_spikes(sum(reordered_spikes, 2)>0,:);
+figure;
+plotSpikeRaster( reordered_spikes, 'TimePerBin', parameters.dt*1000, 'PlotType', 'scatter');
+title(num2str(ithEvent))
+end
+
+
 %% Main plots
 plot_randnet_results(parameters, network, V_m, G_in, network_spike_sequences, ithTest, net_save_path)
 

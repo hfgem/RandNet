@@ -16,7 +16,7 @@ end
 variedParam(:).name
 variedParam(:).range
 paramSetInds = combvec([2], [4])'
-paramSetInds = combvec([1], [1])'
+paramSetInds = combvec([1], [2])'
 
 parameters.n
 parameters.del_G_sra
@@ -32,7 +32,7 @@ useMeanPFDensity = true
 plotNetsBest = false
 plotPvalMat = false % true
 plotClusterPFs = false
-plotNetStruct = true
+plotNetStruct = false
 
 %% Loop over parameter sets
 rng(1); tic
@@ -64,6 +64,7 @@ for ithParamSet = 1:size(paramSetInds, 1)
     allEventMaxJumps = [];
     allShuffleRs = [];
     allShuffleMaxJumps = [];
+    avgDecodePos = zeros(size(pfsim.gridxvals));
     for ithNet = 1:size(resultsStruct, 3)
 
         % Get matrix of PFs
@@ -98,7 +99,16 @@ for ithParamSet = 1:size(paramSetInds, 1)
             allEventMaxJumps = [allEventMaxJumps; maxJumps_preplay];
             allShuffleRs = [allShuffleRs; rsqrs_shuffle];
             allShuffleMaxJumps = [allShuffleMaxJumps; maxJumps_shuffle];
+            
+            % Accumulate decode probability across spatial positions
+            tmpEvents = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pMat;
+            for ithEvent=1:numel(tmpEvents)
+                avgDecodePos = avgDecodePos + sum(tmpEvents{ithEvent}{1}.pMat, 2)';
+                % figure; plot(sum(tmpEvents{ithEvent}{1}.pMat, 2))
+            end
+            % figure; plot(avgDecodePos)
         end
+        
         
         if plotNetStruct
             figure; histogram(sum(network.cluster_mat, 1)); xlabel('n Clusters'); ylabel('Neurons (count)')
@@ -241,6 +251,10 @@ for ithParamSet = 1:size(paramSetInds, 1)
         scatter(rvalThresh_vec(xnan), jumpThres_vec(ynan), 300, 'x')
     end
 
+    %% Plot mean decode position
+    figure; plot(avgDecodePos./sum(avgDecodePos))
+    xlabel('Position (2 cm bins)'); ylabel('Probability Density')
+    
     
     %% Plot ECDF of r values
     

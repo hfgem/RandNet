@@ -251,7 +251,7 @@ function [avg_mat, allResults, PFresults] = parallelize_parameter_tests_2(parame
             %% Calculate and save preplay Bayesian decoding
             if ~isempty(trialResults.events) % only decode if there are events
                 % 1) save SJlab formated files to tmp dir
-                [filepath,name] = fileparts(tempname);
+                [filepath,name] = fileparts( tempname([pwd, '/results/tmp/']) );
                 animalprefix = name; save_path = [filepath, filesep, animalprefix, '_direct']; 
                 mkdir(save_path)
 

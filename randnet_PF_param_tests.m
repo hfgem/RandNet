@@ -54,6 +54,8 @@ end
 load(strcat(load_path,'/parameters.mat'))
 load(strcat(load_path,'/pfsim.mat'))
 
+[s, grid_git_hash_string] = system('git rev-parse HEAD');
+parameters.grid_git_hash_string = grid_git_hash_string;
 
 %% Parameters that are different from the loaded parameters
 

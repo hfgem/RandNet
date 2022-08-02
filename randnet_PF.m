@@ -21,6 +21,9 @@ else
 end
 addpath('functions')
 
+[s,sim_git_hash_string] = system('git rev-parse HEAD');
+parameters.sim_git_hash_string = sim_git_hash_string;
+
 %% Initialize parameters
 
 % Network structure parameters

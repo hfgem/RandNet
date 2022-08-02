@@ -16,6 +16,7 @@ end
 variedParam(:).name
 variedParam(:).range
 paramSetInds = combvec([2], [4])'
+paramSetInds = combvec([1], [1])'
 
 parameters.n
 parameters.del_G_sra
@@ -25,12 +26,13 @@ variedParam(2).name
 
 minPeakRate = 2; % minimum peak PF rate to be considered a place cell
 calcScore = 0
-plotExtraPlots = true % if 1, plot place fields of every network
+plotExtraPlots = false % if 1, plot place fields of every network
 nEventsToPlot = 25
 useMeanPFDensity = true
 plotNetsBest = false
 plotPvalMat = false % true
 plotClusterPFs = false
+plotNetStruct = true
 
 %% Loop over parameter sets
 rng(1); tic
@@ -98,6 +100,11 @@ for ithParamSet = 1:size(paramSetInds, 1)
             allShuffleMaxJumps = [allShuffleMaxJumps; maxJumps_shuffle];
         end
         
+        if plotNetStruct
+            figure; histogram(sum(network.cluster_mat, 1)); xlabel('n Clusters'); ylabel('Neurons (count)')
+            histcounts(sum(network.cluster_mat, 1))
+            % figure; histogram(sum(network.cluster_mat, 2)); xlabel('n Neurons'); ylabel('Clusters (count)')
+        end
         
         % PF: plot and calculate score
         if calcScore
@@ -234,18 +241,22 @@ for ithParamSet = 1:size(paramSetInds, 1)
         scatter(rvalThresh_vec(xnan), jumpThres_vec(ynan), 300, 'x')
     end
 
-    keyboard
+    
     %% Plot ECDF of r values
     
     allEventRs_ecdf = (allEventRs);
-    rvals_ecdf= (vertcat(allShuffleRs{:}));
+    rvals_shuff_ecdf= (vertcat(allShuffleRs{:}));
                 
-    figure; hold on; ecdf(sqrt(allEventRs_ecdf)); ecdf(sqrt(rvals_ecdf))
+    figure; hold on; ecdf(sqrt(allEventRs_ecdf)); ecdf(sqrt(rvals_shuff_ecdf))
     % figure; hold on; ecdf(allEventRs_ecdf); ecdf(rvals_ecdf)
     legend({'Preplays', 'Shuffles'}, 'Location', 'Best')
     xlabel('|Correlation|'); ylabel('Cumulative proportion');
-    %title(['ithParam1=', num2str(ithParam1) ' ithParam2=', num2str(ithParam2), ' pval=', num2str(p_kstest) ])
-    [H,P,KSSTAT] = kstest2(sqrt(allEventRs_ecdf), sqrt(rvals_ecdf) )
+    [H,P,KSSTAT] = kstest2(sqrt(allEventRs_ecdf), sqrt(rvals_shuff_ecdf) )
+    title([variedParam(1).name, '=', num2str(variedParam(1).range(ithParam1)), ' ', ...
+        variedParam(2).name, '=', num2str(variedParam(2).range(ithParam2)), ...
+        ' pval=', num2str(P), ...
+        ' nEvents=', num2str(numel(allEventRs_ecdf))])
+
     
     %% Plot best sequences
     
@@ -302,11 +313,12 @@ for ithParamSet = 1:size(paramSetInds, 1)
     xlabel('Position (2 cm bin)'); ylabel('Cell (sorted)');
     % colormap(flipud(bone)); title ''
     
+    
     %% Plot cluster-wise place fields
     if plotClusterPFs
-        figure; tiledlayout(parameters.clusters/2,1);
+        figure; tiledlayout(parameters.clusters,1);
         singularMembership = 1;
-        for ithCluster = parameters.clusters:-2:1
+        for ithCluster = parameters.clusters:-1:1
             if singularMembership
                 isClusterMember = [sum(cluster_matAll(PFpeaksSequence(rateDenomAll>minPeakRate), :), 2)==1] .* [cluster_matAll(PFpeaksSequence(rateDenomAll>minPeakRate),ithCluster)==1];
             else
@@ -323,10 +335,11 @@ for ithParamSet = 1:size(paramSetInds, 1)
         end
     end
     
+    
     %% Extra plots      
     if plotExtraPlots
         % Example network PFs    
-        for ithNet = 1:10
+        for ithNet = 1%:10
             cellsToPlot = [rateDenomAll>minPeakRate] & [netInd_all(PFpeaksSequence)==ithNet];
             figure; imagesc( PFmatE_all(PFpeaksSequence(cellsToPlot),:)./rateDenomAll(cellsToPlot)); title('Example net'); colorbar; caxis([0, caxmax])
             xlabel('Position (2 cm bin)'); ylabel('Cell (sorted)');
@@ -379,6 +392,7 @@ for ithParamSet = 1:size(paramSetInds, 1)
         xlabel('Location (2 cm bins)'); ylabel('Firing rate (Hz)'); title('Good example place fields')
     end
     
+    
     %% Plot PF score, if it was calculated
     if calcScore
         figure; histogram(PFscores_all); xlabel('Place field score (lower is better)'); ylabel('Network (count)');
@@ -386,22 +400,20 @@ for ithParamSet = 1:size(paramSetInds, 1)
     
     % Plots for comparison to Shin et al., 2019
     if 0
-        
         % 'Peak Rate'
         peakRate= max(PFmatE_all, [], 2);
         figure; histogram(peakRate(peakRate>minPeakRate), 10, 'Normalization', 'probability'); xlabel('Place field peak (Hz)'); ylabel('Place cells (Prob.)');
         xlim([-2, 45]); ylim([0, 0.4]); box off
-
         % 'sparsity'                
         cellSparsity =  mean( PFmatE_all>[0.25*max(PFmatE_all, [], 2)], 2 );
         figure; histogram(cellSparsity(peakRate>minPeakRate), 10, 'Normalization', 'probability'); xlabel('Spatial sparsity'); ylabel('E cells (count)'); ylabel('Place cells (Prob.)');
         xlim([-0.05, 1.05]); ylim([0, 0.3]); box off
-
         % 'information'
         spatialInfo = nanmean( [PFmatE_all./mean(PFmatE_all, 2)] .* log(( PFmatE_all+eps )./mean(PFmatE_all, 2) ), 2 );
         figure; histogram(spatialInfo(peakRate>minPeakRate), 10, 'Normalization', 'probability'); xlabel('Spatial Information (bits)'); ylabel('E cells (count)'); ylabel('Place cells (Prob.)');
         xlim([-0.05, 3.45]); ylim([0, 0.3]); box off
     end
+    
     
 end
 

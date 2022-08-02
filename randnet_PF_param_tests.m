@@ -116,7 +116,7 @@ variedParam(1).name = 'mnc'; % 2nd parameter to be varied
 variedParam(1).range = linspace(1, 6, 21); % set of values to test param2 at
 %variedParam(1).range = linspace(1, 25, 5); % set of values to test param2 at
 variedParam(1).range = 1.0:0.25:3.0; %linspace(1, 8, 29); % set of values to test param2 at
-% variedParam(1).range = 1.0:0.25:1.25; %linspace(1, 8, 29); % set of values to test param2 at
+variedParam(1).range = 1.0:0.25:1.25; %linspace(1, 8, 29); % set of values to test param2 at
 
 variedParam(2).name = 'clusters'; % 2nd parameter to be varied
 %variedParam(2).range = [2:1:21]; % set of values to test param2 at
@@ -126,6 +126,7 @@ variedParam(2).range = [2:2:50]; % set of values to test param2 at
 variedParam(2).range = [5:5:60]; % set of values to test param2 at
 % variedParam(2).range = [5:5:10]; % set of values to test param2 at
 
+parameters.include_all = 3; disp('include_all==3') % if a neuron is not in any cluster, take cluster membership from a highly connected neuron
 
 %{
 variedParam(1).name = 'Win_mean'; % 1st parameter to be varied. Must be a field in the parameter structure

@@ -55,6 +55,13 @@ allNetKSstat = zeros(numel(xParamvec), numel(yParamvec), num_nets);
 allNetMedianDiff = zeros(numel(xParamvec), numel(yParamvec), num_nets);
 allNetGroupID = nan(numel(xParamvec), numel(yParamvec), num_nets);
 
+allNetDecodeSlopes = zeros(numel(xParamvec), numel(yParamvec), num_nets); % Mean decoded slope of each network for each parameter point
+allNetDecodeSlopes_zscored = zeros(numel(xParamvec), numel(yParamvec), num_nets); % Mean decoded slope of each network for each parameter point
+
+allNetDecodeEntropy = zeros(numel(xParamvec), numel(yParamvec), num_nets); % Mean decoded slope of each network for each parameter point
+
+allNetDecodeVar = zeros(numel(xParamvec), numel(yParamvec), num_nets); % Mean decoded slope of each network for each parameter point
+
 figure(515); hold on
 imagesc(xParamvec, yParamvec, squeeze(op(1,:,:))', 'AlphaData', ~isnan(squeeze(op(1,:,:))')); drawnow
 set(gca,'YDir','normal')
@@ -117,6 +124,25 @@ for ithParam1 = 1:size(resultsStruct, 1)
                 nEvents_accum = nEvents_accum + numel(pvals_preplay);
                 nSigEvents_accum = nSigEvents_accum + sum(pvals_preplay<0.05);
                 
+                %%
+                
+                slopes_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.slopes(:,1);
+                % slopes_shuffle = vertcat(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.shuffle_slopes{:});
+                % slopes_shuffle = slopes_shuffle(:,1); % take just forward traj
+                allNetDecodeSlopes(ithParam1, ithParam2, ithNet) = mean(abs(slopes_preplay));
+                % allNetDecodeSlopes_zscored = 0;
+
+                entropy_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.Entropy(:,1);
+                allNetDecodeEntropy(ithParam1, ithParam2, ithNet) = mean(entropy_preplay);
+                
+                temp = 0;
+                for ithEvent = 1:numel(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pMat)
+                    temp = temp + mean(var(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pMat{ithEvent}{1}.pMat, [], 1));
+                end
+                allNetDecodeVar(ithParam1, ithParam2, ithNet) = temp./ numel(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pMat);
+                                
+                
+                %%
                 temp(3, ithNet) = numel(pvals_preplay) / sum(pvals_preplay<0.05) ;
 
             else
@@ -227,6 +253,30 @@ set(gca,'clim',[log10(.05)*2 0])
 set(gcf,'colormap',cm)
 colorbar
 colorbar('Direction','reverse','Ticks',[log10(.005),log10(.05),log10(.5)],'TickLabels',[.005,.05,.5])
+
+
+%% Extra parameter grid plots
+
+figure; 
+imagesc(xParamvec, yParamvec, mean(allNetDecodeSlopes, 3)', 'AlphaData', ~isnan(mean(allNetDecodeSlopes, 3)'))
+set(gca,'YDir','normal')
+cb = colorbar(); cb.Label.String = 'Mean abs. decode slope';
+xlabel(xName,'Interpreter','none'); ylabel(yName,'Interpreter','none')
+
+
+figure; 
+imagesc(xParamvec, yParamvec, mean(allNetDecodeEntropy, 3)', 'AlphaData', ~isnan(mean(allNetDecodeEntropy, 3)'))
+set(gca,'YDir','normal')
+cb = colorbar(); cb.Label.String = 'Mean entropy';
+xlabel(xName,'Interpreter','none'); ylabel(yName,'Interpreter','none')
+
+
+figure; 
+imagesc(xParamvec, yParamvec, mean(allNetDecodeVar, 3)', 'AlphaData', ~isnan(mean(allNetDecodeVar, 3)'))
+set(gca,'YDir','normal')
+cb = colorbar(); cb.Label.String = 'Mean decode variance';
+xlabel(xName,'Interpreter','none'); ylabel(yName,'Interpreter','none')
+
 
 %% Plot net-wise scatter, if single parameter point was run above
 

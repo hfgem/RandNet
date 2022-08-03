@@ -343,6 +343,7 @@ if ~isempty(riptimes)
             permbins = nonzerobins;
             srvalues = [];
             smaxJumps = [];
+            sslopes = [];
             for iteration = 1:shuffleIterations % 1500
                 permbins = permbins(randperm(length(permbins)));% temporal shuffle
                 % calculate shuffled pMat
@@ -379,6 +380,7 @@ if ~isempty(riptimes)
                 regressdata(:,3) = 1;
                 [b,bint,r,rint,stats] = regress(regressdata(:,1),[regressdata(:,3),regressdata(:,2)]);
                 srvalues = [srvalues; stats(1)];
+                sslopes = [sslopes; b(2)];
                 
                 [~, PeakDecodeInd] = max(pMat, [], 1); 
                 currentShuffMaxJump = max(abs(diff(PeakDecodeInd))./size(pMat, 1));
@@ -386,7 +388,9 @@ if ~isempty(riptimes)
             end
             % calculate p-value
             pvalue(event,traj) = sum(Res(event,traj) < srvalues)/length(srvalues);
+            
             % Save shuffle stats
+            shuffle_Spd{event}{traj} = sslopes;
             shuffle_rvalues{event}{traj} = srvalues;
             shuffle_maxJump{event}{traj} = smaxJumps;
         end
@@ -460,6 +464,7 @@ else
     replaytraj.tBinSz = tBinSz;
     replaytraj.cellcountthresh = cellcountthresh;
     
+    replaytraj.shuffle_slopes = shuffle_Spd;
     replaytraj.shuffle_rsquare = shuffle_rvalues;
     replaytraj.shuffle_maxJump = shuffle_maxJump;
 end

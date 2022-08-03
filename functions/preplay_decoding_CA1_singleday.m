@@ -328,6 +328,12 @@ if ~isempty(riptimes)
             pMat_cell{event}{traj}.timevec = 1:szPM2;
             pMat_cell{event}{traj}.posvec = distvector;
             pMat_cell{event}{traj}.timebinsz = tBinSz;
+            
+            [X,y] = meshgrid([1:size(pMat,2)],[1:size(pMat,1)]); w = pMat;
+            mdl = fitlm(X(:),y(:),'Weights',w(:));
+            weightedSlope(event,traj) = mdl.Coefficients.Estimate(2);
+            weightedR2(event,traj) = mdl.Rsquared.Ordinary;
+            
             if figopt
                 subplot(1,4,traj)
                 imagesc(1:szPM2,distvector,pMat);
@@ -344,6 +350,8 @@ if ~isempty(riptimes)
             srvalues = [];
             smaxJumps = [];
             sslopes = [];
+            sweightedSlope = [];
+            sweightedR2 = [];
             for iteration = 1:shuffleIterations % 1500
                 permbins = permbins(randperm(length(permbins)));% temporal shuffle
                 % calculate shuffled pMat
@@ -382,10 +390,17 @@ if ~isempty(riptimes)
                 srvalues = [srvalues; stats(1)];
                 sslopes = [sslopes; b(2)];
                 
-                [~, PeakDecodeInd] = max(pMat, [], 1); 
-                currentShuffMaxJump = max(abs(diff(PeakDecodeInd))./size(pMat, 1));
+                [~, PeakDecodeInd] = max(tmppMat, [], 1); 
+                currentShuffMaxJump = max(abs(diff(PeakDecodeInd))./size(tmppMat, 1));
                 smaxJumps = [smaxJumps, currentShuffMaxJump];
+                
+                [X,y] = meshgrid([1:size(tmppMat,2)],[1:size(tmppMat,1)]); w = tmppMat;
+                mdl = fitlm(X(:),y(:),'Weights',w(:));
+                sweightedSlope = [sweightedSlope,  mdl.Coefficients.Estimate(2)];
+                sweightedR2 = [sweightedR2, mdl.Rsquared.Ordinary];
+                
             end
+            
             % calculate p-value
             pvalue(event,traj) = sum(Res(event,traj) < srvalues)/length(srvalues);
             
@@ -393,6 +408,8 @@ if ~isempty(riptimes)
             shuffle_Spd{event}{traj} = sslopes;
             shuffle_rvalues{event}{traj} = srvalues;
             shuffle_maxJump{event}{traj} = smaxJumps;
+            shuffle_weightedSlope{event}{traj} = sweightedSlope;
+            shuffle_weightedR2{event}{traj} = sweightedR2;
         end
         
         [minP,tidx] = min(pvalue(event,:));% find the minimun pvalue
@@ -464,9 +481,15 @@ else
     replaytraj.tBinSz = tBinSz;
     replaytraj.cellcountthresh = cellcountthresh;
     
+    replaytraj.weightedSlope = weightedSlope;
+    replaytraj.weightedR2 = weightedR2;
+    
     replaytraj.shuffle_slopes = shuffle_Spd;
     replaytraj.shuffle_rsquare = shuffle_rvalues;
     replaytraj.shuffle_maxJump = shuffle_maxJump;
+    
+    replaytraj.shuffle_weightedSlope = shuffle_weightedSlope;
+    replaytraj.shuffle_weightedR2 = shuffle_weightedR2;
 end
 
 replaytrajectory{day}{ep} = replaytraj;

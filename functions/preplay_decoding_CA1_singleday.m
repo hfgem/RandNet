@@ -253,6 +253,26 @@ if ~isempty(riptimes)
         wrking = bsxfun(@times,wrking, expon); %[nPos x nTbin x nCell]
         post = prod(wrking,3); %Non normalised prob [nPos x Tbin]
         
+        %{
+        figure; imagesc(exp(sum(log(wrking),3))); colorbar
+        figure; imagesc(sum(log(wrking),3)); colorbar
+        
+        logPost = sum( log(wrking) , 3); 
+        figure; imagesc(logPost./min(logPost, [], 1)); colorbar
+        figure; imagesc(exp( logPost./min(logPost, [], 1) )); colorbar
+        logNormPost = exp( logPost./-min(logPost, [], 1) );
+        %logNormPost = logNormPost(2:end-1,:);
+        figure; imagesc(logNormPost./sum(logNormPost, 1)); colorbar
+        tic
+        a = prod(vpa(wrking) ,3); toc
+        figure; imagesc(double(a./sum(a, 1)))
+        
+        b =  exp(vpa(sum(log(wrking) ,3)));
+        figure; imagesc(double(a./sum(a, 1)))
+
+        keyboard
+        %}
+
         post(:,nSpkPerTBin==0)  =0; % so the posterior matrix can be smoothed.
         post(isnan(post)) = 0;   % remove NaN
                 

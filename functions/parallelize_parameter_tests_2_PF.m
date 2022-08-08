@@ -279,9 +279,9 @@ function [avg_mat, allResults, PFresults] = parallelize_parameter_tests_2(parame
                 clear tetinfo linfields ripple spikes
 
                 % 2) Save results: 
-                day=1; ep=2; cellcountthresh = 5; savedata = 0; figopt = 0; shuffleIterations = 500;
+                day=1; ep=2; savedata = 0; figopt = 0; 
                 warning off
-                decodingResults = preplay_decoding_CA1_singleday(animalprefix,day,ep,cellcountthresh,[filepath, filesep],savedata,figopt,shuffleIterations);
+                decodingResults = preplay_decoding_CA1_singleday(animalprefix,day,ep,[filepath, filesep],savedata,figopt, parameters);
                 warning on
                 allResults{ithNet}{ithTest}.replaytrajectory = decodingResults{day}{ep}; 
                 % 3) Delete tmp dir files:

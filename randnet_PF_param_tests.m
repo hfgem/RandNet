@@ -69,6 +69,12 @@ parameters.min_avg_length = 0;
 parameters.max_avg_length = inf;
 %}
 
+% New, decoding analysis parameters
+parameters.useLogSumDecode=1;
+parameters.cellcountthresh = 5;
+parameters.shuffleIterations = 500;
+
+
 % Simulation duration
 %parameters.t_max = 10;
 parameters.t_max = 120;

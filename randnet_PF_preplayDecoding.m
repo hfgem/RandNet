@@ -54,17 +54,19 @@ save([save_path, animalprefix, '_direct/', animalprefix, 'spikes01.mat'], 'spike
 
 
 %% Run preplay decoding analysis
-% animalprefix = '2022-06-29T12-40'
+% animalprefix = '2022-06-29T12-40'; saveFlag = 0;
+% animalprefix = '2022-08-03T15-12'; saveFlag = 0;
 
 day=1; ep=2;
 
-cellcountthresh = 5; % at least 5 cells fired as a candidate event
+parameters.cellcountthresh = 5; % at least 5 cells fired as a candidate event
 savedata = saveFlag % save data = 1; not save = 0
-figopt = 1 % 1 = plot decoding result for each event; 0 = no figure generated
-shuffleIterations = 500 % 1500 for standard decoding
+figopt = 2 % 1 = plot decoding result for each event; 0 = no figure generated
+parameters.shuffleIterations = 2; % 1500 for standard decoding
+parameters.useLogSumDecode = 1
 
 warning off
-replaytrajectory = preplay_decoding_CA1_singleday(animalprefix,day,ep,cellcountthresh, save_path, savedata, figopt, shuffleIterations);
+replaytrajectory = preplay_decoding_CA1_singleday(animalprefix, day, ep, save_path, savedata, figopt, parameters);
 warning on
 
 

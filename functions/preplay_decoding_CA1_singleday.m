@@ -1,4 +1,4 @@
-function replaytrajectory = preplay_decoding_CA1_singleday(animalprefix,day,ep,cellcountthresh, savedir, savedata, figopt, shuffleIterations)
+function replaytrajectory = preplay_decoding_CA1_singleday(animalprefix, day, ep, savedir, savedata, figopt, parameters)
 % Adapted from code for Shin et al., 2019, Jadhav Lab
 %
 % INPUTS:
@@ -23,17 +23,37 @@ function replaytrajectory = preplay_decoding_CA1_singleday(animalprefix,day,ep,c
 % Assumes all simulation data does not exclude any cells
 
 
-%% Analysis parameters
+%% Default parameters
 
 tBinSz = 10; %ms, default temporal bin in ms [typically around 15ms], hard coded
 minEventDur = 50; % ms, exclude events shorter than this
 wellcutoff = 0; %cm, remove reward-well regions (15cm around start and end); or 0cm without exclusion
-minPeakRate = 3; %Hz, minimum peak rate to include cell
+minPeakRate_decode = 3; %Hz, minimum peak rate to include cell
 
-downSampleCells = 0;
+downSampleCells = 0; % true/false flag to use downsampling
 downSampledFrac = 0.1;
 
-dispFlag = 1; % display event analysis progression
+dispFlag_decode = 1; % display event analysis progression
+
+useLogSumDecode = 0;
+shuffleIterations = 1500;
+cellcountthresh = 5;
+
+%% Overwrite default parameters, if specified in parameters struct
+if isfield(parameters, 'tBinSz'); tBinSz = parameters.tBinSz; end
+if isfield(parameters, 'minEventDur'); minEventDur = parameters.minEventDur; end
+if isfield(parameters, 'wellcutoff'); wellcutoff = parameters.wellcutoff; end
+if isfield(parameters, 'minPeakRate_decode'); minPeakRate_decode = parameters.minPeakRate_decode; end
+
+if isfield(parameters, 'downSampleCells'); downSampleCells = parameters.downSampleCells; end
+if isfield(parameters, 'downSampledFrac'); downSampledFrac = parameters.downSampledFrac; end
+
+if isfield(parameters, 'dispFlag_decode'); dispFlag_decode = parameters.dispFlag_decode; end
+
+if isfield(parameters, 'useLogSumDecode'); useLogSumDecode = parameters.useLogSumDecode; end
+if isfield(parameters, 'shuffleIterations'); shuffleIterations = parameters.shuffleIterations; end
+if isfield(parameters, 'cellcountthresh'); cellcountthresh = parameters.cellcountthresh; end
+
 
 %% set animal directory
 dir = [savedir, animalprefix, '_direct/'];
@@ -106,7 +126,7 @@ for i = 1:hpnum
                 pos_hp = [pos_hp;pos1];
                 lintrack_hp = [lintrack_hp;lintrack1];
            end
-           if (max(linfield_hp) >= minPeakRate) % peak firing rate max larger than 3 Hz
+           if (max(linfield_hp) >= minPeakRate_decode) % peak firing rate max larger than 3 Hz
                a = find(isnan(linfield_hp));
                %pad nan
                if ~isempty(a)
@@ -208,7 +228,7 @@ if ~isempty(riptimes)
     for event = 1:length(eventindex)
         
         % show current event number
-        if dispFlag
+        if dispFlag_decode
             disp(['Event ', num2str(event), ' of ', num2str(length(eventindex))])
         end
         
@@ -251,28 +271,18 @@ if ~isempty(riptimes)
         wrking = bsxfun(@power, expecSpk, spkPerBin); %[nPos x nTbin x nCell]
         wrking = bsxfun(@rdivide, wrking, factSpkPerBin); %[nPos x nTbin x nCell]
         wrking = bsxfun(@times,wrking, expon); %[nPos x nTbin x nCell]
-        post = prod(wrking,3); %Non normalised prob [nPos x Tbin]
+        if useLogSumDecode
+            logPost = sum( log(wrking) , 3); % log transformed, non-normalized prob [nPos x Tbin]
+            post = exp(logPost-max(logPost)); %Peak-normalized prob [nPos x Tbin]
+            
+            % tic; a = prod(vpa(wrking) ,3); toc; figure; imagesc(double(a./sum(a, 1)))
+            % tic; b =  exp(vpa(sum(log(wrking) ,3))); toc; figure; imagesc(double(b./sum(b, 1)))
+        else
+            % If many cells spike in a time bin, then prod(working,3) vanishes numerically
+            post = prod(wrking,3); %Non normalized prob [nPos x Tbin]
+        end
         
-        %{
-        figure; imagesc(exp(sum(log(wrking),3))); colorbar
-        figure; imagesc(sum(log(wrking),3)); colorbar
         
-        logPost = sum( log(wrking) , 3); 
-        figure; imagesc(logPost./min(logPost, [], 1)); colorbar
-        figure; imagesc(exp( logPost./min(logPost, [], 1) )); colorbar
-        logNormPost = exp( logPost./-min(logPost, [], 1) );
-        %logNormPost = logNormPost(2:end-1,:);
-        figure; imagesc(logNormPost./sum(logNormPost, 1)); colorbar
-        tic
-        a = prod(vpa(wrking) ,3); toc
-        figure; imagesc(double(a./sum(a, 1)))
-        
-        b =  exp(vpa(sum(log(wrking) ,3)));
-        figure; imagesc(double(a./sum(a, 1)))
-
-        keyboard
-        %}
-
         post(:,nSpkPerTBin==0)  =0; % so the posterior matrix can be smoothed.
         post(isnan(post)) = 0;   % remove NaN
                 
@@ -385,7 +395,12 @@ if ~isempty(riptimes)
                 wrking = bsxfun(@power, tmpexpecSpk, tmpspkPerBin); %[nPos x nTbin x nCell]
                 wrking = bsxfun(@rdivide, wrking, tmpfactSpkPerBin); %[nPos x nTbin x nCell]
                 wrking = bsxfun(@times,wrking, tmpexpon); %[nPos x nTbin x nCell]
-                tmppMat = prod(wrking,3); %Non normalised prob [nPos x Tbin]
+                if useLogSumDecode
+                    logTmppMat = sum( log(wrking) , 3); % log transformed, non-normalized prob [nPos x Tbin]
+                    tmppMat = exp(logTmppMat-max(logTmppMat)); %Peak-normalized prob [nPos x Tbin]
+                else % If many cells spike in a time bin, then prod(working,3) vanishes numerically
+                    tmppMat = prod(wrking,3); %Non normalised prob [nPos x Tbin]
+                end
                 tmppMat(:,tmpnSpkPerTBin==0)  =0; % so the posterior matrix can be smoothed.
                 tmppMat(isnan(tmppMat)) = 0;  
                 for i = 1:szPM2; if (sum(tmppMat(:,i))>0)

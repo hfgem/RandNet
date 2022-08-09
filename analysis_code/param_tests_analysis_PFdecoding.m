@@ -31,6 +31,8 @@ plotCombinedCDFs = 0
 maxNEvents = inf % downsample number of replay events for kstest to maxNEvents, use inf for no downsampling
 % maxNEvents = 500 
 
+weightedDecodes = 1;
+
 %downSample = 0
 %downSampleFracEvents = 0.5;
 
@@ -39,10 +41,14 @@ xName = variedParam(1).name;
 yParamvec = variedParam(2).range;
 yName = variedParam(2).name;
 
-analysisTitle = 'Decoding KS-test';
+if weightedDecodes
+    analysisTitle = 'KS-test, weighted decode corrs';
+else
+    analysisTitle = 'KS-test, peak pos. decode corrs';
+end
 if combineNetData
-    cbLabel1 = 'combined p-val';
-    cbLabel2 = 'combined KS-stat';
+    cbLabel1 = 'Combined p-val';
+    cbLabel2 = 'Combined KS-stat';
 else
     cbLabel1 = 'Median p-val';
     cbLabel2 = 'Median KS-stat';
@@ -90,11 +96,17 @@ for ithParam1 = 1:size(resultsStruct, 1)
                 %pvals = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pvalue(:,1);
                 %figure; histogram(pvals, 10)
 
-                allshuff_rvals = vertcat(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.shuffle_rsquare{:});
-                allshuff_rvals = allshuff_rvals(:,1); % take just forward traj
-
-                rvals_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.rsquare(:,1);
-                rvals_shuffle = vertcat(allshuff_rvals{:,1});
+                if weightedDecodes
+                    allshuff_rvals = vertcat(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.shuffle_weightedR2{:});
+                    allshuff_rvals = allshuff_rvals(:,1); % take just forward traj
+                    rvals_shuffle = vertcat([allshuff_rvals{:,1}]');
+                    rvals_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.weightedR2(:,1);
+                else
+                    allshuff_rvals = vertcat(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.shuffle_rsquare{:});
+                    allshuff_rvals = allshuff_rvals(:,1); % take just forward traj
+                    rvals_shuffle = vertcat(allshuff_rvals{:,1});
+                    rvals_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.rsquare(:,1);
+                end
                 
                 if plotAllCDFs
                     figure; hold on; ecdf(rvals_preplay); ecdf(rvals_shuffle); legend({'Preplays', 'Shuffles'}, 'Location', 'Best')

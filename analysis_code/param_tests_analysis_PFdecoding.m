@@ -31,7 +31,7 @@ plotCombinedCDFs = 0
 maxNEvents = inf % downsample number of replay events for kstest to maxNEvents, use inf for no downsampling
 % maxNEvents = 500 
 
-weightedDecodes = 1;
+useWeightedDecode = 1; % slope and R2 for correlations by either peak prob or weighted prob
 
 %downSample = 0
 %downSampleFracEvents = 0.5;
@@ -41,7 +41,7 @@ xName = variedParam(1).name;
 yParamvec = variedParam(2).range;
 yName = variedParam(2).name;
 
-if weightedDecodes
+if useWeightedDecode
     analysisTitle = 'KS-test, weighted decode corrs';
 else
     analysisTitle = 'KS-test, peak pos. decode corrs';
@@ -96,16 +96,37 @@ for ithParam1 = 1:size(resultsStruct, 1)
                 %pvals = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pvalue(:,1);
                 %figure; histogram(pvals, 10)
 
-                if weightedDecodes
+                if useWeightedDecode
                     allshuff_rvals = vertcat(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.shuffle_weightedR2{:});
                     allshuff_rvals = allshuff_rvals(:,1); % take just forward traj
                     rvals_shuffle = vertcat([allshuff_rvals{:,1}]');
+                    
                     rvals_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.weightedR2(:,1);
+                
+                    pvals_preplay = nan(size(rvals_preplay));
+                    for ithEvent=1:numel(rvals_preplay)
+                        pvals_preplay(ithEvent) = mean(rvals_preplay(ithEvent)<allshuff_rvals{ithEvent});
+                    end
+                    
+                    slopes_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.weightedSlope(:,1);
+                    slopes_shuffle = vertcat(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.shuffle_weightedSlope{:});
+                    slopes_shuffle = slopes_shuffle(:,1); % take just forward traj
+                    slopes_shuffle = vertcat([slopes_shuffle{:,1}]');
                 else
                     allshuff_rvals = vertcat(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.shuffle_rsquare{:});
                     allshuff_rvals = allshuff_rvals(:,1); % take just forward traj
                     rvals_shuffle = vertcat(allshuff_rvals{:,1});
+                    
                     rvals_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.rsquare(:,1);
+                
+                    % Equal to frac of shuffle events with greater R2 than actual event's R2
+                    pvals_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pvalue(:,1);
+                    
+                    slopes_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.slopes(:,1);
+                    slopes_shuffle = vertcat(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.shuffle_slopes{:});
+                    slopes_shuffle = slopes_shuffle(:,1); % take just forward traj
+                    slopes_shuffle = cellfun(@transpose,slopes_shuffle,'UniformOutput',false); 
+                    slopes_shuffle = vertcat([slopes_shuffle{:,1}]');
                 end
                 
                 if plotAllCDFs
@@ -132,17 +153,15 @@ for ithParam1 = 1:size(resultsStruct, 1)
                 allRvecs = [allRvecs, rvals_preplay'];
                 allRvecs_shuff = [allRvecs_shuff, rvals_shuffle'];
                 
-                pvals_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pvalue(:,1);
                 nEvents_accum = nEvents_accum + numel(pvals_preplay);
                 nSigEvents_accum = nSigEvents_accum + sum(pvals_preplay<0.05);
                 
                 %%
                 
-                slopes_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.slopes(:,1);
                 % slopes_shuffle = vertcat(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.shuffle_slopes{:});
                 % slopes_shuffle = slopes_shuffle(:,1); % take just forward traj
                 allNetDecodeSlopes(ithParam1, ithParam2, ithNet) = mean(abs(slopes_preplay));
-                % allNetDecodeSlopes_zscored = 0;
+                allNetDecodeSlopes_zscored(ithParam1, ithParam2, ithNet) = [mean(abs(slopes_preplay)) - mean(abs(slopes_shuffle))] / [std(abs(slopes_shuffle))];
 
                 entropy_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.Entropy(:,1);
                 allNetDecodeEntropy(ithParam1, ithParam2, ithNet) = mean(entropy_preplay);
@@ -153,8 +172,7 @@ for ithParam1 = 1:size(resultsStruct, 1)
                 end
                 allNetDecodeVar(ithParam1, ithParam2, ithNet) = temp./ numel(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pMat);
                                 
-                
-                %%
+
                 temp(3, ithNet) = numel(pvals_preplay) / sum(pvals_preplay<0.05) ;
 
             else
@@ -277,6 +295,13 @@ xlabel(xName,'Interpreter','none'); ylabel(yName,'Interpreter','none')
 
 
 figure; 
+imagesc(xParamvec, yParamvec, mean(allNetDecodeSlopes_zscored, 3)', 'AlphaData', ~isnan(mean(allNetDecodeSlopes_zscored, 3)'))
+set(gca,'YDir','normal')
+cb = colorbar(); cb.Label.String = 'Shuffle scored decode slope';
+xlabel(xName,'Interpreter','none'); ylabel(yName,'Interpreter','none')
+
+
+figure; 
 imagesc(xParamvec, yParamvec, mean(allNetDecodeEntropy, 3)', 'AlphaData', ~isnan(mean(allNetDecodeEntropy, 3)'))
 set(gca,'YDir','normal')
 cb = colorbar(); cb.Label.String = 'Mean entropy';
@@ -292,13 +317,18 @@ xlabel(xName,'Interpreter','none'); ylabel(yName,'Interpreter','none')
 
 %% Plot net-wise scatter, if single parameter point was run above
 
-figure; scatterhist(allNetMedianDiff(:), allNetPvals(:), 'Group', allNetGroupID(:), 'Kernel','on')
+
+% figure; scatterhist(allNetMedianDiff(:), allNetPvals(:), 'Group', allNetGroupID(:), 'Kernel','on')
+figure; scatter(allNetMedianDiff(:), allNetPvals(:), [], allNetGroupID(:))
+title('All networks from all parameter points')
 xlabel('median(actual R^2)-median(shuff R^2)')
 ylabel('KStest p-value')
 
+%{
 figure; scatterhist(allNetKSstat(:), allNetPvals(:), 'Group', allNetGroupID(:), 'Kernel','on')
 xlabel('KS-statistic')
 ylabel('KStest p-value')
+%}
 
 %% Plot net-wise scatter, if multiple parameter points were run
 
@@ -310,6 +340,8 @@ try
     Y = squeeze(allNetPvals(ind1,ind2,:)); 
     ID = squeeze(allNetGroupID(ind1,ind2,:));
     figure; scatterhist(X(:), Y(:), 'Group', ID(:), 'Kernel','on')
+    % figure; scatter(X(:), Y(:), [], ID(:))
+    title(['Nets from parameter point index (', num2str(ind1), ', ', num2str(ind2), ')'])
     xlabel('median(actual R^2)-median(shuff R^2)')
     ylabel('KStest p-value')
 end

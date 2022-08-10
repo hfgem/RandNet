@@ -16,21 +16,24 @@ end
 variedParam(:).name
 variedParam(:).range
 paramSetInds = combvec([2], [4])'
-paramSetInds = combvec([1], [2])'
+% paramSetInds = combvec([1], [2])'
 
 parameters.n
 parameters.del_G_sra
 variedParam(1).name
 variedParam(2).name
 
-
+% Analysis and plotting parameters
 minPeakRate = 2; % minimum peak PF rate to be considered a place cell
-calcScore = 0
-plotExtraPlots = false % if 1, plot place fields of every network
-nEventsToPlot = 25
+useWeightedDecode = 1; % slope and R2 for correlations by either peak prob or weighted prob
+nEventsToPlot = 25; 
 useMeanPFDensity = true
+
+% Analysis and plotting options
+calcScore = false
+plotExtraPlots = false % if 1, plot place fields of every network
 plotNetsBest = false
-plotPvalMat = false % true
+plotPvalMat = true 
 plotClusterPFs = false
 plotNetStruct = false
 
@@ -89,10 +92,26 @@ for ithParamSet = 1:size(paramSetInds, 1)
 
         %Accumulate best events, if there are any
         if ~isempty(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pvalue)
-            rsqrs_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.rsquare(:,1); 
+            
+            if useWeightedDecode
+                rsqrs_shuffle = vertcat(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.shuffle_weightedR2{:}); 
+                rsqrs_shuffle = rsqrs_shuffle(:,1);
+                rsqrs_shuffle = cellfun(@transpose,rsqrs_shuffle,'UniformOutput',false); 
+                rsqrs_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.weightedR2(:,1); 
+                
+                % pvals_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pvalue(:,1); % pvalue, relative to shuffle
+                pvals_preplay = nan(size(rsqrs_preplay));
+                for ithEvent=1:numel(rsqrs_preplay)
+                    pvals_preplay(ithEvent) = mean(rsqrs_preplay(ithEvent)<rsqrs_shuffle{ithEvent});
+                end
+            else
+                rsqrs_shuffle = vertcat(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.shuffle_rsquare{:}); 
+                rsqrs_shuffle = rsqrs_shuffle(:,1);
+                rsqrs_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.rsquare(:,1); 
+                pvals_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pvalue(:,1); % pvalue, relative to shuffle
+            end
+            
             maxJumps_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.maxJump(:,1); 
-            rsqrs_shuffle = vertcat(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.shuffle_rsquare{:}); 
-            rsqrs_shuffle = rsqrs_shuffle(:,1);
             maxJumps_shuffle = vertcat(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.shuffle_maxJump{:}); 
             maxJumps_shuffle = maxJumps_shuffle(:,1);
             allEventRs = [allEventRs; rsqrs_preplay];
@@ -132,7 +151,6 @@ for ithParamSet = 1:size(paramSetInds, 1)
         if nEventsToPlot>0
             if isempty(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pvalue); continue; end
             
-            pvals_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pvalue(:,1); % pvalue
             % rvals_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.rsquare(:,1); % pvalue
             % fitPvals_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.FitpVal(:,1); % pvalue
             
@@ -194,8 +212,8 @@ for ithParamSet = 1:size(paramSetInds, 1)
     %% Plot p-value matrix
     
     if plotPvalMat
-        rvalThresh_vec = 0:0.1:1;
-        jumpThres_vec = 0:0.1:1;
+        rvalThresh_vec = 0.0:0.1:0.9;
+        jumpThres_vec =  0.1:0.1:1.0;
 
         op = zeros(numel(jumpThres_vec), numel(rvalThresh_vec));
         for ij = 1:numel(jumpThres_vec)
@@ -217,20 +235,19 @@ for ithParamSet = 1:size(paramSetInds, 1)
                 if [sum(nShuffPass)==0] & [sum(nActPass)==0]
                     op(ij, ir) = nan;
                 end
-                keyboard
             end
             ij
         end
 
         % Plot with linear colormap
-        figure; imagesc(rvalThresh_vec, jumpThres_vec, op', 'AlphaData', ~isnan(op')); colorbar
+        figure; imagesc(jumpThres_vec, rvalThresh_vec, op', 'AlphaData', ~isnan(op')); colorbar
         xlabel('<|Max Jump Distance|')
         ylabel('>|Correlation|')
         caxis([0, 0.1])
 
         % Plot with better colormap
         figure; 
-        imagesc(rvalThresh_vec, jumpThres_vec, log10(op'), 'AlphaData', ~isnan(op'))
+        imagesc(jumpThres_vec, rvalThresh_vec, log10(op'), 'AlphaData', ~isnan(op'))
         % set(gca,'YDir','normal')
         cb = colorbar(); %cb.Label.String = cbLabel2;
         xlabel('<|Max Jump Distance|')

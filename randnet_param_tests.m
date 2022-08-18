@@ -72,6 +72,10 @@ parameters.V_m_noise = 10^(-4); %magnitude of noise
 parameters.G_std = 20*10^(-9);
 parameters.check_criticality = 1; %=1 if want to test network for chaos
 
+%For criticality tests run very long simulations with a single
+%initialization
+parameters.t_max = 600;
+
 try %Ensure that E_events_only = 1
     assert(parameters.E_events_only == 1)
 catch
@@ -127,8 +131,8 @@ disp('Parameters Saved')
 optFlag = 1; 
 
 %Test parameters
-parameters.nTrials = 5; % How many tests of different initializations to run
-parameters.nNets = 2; % How many networks to run
+parameters.nTrials = 1; % How many tests of different initializations to run
+parameters.nNets = 1; % How many networks to run
 test_n = 10; % Number of values to test for each parameter
 
 % assert(parameters.usePoisson==1)
@@ -211,11 +215,23 @@ for i = 1:size(resultsMatLinear, 2)
     end
     resultsMat(structIndices{:},:) = resultsMatLinear(:,i);
     
-    for j = 1:parameters.nNets
-        for k = 1:parameters.nTrials
-            if ~isempty(resultsStructLinear{i}) %In case run terminates early, existing results can be stored
-                resultsStruct(structIndices{:}, j, k).results = resultsStructLinear{i}{j}{k};
-            end
+    if parameters.nNets > 1
+        for j = 1:parameters.nNets
+            if parameters.nTrials > 1
+                for k = 1:parameters.nTrials
+                    if ~isempty(resultsStructLinear{i}) %In case run terminates early, existing results can be stored
+                        resultsStruct(structIndices{:}, j, k).results = resultsStructLinear{i}{j}{k};
+                    end
+                end
+            else
+                if ~isempty(resultsStructLinear{i}) %In case run terminates early, existing results can be stored
+                    resultsStruct(structIndices{:}, j).results = resultsStructLinear{i}{j};
+                end
+            end    
+        end
+    else
+        if ~isempty(resultsStructLinear{i}) %In case run terminates early, existing results can be stored
+            resultsStruct(structIndices{:}).results = resultsStructLinear{i};
         end
     end
 end

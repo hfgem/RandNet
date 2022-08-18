@@ -1,4 +1,4 @@
-function criticality = test_criticality(avalanche_lengths, avalanche_counts)
+function criticality = test_criticality(avalanche_lengths, avalanche_counts, parameters, ithParamSet)
     %This function is used to test network results for chaotic activity
     %Test 1: Length: # Successive time bins with no loss of activity
     %Test 2: Size: Total # spikes during stretch of time bins with no loss 
@@ -31,7 +31,7 @@ function criticality = test_criticality(avalanche_lengths, avalanche_counts)
     %Grab numbers of events and appropriate histogram bin numbers based on
     %Freedman-Diaconis rule
     N = length(avalanche_lengths); %Number of events
-    if N > 1000
+    if N > 10
         iqr_len = iqr(avalanche_lengths); %Interquartile range of lengths
         iqr_count = iqr(avalanche_counts); %Interquartile range of counts
         len_bin_wid = 2*iqr_len/(N^(1/3));
@@ -55,48 +55,48 @@ function criticality = test_criticality(avalanche_lengths, avalanche_counts)
 
             %First Test: Power law of #avalanches of given duration as a function
             %           of duration
-            try
-                len_dataset = table(log(len_bin_avgs(len_nonzero)'),log(len_hist(len_nonzero)'));
-                len_mdl = fitlm(len_dataset);
-                resid = len_mdl.Residuals.Standardized;
-                h = kstest(resid); %Test 1 that residuals are standard-normally distributed
-                len_power = 1;
-                if h ~= 0
-                    len_power = 0;
-                end
-                len_slope = -1*len_mdl.Coefficients.Estimate(2);
-                if abs(len_slope) < 0.5 %Test 2 that slope is large enough
-                    len_power = 0;
-                end
-                crit_3(1) = len_power;
-            catch
-                crit_3(1) = 0;
-            end
+%             try
+%                 len_dataset = table(log(len_bin_avgs(len_nonzero)'),log(len_hist(len_nonzero)'));
+%                 len_mdl = fitlm(len_dataset);
+%                 resid = len_mdl.Residuals.Standardized;
+%                 h = kstest(resid); %Test 1 that residuals are standard-normally distributed
+%                 len_power = 1;
+%                 if h ~= 0
+%                     len_power = 0;
+%                 end
+%                 len_slope = -1*len_mdl.Coefficients.Estimate(2);
+%                 if abs(len_slope) < 0.5 %Test 2 that slope is large enough
+%                     len_power = 0;
+%                 end
+%                 crit_3(1) = len_power;
+%             catch
+%                 crit_3(1) = 0;
+%             end
             
             %Second Test: Power law of #avalanches of a given size as a function of
             %           size
-            try
-                count_dataset = table(log(count_bin_avgs(count_nonzero)'),log(count_hist(count_nonzero)'));
-
-                count_mdl = fitlm(count_dataset);
-                resid = count_mdl.Residuals.Standardized;
-                h = kstest(resid); %Test 1 that residuals are standard-normally distributed
-                count_power = 1;
-                if h ~= 0
-                    count_power = 0;
-                end
-                count_slope = -1*count_mdl.Coefficients.Estimate(2);
-                if abs(count_slope) < 0.5 %Test 2 that slope is large enough
-                    count_power = 0;
-                end
-                crit_3(2) = count_power;
-            catch
-                crit_3(2) = 0;
-            end
+%             try
+%                 count_dataset = table(log(count_bin_avgs(count_nonzero)'),log(count_hist(count_nonzero)'));
+% 
+%                 count_mdl = fitlm(count_dataset);
+%                 resid = count_mdl.Residuals.Standardized;
+%                 h = kstest(resid); %Test 1 that residuals are standard-normally distributed
+%                 count_power = 1;
+%                 if h ~= 0
+%                     count_power = 0;
+%                 end
+%                 count_slope = -1*count_mdl.Coefficients.Estimate(2);
+%                 if abs(count_slope) < 0.5 %Test 2 that slope is large enough
+%                     count_power = 0;
+%                 end
+%                 crit_3(2) = count_power;
+%             catch
+%                 crit_3(2) = 0;
+%             end
 
             %Third Test: Grab average size of avalanche per length stats and fit a 
             %           line to it
-            try
+%             try
                 [sort_ava_len, sort_ind] = sort(avalanche_lengths);
                 unique_len = unique(sort_ava_len);
                 avg_sz_per_len = zeros(size(unique_len));
@@ -132,36 +132,36 @@ function criticality = test_criticality(avalanche_lengths, avalanche_counts)
                     if ~isfolder(strcat(parameters.save_path,'/crit_plots'))
                         mkdir(parameters.save_path,'/crit_plots')
                     end
-                    savefig(f,strcat(parameters.save_path,'/crit_plots','/sim_',string(ithParamSet),'_',string(ithNet),'_',string(ithTest),'_plaw.fig'))
-                    saveas(f,strcat(parameters.save_path,'/crit_plots','/sim_',string(ithParamSet),'_',string(ithNet),'_',string(ithTest),'_plaw.jpg'))
+                    savefig(f,strcat(parameters.save_path,'/crit_plots','/sim_',string(ithParamSet),'_plaw.fig'))
+                    saveas(f,strcat(parameters.save_path,'/crit_plots','/sim_',string(ithParamSet),'_plaw.jpg'))
                     close(f)
                 end 
                 
-                avg_sz_dataset = table(log(unique_len(nonzero_avg_sz)'),log(avg_sz_per_len(nonzero_avg_sz)'));
-                avg_sz_mdl = fitlm(avg_sz_dataset);
-                resid = avg_sz_mdl.Residuals.Standardized;
-                h = kstest(resid); %Test 1 that residuals are standard-normally distributed
-                avg_sz_power = 1;
-                if h ~= 0
-                    %The residuals are not normally distributed and so the linear fit
-                    %is good enough
-                    avg_sz_power = 0;
-                end
-                %       Test 2 that, if avalanches are scale-free, then the exponents are not 
-                %       independent, but satisfy the equation (slope_1 - 1)/(slope_2 -
-                %       1) = 1/slope_3
-                avg_sz_slope = avg_sz_mdl.Coefficients.Estimate(2);
-                slope_ratio = (len_slope - 1)/(count_slope - 1);
-                slope_dist = slope_ratio - 1/avg_sz_slope;
-                if slope_dist > 0.05*slope_ratio
-                    avg_sz_power = 0;
-                end
-                crit_3(3) = avg_sz_power;
-            catch
-                crit_3(3) = 0;
-            end
-
-            %Set the criticality flag based on three tests
+%                 avg_sz_dataset = table(log(unique_len(nonzero_avg_sz)'),log(avg_sz_per_len(nonzero_avg_sz)'));
+%                 avg_sz_mdl = fitlm(avg_sz_dataset);
+%                 resid = avg_sz_mdl.Residuals.Standardized;
+%                 h = kstest(resid); %Test 1 that residuals are standard-normally distributed
+%                 avg_sz_power = 1;
+%                 if h ~= 0
+%                     %The residuals are not normally distributed and so the linear fit
+%                     %is good enough
+%                     avg_sz_power = 0;
+%                 end
+%                 %       Test 2 that, if avalanches are scale-free, then the exponents are not 
+%                 %       independent, but satisfy the equation (slope_1 - 1)/(slope_2 -
+%                 %       1) = 1/slope_3
+%                 avg_sz_slope = avg_sz_mdl.Coefficients.Estimate(2);
+%                 slope_ratio = (len_slope - 1)/(count_slope - 1);
+%                 slope_dist = slope_ratio - 1/avg_sz_slope;
+%                 if slope_dist > 0.05*slope_ratio
+%                     avg_sz_power = 0;
+%                 end
+%                 crit_3(3) = avg_sz_power;
+%             catch
+%                 crit_3(3) = 0;
+%             end
+% 
+%             %Set the criticality flag based on three tests
             criticality = prod(crit_3,'all');
         else
             criticality = 0;

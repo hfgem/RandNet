@@ -69,12 +69,9 @@ function parallelize_parameter_tests_hpcc(parameters, parameterSets_vec, ...
     V_m = parameters.V_reset + randn([parameters.n,1])*parameters.V_m_noise; %set all neurons to baseline reset membrane potential with added noise
     spikes_V_m = randnet_calculator_memOpt(parameters, seed, network, V_m);
     parameters = rmfield(parameters, 'G_in');
-    clear seed
-    %Set which spikes are analyzed based on E_events_only flag
-    clear spikes_V_m V_m network
+    clear seed V_m network
     % count avalanches
     [av_lengths, av_counts] = pull_avalanches(spikes_V_m);
-    clear av_lenghts av_counts parameters
     %Test network for chaotic activity
     test_criticality_hpcc(av_lengths, av_counts, parameters, ithParamSet);
     %Read out time of parameter set completion
@@ -84,5 +81,5 @@ function parallelize_parameter_tests_hpcc(parameters, parameterSets_vec, ...
     if length(m_t) == 1
         m_t = '0' + m_t;
     end
-    disp(['Time = ',h_t,':',m_t,': Parameter set ', num2str(ithParamSet), '/', num2str(size(parameterSets_vec, 2)), ' complete'])
+    disp(strcat('Time = ',h_t,':',m_t,': Parameter set ', num2str(ithParamSet), '/', num2str(size(parameterSets_vec, 2)), ' complete'))
 end % Function

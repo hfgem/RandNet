@@ -3,8 +3,9 @@
 %High Performance Computing Cluster (HPCC). The focus of this code is to
 %test different parameter combinations for network criticality.
 
-my_dir = '/Users/hannahgermaine/Documents/GitHub/RandNet/hpcc_code'; %'/home/hgerm/code';
+my_dir = '/home/hgerm/code';
 cd(my_dir)
+addpath(genpath(my_dir))
 
 %Set Save Parameters
 saveFlag = 1; % 1 to save simulation results

@@ -408,7 +408,7 @@ for ithNet = 1:parameters.nNets
             opV = zeros(parameters.n, numel(pfsim.t), pfsim.nEnvironments, pfsim.nTrials); % Voltage from all sims
             opS = zeros(parameters.n, numel(pfsim.t), pfsim.nEnvironments, pfsim.nTrials); % Spikes from all sims
             for ithEnv = 1:pfsim.nEnvironments
-                for i = 1:pfsim.nTrials
+                for ithTrial = 1:pfsim.nTrials
 
                     % Set up for simulation
                     V_m = zeros(parameters.n,numel(pfsim.t)); %membrane potential for each neuron at each timestep
@@ -418,8 +418,8 @@ for ithNet = 1:parameters.nNets
 
                     % PF Simulation
                     [V_m, G_sra, G_syn_E_E, G_syn_I_E, G_syn_E_I, G_syn_I_I, conns] = randnet_calculator(pfsim, trialSeed, network, V_m);
-                    opV(:,:,ithEnv,i) = V_m;
-                    opS(:,:,ithEnv,i) = logical( V_m>parameters.V_th);
+                    opV(:,:,ithEnv,ithTrial) = V_m;
+                    opS(:,:,ithEnv,ithTrial) = logical( V_m>parameters.V_th);
                 end
             end
         end

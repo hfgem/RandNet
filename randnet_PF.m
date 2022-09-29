@@ -92,8 +92,8 @@ parameters.nNets = 1; % How many networks to run
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 PFsimFlag = 1;
-PFscoreFlag = 1;
-preplaySimFlag = 1;
+PFscoreFlag = 0;
+preplaySimFlag = 0;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -321,7 +321,8 @@ pfsim = parameters;
 pfsim.PFscoreFlag = PFscoreFlag;
 
 % Add PF specific parameters and PF specific values
-pfsim.nEnvironments = 1;
+pfsim.envIDs = [1, 2, 3] ; % odd IDs are rightward traversals, even IDs are rightward traversals of the ID-1 track
+pfsim.nEnvironments = numel(pfsim.envIDs);
 pfsim.nTrials = 5;
 pfsim.t_max = 2;
 pfsim.t = 0:parameters.dt:pfsim.t_max;
@@ -377,7 +378,7 @@ for ithNet = 1:parameters.nNets
     end
     
     % Generete ith network structure
-    network = create_clusters(parameters, 'seed', ithNet, 'include_all', parameters.include_all, 'global_inhib', parameters.global_inhib);
+    network = create_clusters(pfsim, 'seed', ithNet, 'include_all', parameters.include_all, 'global_inhib', parameters.global_inhib);
     if parameters.saveFlag
         save(strcat(net_save_path,'/network.mat'),'network');
     end
@@ -387,48 +388,56 @@ for ithNet = 1:parameters.nNets
     startTime = now;
     tic;
     if PFsimFlag
-        G_in_PFs = zeros(parameters.n, numel(pfsim.t), pfsim.nEnvironments, pfsim.nTrials);
+        opV = zeros(parameters.n, numel(pfsim.t), pfsim.nEnvironments, pfsim.nTrials); % Voltage from all sims
+        opS = zeros(parameters.n, numel(pfsim.t), pfsim.nEnvironments, pfsim.nTrials); % Spikes from all sims
+        
         for ithEnv = 1:pfsim.nEnvironments
+            
             for ithTrial = 1:pfsim.nTrials
+                
+                G_in_PFs = zeros(parameters.n, numel(pfsim.t));
                 %rng(ithTrial)
                 % G_in_PFs(:,1,ithEnv,ithTrial) = 1/10* dI(:,ithEnv) * 2*parameters.rGmax * parameters.tau_syn_E + sqrt(1/2*parameters.tau_syn_E*dI(:,ithEnv).^2*2*parameters.rGmax).*randn(parameters.n, 1) ; 
-                G_in_PFs(:,1,ithEnv,ithTrial) = zeros(parameters.n, 1) ; 
+                G_in_PFs(:,1) = zeros(parameters.n, 1) ; 
                 for i = 2:numel(pfsim.t)
                         % Exponential decay from last time step
-                        G_in_PFs(:,i,ithEnv,ithTrial) = G_in_PFs(:,i-1,ithEnv,ithTrial)*exp(-parameters.dt/parameters.tau_syn_E);
+                        G_in_PFs(:,i) = G_in_PFs(:,i-1)*exp(-parameters.dt/parameters.tau_syn_E);
                         % Add spikes from each input source
-                        G_in_PFs(:,i,ithEnv,ithTrial) = G_in_PFs(:,i,ithEnv,ithTrial) + ...
-                                network.spatialInput{1} .* (1-parameters.PFcontextFrac).*[rand(parameters.n, 1) < (parameters.dt* (parameters.rG * (i/numel(pfsim.t)) ))] + ...
-                                network.spatialInput{2} .* (1-parameters.PFcontextFrac).* [rand(parameters.n, 1) < (parameters.dt* ( parameters.rG * ((numel(pfsim.t)-i)/numel(pfsim.t)) ) )] + ...
+                        G_in_PFs(:,i) = G_in_PFs(:,i) + ...
+                                network.spatialInput{1}(:,ithEnv) .* (1-parameters.PFcontextFrac).*[rand(parameters.n, 1) < (parameters.dt* (parameters.rG * (i/numel(pfsim.t)) ))] + ...
+                                network.spatialInput{2}(:,ithEnv) .* (1-parameters.PFcontextFrac).* [rand(parameters.n, 1) < (parameters.dt* ( parameters.rG * ((numel(pfsim.t)-i)/numel(pfsim.t)) ) )] + ...
                                 network.contextInput(:,ithEnv) .* [parameters.PFcontextFrac.*ismember(network.all_indices, network.E_indices)]' .* [rand(parameters.n, 1) < (parameters.dt*parameters.rG)] + ...
                                 network.contextInput(:,ithEnv) .* [parameters.IcueScale_PF.*ismember(network.all_indices, network.I_indices)]' .* [rand(parameters.n, 1) < (parameters.dt*parameters.rG)]   ;
                 end
+                
+                % Set up for simulation
+                V_m = zeros(parameters.n,numel(pfsim.t)); %membrane potential for each neuron at each timestep
+                V_m(:,1) = -60e-3 + 5e-3*randn([parameters.n,1]); %set all neurons to baseline reset membrane potential with added noise
+                pfsim.G_in = G_in_PFs; 
+                trialSeed = randi(10^6);
+
+                % PF Simulation
+                [V_m, G_sra, G_syn_E_E, G_syn_I_E, G_syn_E_I, G_syn_I_I, conns] = randnet_calculator(pfsim, trialSeed, network, V_m);
+                opV(:,:,ithEnv,ithTrial) = V_m;
+                opS(:,:,ithEnv,ithTrial) = logical( V_m>parameters.V_th);
+                
             end
             
-            opV = zeros(parameters.n, numel(pfsim.t), pfsim.nEnvironments, pfsim.nTrials); % Voltage from all sims
-            opS = zeros(parameters.n, numel(pfsim.t), pfsim.nEnvironments, pfsim.nTrials); % Spikes from all sims
-            for ithEnv = 1:pfsim.nEnvironments
-                for i = 1:pfsim.nTrials
 
-                    % Set up for simulation
-                    V_m = zeros(parameters.n,numel(pfsim.t)); %membrane potential for each neuron at each timestep
-                    V_m(:,1) = -60e-3 + 5e-3*randn([parameters.n,1]); %set all neurons to baseline reset membrane potential with added noise
-                    pfsim.G_in = G_in_PFs(:,:,ithEnv,ithTrial); 
-                    trialSeed = randi(10^6);
-
-                    % PF Simulation
-                    [V_m, G_sra, G_syn_E_E, G_syn_I_E, G_syn_E_I, G_syn_I_I, conns] = randnet_calculator(pfsim, trialSeed, network, V_m);
-                    opV(:,:,ithEnv,i) = V_m;
-                    opS(:,:,ithEnv,i) = logical( V_m>parameters.V_th);
-                end
-            end
         end
         % keyboard
 
-        % Calculate Place fields and PF-objective score
-        allScores = zeros(size(pfsim.nEnvironments));
-        for i = 1:pfsim.nEnvironments
-            [linfields, PFpeaksSequence] = calculate_linfields(opS, pfsim, pfsim, network, true);
+        % Calculate Place fields and PF-objective score and plot PF sim figs
+        allScores = zeros(1, pfsim.nEnvironments);
+        allPFpeaksSeq = [];
+        allLinfields = [];
+        for ithEnv = 1:pfsim.nEnvironments
+            
+            trialSpikes = opS(:,:,ithEnv,:);
+            [linfields, PFpeaksSequence] = calculate_linfields(trialSpikes, pfsim, pfsim, network, true);
+            allPFpeaksSeq(:,ithEnv) = PFpeaksSequence;
+            allLinfields{ithEnv} = linfields;
+            
             %{
             figure; plot(pfsim.t, V_m(network.E_indices(1:3),:)); ylabel('Vm (V)'); xlabel('Time (s)'); 
             figure; plot(pfsim.t, V_m(network.I_indices(1:3),:)); ylabel('Vm (V)'); xlabel('Time (s)'); 
@@ -441,19 +450,23 @@ for ithNet = 1:parameters.nNets
             ylabel('Cell');
             %}
             if pfsim.PFscoreFlag
-                allScores(i) = calculate_linfieldsScore(linfields, pfsim, pfsim, network)
+                allScores(ithEnv) = calculate_linfieldsScore(linfields, pfsim, pfsim, network)
             end
-            disp(['Env: ', num2str(i), ', Score: ', num2str(allScores(i))])
+            disp(['Env: ', num2str(ithEnv), ', Score: ', num2str(allScores(ithEnv))])
+            
+            %figure; plotSpikeRaster( logical( [ opS(network.E_indices,:,ithEnv,1); opS(network.I_indices,:,1,1) ]), 'TimePerBin', parameters.dt, 'PlotType', 'scatter');
+            rpermIcells = randperm(numel(network.I_indices));
+            figure; plotSpikeRaster( logical( [ opS(network.E_indices(PFpeaksSequence),:,ithEnv,1); opS(network.I_indices(rpermIcells),:,1,1) ]), 'TimePerBin', parameters.dt, 'PlotType', 'scatter');
+
         end
         score = mean(allScores);
         disp(['Mean score: ', num2str(score)])
-    
-    figure; plotSpikeRaster( logical( [ opS(network.E_indices,:,1,1); opS(network.I_indices,:,1,1) ]), 'TimePerBin', parameters.dt, 'PlotType', 'scatter');
-     rpermIcells = randperm(numel(network.I_indices));
-     figure; plotSpikeRaster( logical( [ opS(network.E_indices(PFpeaksSequence),:,1,1); opS(network.I_indices(rpermIcells),:,1,1) ]), 'TimePerBin', parameters.dt, 'PlotType', 'scatter');
 
-    figure; histogram( sum(opS, [2:4])./parameters.t_max./parameters.nTrials, 50 )
-    xlabel('Mean rate (Hz, PF trials)'); ylabel('All cells')
+        figure; histogram( sum(opS, [2:4])./parameters.t_max./parameters.nTrials./pfsim.nEnvironments, 50 )
+        xlabel('Mean rate (Hz, all PF trials)'); ylabel('All cells')
+    
+        plotPFs(allLinfields, allPFpeaksSeq, network, pfsim)
+        
     end
     PFruntime = toc
     

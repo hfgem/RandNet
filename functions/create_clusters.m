@@ -164,8 +164,9 @@ function [network] = create_clusters(parameters, varargin)
 
             % if parameters.clusterCorrs==1, then make input1 and input2 correlated with cluster membership
             if [isfield(parameters, 'clusterCorrs') && parameters.clusterCorrs]
+                clusterSequence = randperm(parameters.clusters);  % 1:parameters.clusters;
                 for i = 1:parameters.n
-                    secondBias =  mean(cluster_mat(:,i).*([1:parameters.clusters]'-1)) / (1-1/parameters.clusters) / sum(cluster_mat(:,i));
+                    secondBias =  mean(cluster_mat(:,i).*(clusterSequence'-1)) / (1-1/parameters.clusters) / sum(cluster_mat(:,i));
                     secondBias = 0.5 + ((1-(2*secondBias))/parameters.inputBiasSigma);
                     temp1 = (input1(i)+input2(i)) * (1-secondBias);
                     temp2 = (input1(i)+input2(i)) * (secondBias);

@@ -128,30 +128,7 @@ function [network] = create_clusters(parameters, varargin)
         conns(:,I_indices) = (rand(parameters.n, [parameters.n*(1-parameters.p_E)]) < parameters.p_I);
     end
     
-    % Input strengths
-    input1 = lognrnd(parameters.W_gin, parameters.cueSigma, parameters.n, 1); % location cue 1 strengths
-	input2 = lognrnd(parameters.W_gin, parameters.cueSigma, parameters.n, 1); % location cue 2 strengths
-    contextInput = lognrnd(parameters.W_gin, parameters.cueSigma/4, parameters.n, 1); % context cue strength
-    % contextInput = parameters.Win_mean+(sqrt(parameters.Win_var)*randn(parameters.n, 1)); % context cue strength
-    %contextInput = lognrnd(log(parameters.W_gin), parameters.cueSigma, parameters.n, pfsim.nEnvironments);
-    
-    % if parameters.clusterCorrs==1, then make input1 and input2 correlated with cluster membership
-    if [isfield(parameters, 'clusterCorrs') && parameters.clusterCorrs]
-        for i = 1:parameters.n
-            secondBias =  mean(cluster_mat(:,i).*([1:parameters.clusters]'-1)) / (1-1/parameters.clusters) / sum(cluster_mat(:,i));
-            secondBias = 0.5 + ((1-(2*secondBias))/parameters.inputBiasSigma);
-            temp1 = (input1(i)+input2(i)) * (1-secondBias);
-            temp2 = (input1(i)+input2(i)) * (secondBias);
-            input1(i) = temp1;
-            input2(i) = temp2;
-        end
-    end
-    
-    % I cells don't receive spatially modulated input
-    input1(I_indices) = 0;
-    input2(I_indices) = 0;
-    
-    %SAVE NETWORK STRUCTURE
+    %SAVE Recurrent NETWORK STRUCTURE
     network = struct;
     network.cluster_mat = cluster_mat;
     network.conns = conns;
@@ -164,8 +141,50 @@ function [network] = create_clusters(parameters, varargin)
     network.I_indices = I_indices;
     network.E_indices = E_indices;
     
-    network.spatialInput{1} = input1;
-    network.spatialInput{2} = input2;
-    network.contextInput = contextInput;
+    
+    % Create environment inputs
+    for ithEnv = parameters.envIDs
+        
+        if mod(ithEnv,2) == 0  % If envID is even, 
+            % Use same context input for reverse traversal
+            network.contextInput(:,ithEnv) = network.contextInput(:,ithEnv-1);
+            
+            % Flip inputs1 and 2
+            network.spatialInput{1}(:,ithEnv) = network.spatialInput{2}(:,ithEnv-1);
+            network.spatialInput{2}(:,ithEnv) = network.spatialInput{1}(:,ithEnv-1);
+            
+        else % If envID is odd, create new input strengths for the new environment
+            
+            % Input strengths
+            input1 = lognrnd(parameters.W_gin, parameters.cueSigma, parameters.n, 1); % location cue 1 strengths
+            input2 = lognrnd(parameters.W_gin, parameters.cueSigma, parameters.n, 1); % location cue 2 strengths
+            contextInput = lognrnd(parameters.W_gin, parameters.cueSigma/4, parameters.n, 1); % context cue strength
+            % contextInput = parameters.Win_mean+(sqrt(parameters.Win_var)*randn(parameters.n, 1)); % context cue strength
+            %contextInput = lognrnd(log(parameters.W_gin), parameters.cueSigma, parameters.n, pfsim.nEnvironments);
+
+            % if parameters.clusterCorrs==1, then make input1 and input2 correlated with cluster membership
+            if [isfield(parameters, 'clusterCorrs') && parameters.clusterCorrs]
+                for i = 1:parameters.n
+                    secondBias =  mean(cluster_mat(:,i).*([1:parameters.clusters]'-1)) / (1-1/parameters.clusters) / sum(cluster_mat(:,i));
+                    secondBias = 0.5 + ((1-(2*secondBias))/parameters.inputBiasSigma);
+                    temp1 = (input1(i)+input2(i)) * (1-secondBias);
+                    temp2 = (input1(i)+input2(i)) * (secondBias);
+                    input1(i) = temp1;
+                    input2(i) = temp2;
+                end
+            end
+
+            % I cells don't receive spatially modulated input
+            input1(I_indices) = 0;
+            input2(I_indices) = 0;
+
+            network.spatialInput{1}(:,ithEnv) = input1;
+            network.spatialInput{2}(:,ithEnv) = input2;
+            
+            network.contextInput(:,ithEnv) = contextInput;
+        end
+        
+    end
+
     
 end

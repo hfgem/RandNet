@@ -321,7 +321,7 @@ pfsim = parameters;
 pfsim.PFscoreFlag = PFscoreFlag;
 
 % Add PF specific parameters and PF specific values
-pfsim.envIDs = [1, 2, 3] ; % odd IDs are rightward traversals, even IDs are rightward traversals of the ID-1 track
+pfsim.envIDs = [1, 2, 3, 4] ; % odd IDs are rightward traversals, even IDs are rightward traversals of the ID-1 track
 pfsim.nEnvironments = numel(pfsim.envIDs);
 pfsim.nTrials = 5;
 pfsim.t_max = 2;

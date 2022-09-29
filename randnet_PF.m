@@ -106,7 +106,7 @@ parameters.rG = 5000;
 parameters.Win_var = (5e-12)^2;
 parameters.tau_sra = 30*10^(-3); %spike rate adaptation time constant (s)
 parameters.del_G_sra = 3.0e-012; %spike rate adaptation conductance step following spike %ranges from 1-200 *10^(-9) (S)
-parameters.include_all = 2; % if a neuron is not in any cluster, take cluster membership from a highly connected neuron
+parameters.include_all = 3; % if a neuron is not in any cluster, take cluster membership from a highly connected neuron
 parameters.clusters = 8; % Number of clusters in the network
 parameters.mnc = 1.5; % mean number of clusters each neuron is a member of
 

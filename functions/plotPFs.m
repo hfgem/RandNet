@@ -121,9 +121,9 @@ figure
 for ithEnvSequence = 1:pfsim.nEnvironments 
     
     PFpeaksSequence = allPFpeaksSeq(:,ithEnvSequence);
-    %if mod(ithEnvSequence,2)==0
-    %    PFpeaksSequence = flip(PFpeaksSequence);
-    %end
+    if mod(ithEnvSequence,2)==0
+        PFpeaksSequence = flip(PFpeaksSequence);
+    end
 
     for ithEnvData = 1:pfsim.nEnvironments 
 
@@ -150,11 +150,22 @@ for ithEnvSequence = 1:pfsim.nEnvironments
         imagesc( PFmat_E(PFpeaksSequence,:)./rateDenom1 ); 
         
         mapCorr = nanmean(diag(corr( allEnvPFs{ithEnvSequence},  allEnvPFs{ithEnvData})))
-        title(['Map corr=', num2str(mapCorr)])
+        title(['Map corr=', num2str(mapCorr, '%0.2f')])
+        
+        if ithEnvData==ithEnvSequence
+            nthEnv = ceil(ithEnvData/2);
+            if mod(ithEnvData,2)==0; trajDir='leftward'; 
+            else; trajDir='rightward'; end
+            title(['Env ', num2str(nthEnv), ', ', trajDir])
+            
+        end
         % colorbar; caxis([0, caxmax])
         %title(['Env ID ', num2str(ithEnv)]); 
         %xlabel('Position (2 cm bin)'); ylabel('Cell (sorted)');
-
+        keyboard
+        if ithEnvSequence==1 && ithEnvData==pfsim.nEnvironments
+            xlabel('Position (2 cm bin)'); ylabel('Cell (sorted by column''s order)');
+        end
 
     end
 end
@@ -193,7 +204,7 @@ for ithEnv1 = 1:pfsim.nEnvironments
         
         [RHO,PVAL] = corr(PFpeaksSequence1, PFpeaksSequence2, 'rows','complete');
         % title([num2str(ithEnv1), num2str(ithEnv2), 'p=', num2str(PVAL)])
-        title(['r=', num2str(RHO)])
+        title(['r=', num2str(RHO, '%0.2f')])
         % colorbar; caxis([0, caxmax])
         %title(['Env ID ', num2str(ithEnv)]); 
         %xlabel('Position (2 cm bin)'); ylabel('Cell (sorted)');

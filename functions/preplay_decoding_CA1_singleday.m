@@ -96,11 +96,14 @@ hpnum = length(hpidx(:,1));
 rm = []; % ratemap matrix
 pm = []; % position matrix
 tm = []; % track matrix
-nTracks = 1;
 cellidxm = [];
 %load(sprintf('%s%slinfields0%d.mat',dir,animalprefix,day)); % get linearized place fields
 linfields = load(sprintf('%s%slinfields0%d.mat',dir,animalprefix,day), 'linfields'); % get num tets, get num cells
 linfields = linfields.linfields; 
+
+% nTraj = 4;
+nTraj = numel(linfields{day}{eprun}{1}{hpidx(1,1)}{hpidx(1,2)});
+
 for i = 1:hpnum
       cind = hpidx(i,:);
       if (length(linfields{day}{eprun})>= cind(1))
@@ -117,7 +120,7 @@ for i = 1:hpnum
            linfield_hp = [];
            lintrack_hp = [];
            pos_hp = [];
-           for track = 1:nTracks
+           for track = 1:nTraj
                 temp1 = linfield1{track};
                 pos1 = temp1(:,1);
                 lintrack1 = ones(size(pos1))*track;
@@ -294,8 +297,9 @@ if ~isempty(riptimes)
             myPlotSettings(8, 2)
             figure; sgtitle([animalprefix, ', Day: ', num2str(day), ', Ep: ', num2str(ep), ', Event:', num2str(event)]); 
         end
-        % trajectory loop (4 trajectory types in a W-maze)
-        for traj = 1:4 
+        
+        % trajectory loop (all trajectories stored in linfields{day}{epoch}{tetrode}{cell}{traj})
+        for traj = 1:nTraj 
             trajidx = find(trajinfo == traj);
             pMat = post(trajidx,:);% create a posterior matrix for each traj
             distvector = pm(trajidx,1)';
@@ -459,8 +463,8 @@ if ~isempty(riptimes)
         clear wrking factSpkPerBin expon
         
         if figopt==2
-            for subplotind = 1:4
-                subplot(1,4,subplotind);
+            for subplotind = 1:nTraj
+                subplot(1,nTraj,subplotind);
                 xlabel('Time (10 ms bin)');
                 title(num2str(pvalue(event, subplotind)));
                 if subplotind == 1

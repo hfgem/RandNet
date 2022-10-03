@@ -1,4 +1,4 @@
-function plotPFs(allLinfields, allPFpeaksSeq, network, pfsim)
+function plotPFs(linfields, PFpeaksSequence, network, pfsim)
 %
 %
 % Note: the correlation of the sequence of peaks may be giving falsely high
@@ -16,57 +16,57 @@ minPeakRate = 0;
 
 allEnvPFs = [];
 
-for ithEnv = 1:pfsim.nEnvironments
+for ithTraj = 1:pfsim.nEnvironments
 
-    linfields = allLinfields{ithEnv};
-    posBins = linfields{day}{epoch}{tetrode}{1}{tr}(:,1);
+    %linfields = allLinfields{ithTraj};
+    posBins = linfields{day}{epoch}{tetrode}{1}{ithTraj}(:,1);
 
 
     maxFR = nan(1, pfsim.n);
     allPFs = nan(numel(posBins), pfsim.n);
     for ithCell = network.E_indices
-        PF = linfields{day}{epoch}{tetrode}{ithCell}{tr}(:,5);
+        PF = linfields{day}{epoch}{tetrode}{ithCell}{ithTraj}(:,5);
         allPFs(:,ithCell)= PF;
         maxFR(ithCell) = max(PF); 
     end
 
-    allEnvPFs{ithEnv} = allPFs;
+    allEnvPFs{ithTraj} = allPFs;
 end
 
 %% Plot place fields by self-peak order
 
-for ithEnv = 1:pfsim.nEnvironments 
+for ithTraj = 1:pfsim.nEnvironments 
 
-PFmat = allEnvPFs{ithEnv}';
-PFmat_E = PFmat(network.E_indices,:);
+    PFmat = allEnvPFs{ithTraj}';
+    PFmat_E = PFmat(network.E_indices,:);
 
-row_all_zeros1 = find(all( PFmat_E==0, 2)) ;
-row_n_all_zeros1 = find(~all( PFmat_E==0, 2)) ;
+    row_all_zeros1 = find(all( PFmat_E==0, 2)) ;
+    row_n_all_zeros1 = find(~all( PFmat_E==0, 2)) ;
 
-[peakRate,peakRateLocation] = max(squeeze(PFmat_E(row_n_all_zeros1,:)), [], 2);
+    [peakRate,peakRateLocation] = max(squeeze(PFmat_E(row_n_all_zeros1,:)), [], 2);
 
-[B,sortedCellIndsbyPeakRateLocation] = sort(peakRateLocation, 'descend');
-PFpeaksSequence = [row_n_all_zeros1(sortedCellIndsbyPeakRateLocation); row_all_zeros1];
+    [B,sortedCellIndsbyPeakRateLocation] = sort(peakRateLocation, 'descend');
+    curr_PFpeaksSequence = [row_n_all_zeros1(sortedCellIndsbyPeakRateLocation); row_all_zeros1];
 
-[peakRate, peakRateLocation_all] = max(PFmat_E, [], 2);
+    [peakRate, peakRateLocation_all] = max(PFmat_E, [], 2);
 
 
-normRates = 1;
-if normRates
-    rateDenom1 = max(PFmat_E(PFpeaksSequence,:), [], 2);
-    caxmax = 1;
-else
-    rateDenom1 = 1;
-    caxmax = max(PFmat_E, [], 'all');
-end
+    normRates = 1;
+    if normRates
+        rateDenom1 = max(PFmat_E(curr_PFpeaksSequence,:), [], 2);
+        caxmax = 1;
+    else
+        rateDenom1 = 1;
+        caxmax = max(PFmat_E, [], 'all');
+    end
 
-%figure; histogram(rateDenom1); 
-%xlabel('Peak PF rate (Hz)'); ylabel('E cells (count)');
+    %figure; histogram(rateDenom1); 
+    %xlabel('Peak PF rate (Hz)'); ylabel('E cells (count)');
 
-figure; imagesc( PFmat_E(PFpeaksSequence,:)./rateDenom1 ); 
-title(['Env ID ', num2str(ithEnv)]); 
-colorbar; caxis([0, caxmax])
-xlabel('Position (2 cm bin)'); ylabel('Cell (sorted)');
+    figure; imagesc( PFmat_E(curr_PFpeaksSequence,:)./rateDenom1 ); 
+    title(['Env ID ', num2str(ithTraj)]); 
+    colorbar; caxis([0, caxmax])
+    xlabel('Position (2 cm bin)'); ylabel('Cell (sorted)');
 
 
 end
@@ -120,10 +120,11 @@ end
 figure
 for ithEnvSequence = 1:pfsim.nEnvironments 
     
-    PFpeaksSequence = allPFpeaksSeq(:,ithEnvSequence);
-    if mod(ithEnvSequence,2)==0
-        PFpeaksSequence = flip(PFpeaksSequence);
-    end
+    %PFpeaksSequence = allPFpeaksSeq(:,ithEnvSequence);
+    tmp_PFpeaksSequence = PFpeaksSequence{ithEnvSequence};
+    %if mod(ithEnvSequence,2)==0
+    %    tmp_PFpeaksSequence = flip(tmp_PFpeaksSequence);
+    %end
 
     for ithEnvData = 1:pfsim.nEnvironments 
 
@@ -135,7 +136,7 @@ for ithEnvSequence = 1:pfsim.nEnvironments
 
         normRates = 1;
         if normRates
-            rateDenom1 = max(PFmat_E(PFpeaksSequence,:), [], 2);
+            rateDenom1 = max(PFmat_E(tmp_PFpeaksSequence,:), [], 2);
             caxmax = 1;
         else
             rateDenom1 = 1;
@@ -147,9 +148,11 @@ for ithEnvSequence = 1:pfsim.nEnvironments
 
         ithPlot = sub2ind( [pfsim.nEnvironments, pfsim.nEnvironments], ithEnvSequence, ithEnvData);
         subplot(pfsim.nEnvironments, pfsim.nEnvironments, ithPlot);
-        imagesc( PFmat_E(PFpeaksSequence,:)./rateDenom1 ); 
-        
-        mapCorr = nanmean(diag(corr( allEnvPFs{ithEnvSequence},  allEnvPFs{ithEnvData})))
+        imagesc( PFmat_E(tmp_PFpeaksSequence,:)./rateDenom1 ); 
+        %keyboard
+        mapCorr = nanmean(diag(corr( allEnvPFs{ithEnvSequence}(:,network.E_indices),  allEnvPFs{ithEnvData}(:,network.E_indices))))
+        mapCorr = nanmean(diag(corr( PFmat_E(tmp_PFpeaksSequence,:)',  allEnvPFs{ithEnvData}(:,network.E_indices))))
+
         title(['Map corr=', num2str(mapCorr, '%0.2f')])
         
         if ithEnvData==ithEnvSequence
@@ -162,7 +165,7 @@ for ithEnvSequence = 1:pfsim.nEnvironments
         % colorbar; caxis([0, caxmax])
         %title(['Env ID ', num2str(ithEnv)]); 
         %xlabel('Position (2 cm bin)'); ylabel('Cell (sorted)');
-        keyboard
+        
         if ithEnvSequence==1 && ithEnvData==pfsim.nEnvironments
             xlabel('Position (2 cm bin)'); ylabel('Cell (sorted by column''s order)');
         end
@@ -175,10 +178,11 @@ end
 figure
 for ithEnv1 = 1:pfsim.nEnvironments 
     
-    PFpeaksSequence1 = allPFpeaksSeq(:,ithEnv1);
-    if mod(ithEnv1,2)==0
-        PFpeaksSequence1 = flip(PFpeaksSequence1);
-    end
+    %PFpeaksSequence1 = allPFpeaksSeq(:,ithEnv1);
+    PFpeaksSequence1 = PFpeaksSequence{ithEnv1};
+    %if mod(ithEnv1,2)==0
+    %    PFpeaksSequence1 = flip(PFpeaksSequence1);
+    %end
     PFmat = allEnvPFs{ithEnv1}';
     PFmat_E = PFmat(network.E_indices,:);
     [peakRate, peakRateLocation_all] = max(PFmat_E, [], 2);  
@@ -187,10 +191,11 @@ for ithEnv1 = 1:pfsim.nEnvironments
         
     for ithEnv2 = 1:pfsim.nEnvironments 
 
-        PFpeaksSequence2 = allPFpeaksSeq(:,ithEnv2);
-        if mod(ithEnv2,2)==0
-            PFpeaksSequence2 = flip(PFpeaksSequence2);
-        end
+        % PFpeaksSequence2 = allPFpeaksSeq(:,ithEnv2);
+        PFpeaksSequence2 = PFpeaksSequence{ithEnv2};
+        %if mod(ithEnv2,2)==0
+        %    PFpeaksSequence2 = flip(PFpeaksSequence2);
+        %end
         PFmat = allEnvPFs{ithEnv2}';
         PFmat_E = PFmat(network.E_indices,:);
         [peakRate, peakRateLocation_all] = max(PFmat_E, [], 2);  

@@ -431,12 +431,16 @@ for ithNet = 1:parameters.nNets
         allScores = zeros(1, pfsim.nEnvironments);
         allPFpeaksSeq = [];
         allLinfields = [];
+        
+        [linfields, PFpeaksSequence] = calculate_linfields(opS, pfsim, pfsim, network, true);
+        
         for ithEnv = 1:pfsim.nEnvironments
-            
+            %{
             trialSpikes = opS(:,:,ithEnv,:);
             [linfields, PFpeaksSequence] = calculate_linfields(trialSpikes, pfsim, pfsim, network, true);
             allPFpeaksSeq(:,ithEnv) = PFpeaksSequence;
             allLinfields{ithEnv} = linfields;
+            %}
             
             %{
             figure; plot(pfsim.t, V_m(network.E_indices(1:3),:)); ylabel('Vm (V)'); xlabel('Time (s)'); 
@@ -449,14 +453,15 @@ for ithNet = 1:parameters.nNets
             'TimePerBin', parameters.dt, 'PlotType', 'scatter'); % 
             ylabel('Cell');
             %}
-            if pfsim.PFscoreFlag
+            if pfsim.PFscoreFlag % TODO: adapt to {ithEnv} in {traj} dimension
                 allScores(ithEnv) = calculate_linfieldsScore(linfields, pfsim, pfsim, network)
+                disp('Has calculate_linfieldsScore been fixed for multiple environments?')
             end
             disp(['Env: ', num2str(ithEnv), ', Score: ', num2str(allScores(ithEnv))])
             
             %figure; plotSpikeRaster( logical( [ opS(network.E_indices,:,ithEnv,1); opS(network.I_indices,:,1,1) ]), 'TimePerBin', parameters.dt, 'PlotType', 'scatter');
             rpermIcells = randperm(numel(network.I_indices));
-            figure; plotSpikeRaster( logical( [ opS(network.E_indices(PFpeaksSequence),:,ithEnv,1); opS(network.I_indices(rpermIcells),:,1,1) ]), 'TimePerBin', parameters.dt, 'PlotType', 'scatter');
+            figure; plotSpikeRaster( logical( [ opS(network.E_indices(PFpeaksSequence{ithEnv}),:,ithEnv,1); opS(network.I_indices(rpermIcells),:,ithEnv,1) ]), 'TimePerBin', parameters.dt, 'PlotType', 'scatter');
 
         end
         score = mean(allScores);
@@ -465,7 +470,7 @@ for ithNet = 1:parameters.nNets
         figure; histogram( sum(opS, [2:4])./parameters.t_max./parameters.nTrials./pfsim.nEnvironments, 50 )
         xlabel('Mean rate (Hz, all PF trials)'); ylabel('All cells')
     
-        plotPFs(allLinfields, allPFpeaksSeq, network, pfsim)
+        plotPFs(linfields, PFpeaksSequence, network, pfsim)
         
     end
     PFruntime = toc

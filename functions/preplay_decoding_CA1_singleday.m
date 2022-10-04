@@ -102,7 +102,7 @@ linfields = load(sprintf('%s%slinfields0%d.mat',dir,animalprefix,day), 'linfield
 linfields = linfields.linfields; 
 
 % nTraj = 4;
-nTraj = numel(linfields{day}{eprun}{1}{hpidx(1,1)}{hpidx(1,2)});
+nTraj = numel(linfields{day}{eprun}{hpidx(1,1)}{hpidx(1,2)});
 
 for i = 1:hpnum
       cind = hpidx(i,:);
@@ -154,7 +154,7 @@ pm = pm';
 tm = tm';
 
 % remove reward-well regions (15cm around start and end)
-for i = 1:nTracks
+for i = 1:nTraj
     pm_traj = pm(find(tm == i));
     maxpos = max(max(pm_traj));
     rm(find(tm == i & pm <= wellcutoff)) = 0;

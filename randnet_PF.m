@@ -93,14 +93,14 @@ parameters.nNets = 1; % How many networks to run
 
 PFsimFlag = 1;
 PFscoreFlag = 0;
-preplaySimFlag = 0;
+preplaySimFlag = 1;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 % Combined Preplay and PFs
-parameters.t_max = 6; %maximum amount of time (s)
+parameters.t_max = 120; %maximum amount of time (s)
 parameters.G_L = 10*10^(-9); %leak conductance (S) %10 - 30 nS range
 parameters.rG = 5000;
 parameters.Win_var = (5e-12)^2;
@@ -489,6 +489,7 @@ for ithNet = 1:parameters.nNets
 
             %Create input conductance variable
             rng(ithTest)
+            preplayContext = 1; % Which environments context cue to use for preplay sim
             if parameters.usePoisson
                 G_in = zeros(parameters.n, parameters.t_steps+1);
                 G_in(:,1) = 1/2* parameters.Win_mean * 2*parameters.rG * parameters.tau_syn_E + sqrt(1/2*parameters.tau_syn_E*parameters.Win_mean.^2*2*parameters.rG).*randn(parameters.n, 1) ; 
@@ -496,8 +497,8 @@ for ithNet = 1:parameters.nNets
                     G_in(:,k) = G_in(:,k-1)*exp(-parameters.dt/parameters.tau_syn_E);
 
                     % G_in(:,k) = G_in(:,k) + network.contextInput .* [rand(parameters.n, 1) < (parameters.dt*parameters.rG)];
-                    G_in(:,k) = G_in(:,k) + [network.contextInput .* [1     .*              ismember(network.all_indices, network.E_indices)]' .* [rand(parameters.n, 1) < (parameters.dt*parameters.rG)] + ...
-                                             network.contextInput .* [parameters.IcueScale.*ismember(network.all_indices, network.I_indices)]'  .* [rand(parameters.n, 1) < (parameters.dt*parameters.rG)]] ;
+                    G_in(:,k) = G_in(:,k) + [network.contextInput(:,preplayContext) .* [1     .*              ismember(network.all_indices, network.E_indices)]' .* [rand(parameters.n, 1) < (parameters.dt*parameters.rG)] + ...
+                                             network.contextInput(:,preplayContext) .* [parameters.IcueScale.*ismember(network.all_indices, network.I_indices)]'  .* [rand(parameters.n, 1) < (parameters.dt*parameters.rG)]] ;
                 end
             else
                 G_in = (parameters.G_std*randn(parameters.n,parameters.t_steps+1))+parameters.G_mean;

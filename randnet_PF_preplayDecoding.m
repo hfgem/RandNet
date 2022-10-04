@@ -2,7 +2,7 @@
 % This script can be run after randnet_PF to perform Bayesian decoding on
 % the preplay sequences
 
-saveFlag = 1; % 1 to save simulation results
+saveFlag = 0; % 1 to save simulation results
 selectPath = 0; % 1 to select save destination, 0 to save in current dir
 plotResults = 1; % 1 to plot basic simulation results
 

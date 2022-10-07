@@ -89,7 +89,7 @@ function [avg_mat, allResults, PFresults] = parallelize_parameter_tests_2(parame
     allResults = cell(1, num_nets) ;
     PFresults = cell(1, num_nets) ;
     for ithNet = 1:num_nets
-        network = create_clusters(parameters, 'seed', ithNet, 'include_all', parameters.include_all, 'global_inhib', parameters.global_inhib);
+        network = create_clusters(pfsim, 'seed', ithNet, 'include_all', parameters.include_all, 'global_inhib', parameters.global_inhib);
         
         PFresults{ithNet}{1}.E_indices = network.E_indices; % only collect E_indices to verify that create_clusters with netSeed is successful at recreating networks posthoc
         PFresults{ithNet}{1}.netSeed = ithNet;
@@ -99,55 +99,54 @@ function [avg_mat, allResults, PFresults] = parallelize_parameter_tests_2(parame
         network_spike_sequences = struct; 
         
         %% Run PF simulation
-        G_in_PFs = zeros(parameters.n, numel(pfsim.t), pfsim.nEnvironments, pfsim.nTrials);
+        
+        %opV = zeros(parameters.n, numel(pfsim.t), pfsim.nEnvironments, pfsim.nTrials); % Voltage from all sims
+        opS = zeros(parameters.n, numel(pfsim.t), pfsim.nEnvironments, pfsim.nTrials); % Spikes from all sims
         for ithEnv = 1:pfsim.nEnvironments
             
-                    
             for ithTrial = 1:pfsim.nTrials
+                
+                G_in_PFs = zeros(parameters.n, numel(pfsim.t));
                 %rng(ithTrial, , 'twister')
                 % G_in_PFs(:,1,ithEnv,ithTrial) = 1/10* dI(:,ithEnv) * 2*parameters.rGmax * parameters.tau_syn_E + sqrt(1/2*parameters.tau_syn_E*dI(:,ithEnv).^2*2*parameters.rGmax).*randn(parameters.n, 1) ; 
-                G_in_PFs(:,1,ithEnv,ithTrial) = zeros(parameters.n, 1) ; 
+                G_in_PFs(:,1) = zeros(parameters.n, 1); 
                 for i = 2:numel(pfsim.t)
                         % Exponential decay from last time step
-                        G_in_PFs(:,i,ithEnv,ithTrial) = G_in_PFs(:,i-1,ithEnv,ithTrial)*exp(-parameters.dt/parameters.tau_syn_E);
+                        G_in_PFs(:,i) = G_in_PFs(:,i-1)*exp(-parameters.dt/parameters.tau_syn_E);
                         % Add spikes from each input source
-                        G_in_PFs(:,i,ithEnv,ithTrial) = G_in_PFs(:,i,ithEnv,ithTrial) + ...
-                                network.spatialInput{1} .* (1-parameters.PFcontextFrac).*[rand(parameters.n, 1) < (parameters.dt* (parameters.rG * (i/numel(pfsim.t)) ))] + ...
-                                network.spatialInput{2} .* (1-parameters.PFcontextFrac).* [rand(parameters.n, 1) < (parameters.dt* ( parameters.rG * ((numel(pfsim.t)-i)/numel(pfsim.t)) ) )] + ...
+                        G_in_PFs(:,i) = G_in_PFs(:,i) + ...
+                                network.spatialInput{1}(:,ithEnv) .* (1-parameters.PFcontextFrac).*[rand(parameters.n, 1) < (parameters.dt* (parameters.rG * (i/numel(pfsim.t)) ))] + ...
+                                network.spatialInput{2}(:,ithEnv) .* (1-parameters.PFcontextFrac).* [rand(parameters.n, 1) < (parameters.dt* ( parameters.rG * ((numel(pfsim.t)-i)/numel(pfsim.t)) ) )] + ...
                                 network.contextInput(:,ithEnv) .* [parameters.PFcontextFrac.*ismember(network.all_indices, network.E_indices)]' .* [rand(parameters.n, 1) < (parameters.dt*parameters.rG)] + ...
                                 network.contextInput(:,ithEnv) .* [parameters.IcueScale_PF.*ismember(network.all_indices, network.I_indices)]' .* [rand(parameters.n, 1) < (parameters.dt*parameters.rG)]   ;
                 end
-            end
 
-            %opV = zeros(parameters.n, numel(pfsim.t), pfsim.nEnvironments, pfsim.nTrials); % Voltage from all sims
-            opS = zeros(parameters.n, numel(pfsim.t), pfsim.nEnvironments, pfsim.nTrials); % Spikes from all sims
-            for ithEnv = 1:pfsim.nEnvironments
-                for ithTrial = 1:pfsim.nTrials
+                % Set up for simulation
+                V_m = zeros(parameters.n,numel(pfsim.t)); %membrane potential for each neuron at each timestep
+                V_m(:,1) = -60e-3 + 1e-3*randn([parameters.n,1]); %set all neurons to baseline reset membrane potential with added noise
+                pfsim.G_in = G_in_PFs; 
+                trialSeed = randi(10^6);
 
-                    % Set up for simulation
-                    V_m = zeros(parameters.n,numel(pfsim.t)); %membrane potential for each neuron at each timestep
-                    V_m(:,1) = -60e-3 + 1e-3*randn([parameters.n,1]); %set all neurons to baseline reset membrane potential with added noise
-                    pfsim.G_in = G_in_PFs(:,:,ithEnv,ithTrial); 
-                    trialSeed = randi(10^6);
-
-                    % PF Simulation
-                    [V_m, ~, ~, ~, ~, ~, ~] = randnet_calculator(pfsim, trialSeed, network, V_m);
-                    %opV(:,:,ithEnv,ithTrial) = V_m;
-                    opS(:,:,ithEnv,ithTrial) = logical( V_m>parameters.V_th);
-                    clear V_m 
-                    rmfield(pfsim, 'G_in');
-                end
+                % PF Simulation
+                [V_m, ~, ~, ~, ~, ~, ~] = randnet_calculator(pfsim, trialSeed, network, V_m);
+                %opV(:,:,ithEnv,ithTrial) = V_m;
+                opS(:,:,ithEnv,ithTrial) = logical( V_m>parameters.V_th);
+                clear V_m 
+                pfsim = rmfield(pfsim, 'G_in');
             end
         end
         % keyboard
 
         % Calculate Place fields and PF-objective score
-        allScores = zeros(size(pfsim.nEnvironments));
+        allScores = zeros(1, pfsim.nEnvironments);
+        
+        [linfields, PFpeaksSequence] = calculate_linfields(opS, pfsim, pfsim, network, true);
+        
         
         for ithEnv = 1:pfsim.nEnvironments
             % [linfields, PFpeaksSequence, PFmat] = calculate_linfields(opS, pfsim, pfsim, network, true);
-            [linfields, ~, PFmat] = calculate_linfields(opS, pfsim, pfsim, network, false);
-            PFresults{ithNet}{ithEnv}.linfields = PFmat;
+            %[linfields, ~, PFmat] = calculate_linfields(opS, pfsim, pfsim, network, false);
+            %PFresults{ithNet}{ithEnv}.linfields = PFmat;
 
             %{
             figure; plot(pfsim.t, V_m(network.E_indices(1:3),:)); ylabel('Vm (V)'); xlabel('Time (s)'); 
@@ -163,6 +162,7 @@ function [avg_mat, allResults, PFresults] = parallelize_parameter_tests_2(parame
             if pfsim.PFscoreFlag % Calculating the score is computationally expensive (due to fitting gaussian curves)
                 allScores(ithEnv) = calculate_linfieldsScore(linfields, pfsim, pfsim, network)
                 %disp(['Env: ', num2str(i), ', Score: ', num2str(allScores(i))])
+                disp('Has calculate_linfieldsScore been fixed for multiple environments?')
             end
         end
         if pfsim.PFscoreFlag
@@ -180,6 +180,8 @@ function [avg_mat, allResults, PFresults] = parallelize_parameter_tests_2(parame
             seed = ithTest;
 
             %Create input conductance variable
+            rng(ithTest)
+            preplayContext = 1; % Which environments context cue to use for preplay sim
             if parameters.usePoisson
                 G_in = single(zeros(parameters.n, parameters.t_steps+1));
                 
@@ -187,8 +189,8 @@ function [avg_mat, allResults, PFresults] = parallelize_parameter_tests_2(parame
                     G_in(:,k) = G_in(:,k-1)*exp(-parameters.dt/parameters.tau_syn_E);
 
                     % G_in(:,k) = G_in(:,k) + network.contextInput .* [rand(parameters.n, 1) < (parameters.dt*parameters.rG)];
-                    G_in(:,k) = G_in(:,k) + [network.contextInput .* [1     .*              ismember(network.all_indices, network.E_indices)]' .* [rand(parameters.n, 1) < (parameters.dt*parameters.rG)] + ...
-                                             network.contextInput .* [parameters.IcueScale.*ismember(network.all_indices, network.I_indices)]'  .* [rand(parameters.n, 1) < (parameters.dt*parameters.rG)]] ;
+                    G_in(:,k) = G_in(:,k) + [network.contextInput(:,preplayContext) .* [1     .*              ismember(network.all_indices, network.E_indices)]' .* [rand(parameters.n, 1) < (parameters.dt*parameters.rG)] + ...
+                                             network.contextInput(:,preplayContext) .* [parameters.IcueScale.*ismember(network.all_indices, network.I_indices)]'  .* [rand(parameters.n, 1) < (parameters.dt*parameters.rG)]] ;
                 end
             else
                 G_in = (parameters.G_std*randn(parameters.n,parameters.t_steps+1))+parameters.G_mean;

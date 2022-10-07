@@ -10,14 +10,14 @@
 
 clear all
 
-parameters.saveFlag = 0; % 1 to save simulation results
+parameters.saveFlag = 1; % 1 to save simulation results
 parameters.selectPath = 0; % 1 to select save destination, 0 to save in current dir
 parameters.plotResults = 1; % 1 to plot basic simulation results
 
 if parameters.saveFlag & parameters.selectPath
     save_path = uigetdir('/Users/hannahgermaine/Documents/PhD/','Select Save Folder'); %Have user input where they'd like the output stored
 else
-    save_path = [pwd, '/results/randnet_PF'];
+    save_path = [pwd, '/results/randnet_PF_Envs'];
 end
 addpath('functions')
 
@@ -100,7 +100,7 @@ preplaySimFlag = 1;
 
 
 % Combined Preplay and PFs
-parameters.t_max = 120; %maximum amount of time (s)
+parameters.t_max = 12; %maximum amount of time (s)
 parameters.G_L = 10*10^(-9); %leak conductance (S) %10 - 30 nS range
 parameters.rG = 5000;
 parameters.Win_var = (5e-12)^2;
@@ -398,7 +398,7 @@ for ithNet = 1:parameters.nNets
                 G_in_PFs = zeros(parameters.n, numel(pfsim.t));
                 %rng(ithTrial)
                 % G_in_PFs(:,1,ithEnv,ithTrial) = 1/10* dI(:,ithEnv) * 2*parameters.rGmax * parameters.tau_syn_E + sqrt(1/2*parameters.tau_syn_E*dI(:,ithEnv).^2*2*parameters.rGmax).*randn(parameters.n, 1) ; 
-                G_in_PFs(:,1) = zeros(parameters.n, 1) ; 
+                G_in_PFs(:,1) = zeros(parameters.n, 1); 
                 for i = 2:numel(pfsim.t)
                         % Exponential decay from last time step
                         G_in_PFs(:,i) = G_in_PFs(:,i-1)*exp(-parameters.dt/parameters.tau_syn_E);
@@ -429,8 +429,8 @@ for ithNet = 1:parameters.nNets
 
         % Calculate Place fields and PF-objective score and plot PF sim figs
         allScores = zeros(1, pfsim.nEnvironments);
-        allPFpeaksSeq = [];
-        allLinfields = [];
+        % allPFpeaksSeq = [];
+        % allLinfields = [];
         
         [linfields, PFpeaksSequence] = calculate_linfields(opS, pfsim, pfsim, network, true);
         

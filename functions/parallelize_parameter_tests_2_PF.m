@@ -140,8 +140,8 @@ function [avg_mat, allResults, PFresults] = parallelize_parameter_tests_2(parame
         % Calculate Place fields and PF-objective score
         allScores = zeros(1, pfsim.nEnvironments);
         
-        [linfields, PFpeaksSequence] = calculate_linfields(opS, pfsim, pfsim, network, true);
-        
+        [linfields, PFpeaksSequence, PFmat] = calculate_linfields(opS, pfsim, pfsim, network, true);
+        PFresults{ithNet}{1}.linfields = PFmat;
         
         for ithEnv = 1:pfsim.nEnvironments
             % [linfields, PFpeaksSequence, PFmat] = calculate_linfields(opS, pfsim, pfsim, network, true);

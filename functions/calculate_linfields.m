@@ -86,14 +86,15 @@ end
 
 for tr = 1:size(opS, 3)
     
-    PFmat = [];
+    PFmat_temp = [];
     for ithCell = 1:parameters.n
         PF = linfields{day}{epoch}{tetrode}{ithCell}{tr}(:,5);
         %if sum(PF>0)
-            PFmat= [PFmat;PF'];
+            PFmat_temp= [PFmat_temp;PF'];
         %end
     end
-    PFmat_E = PFmat(network.E_indices,:);
+    PFmat{tr} = PFmat_temp;
+    PFmat_E = PFmat_temp(network.E_indices,:);
 
     row_all_zeros1 = find(all( PFmat_E==0, 2)) ;
     row_n_all_zeros1 = find(~all( PFmat_E==0, 2)) ;

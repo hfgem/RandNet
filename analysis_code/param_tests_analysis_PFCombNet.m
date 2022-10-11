@@ -17,6 +17,7 @@ variedParam(:).name
 variedParam(:).range
 paramSetInds = combvec([2], [4])'
 % paramSetInds = combvec([1], [2])'
+paramSetInds = combvec([2], [2])'
 
 parameters.n
 parameters.del_G_sra
@@ -71,7 +72,8 @@ for ithParamSet = 1:size(paramSetInds, 1)
     for ithNet = 1:size(resultsStruct, 3)
 
         % Get matrix of PFs
-        PFmat = PFresultsStruct(ithParam1, ithParam2, ithNet).results{1}.linfields;
+        ithLinfield = 1;
+        PFmat = PFresultsStruct(ithParam1, ithParam2, ithNet).results{1}.linfields{ithLinfield};
         E_indices = PFresultsStruct(ithParam1, ithParam2, ithNet).results{1}.E_indices;
         netSeed = PFresultsStruct(ithParam1, ithParam2, ithNet).results{1}.netSeed;
 
@@ -80,6 +82,7 @@ for ithParamSet = 1:size(paramSetInds, 1)
 
         % Recreate network
         netParams=parameters;
+        netParams.envIDs = pfsim.envIDs;
         for i = 1:size(variedParam, 2)
             netParams.(variedParam(i).name) = variedParam(i).range(paramSetInds(i));
         end

@@ -4,6 +4,8 @@
 % load('C:\Users\Jordan\Box\Data\Replay project\RandNet\temp, new PF sim code grids\results_2022-07-21T15-05.mat')
 % load('../results/randnet_PF_param_tests/results_2022-07-21T15-05.mat')
 
+load(['C:\Users\Jordan\Box\Data\RandNet-Data\temp, new PF sim code grids\', ...
+    'results_2022-07-22T18-29.mat'])
 
 if isfolder('functions')
     addpath('functions')
@@ -15,8 +17,9 @@ end
 % paramSetInds = combvec([1:size(resultsStruct, 1)], [1:size(resultsStruct, 2)])'
 variedParam(:).name
 variedParam(:).range
-paramSetInds = combvec([2], [4])'
-% paramSetInds = combvec([1], [2])'
+paramSetInds = combvec([2], [4])' % best example, for 2022-07-22T18-29 data
+% paramSetInds = combvec([1], [1])' % stationary example, for 2022-07-22T18-29 data
+% paramSetInds = combvec([9], [1])' % diffuse example, for 2022-07-22T18-29 data
 
 parameters.n
 parameters.del_G_sra
@@ -25,7 +28,7 @@ variedParam(2).name
 
 % Analysis and plotting parameters
 minPeakRate = 2; % minimum peak PF rate to be considered a place cell
-useWeightedDecode = 1; % slope and R2 for correlations by either peak prob or weighted prob
+useWeightedDecode = 0 % slope and R2 for correlations by either peak prob or weighted prob
 nEventsToPlot = 25; 
 useMeanPFDensity = true
 
@@ -211,6 +214,7 @@ for ithParamSet = 1:size(paramSetInds, 1)
     
     %% Plot p-value matrix
     
+    % myPlotSettings(3, 1.5) % for poster
     if plotPvalMat
         rvalThresh_vec = 0.0:0.1:0.9;
         jumpThres_vec =  0.1:0.1:1.0;
@@ -244,7 +248,8 @@ for ithParamSet = 1:size(paramSetInds, 1)
         xlabel('<|Max Jump Distance|')
         ylabel('>|Correlation|')
         caxis([0, 0.1])
-
+        
+        
         % Plot with better colormap
         figure; 
         imagesc(jumpThres_vec, rvalThresh_vec, log10(op'), 'AlphaData', ~isnan(op'))
@@ -275,6 +280,7 @@ for ithParamSet = 1:size(paramSetInds, 1)
     
     %% Plot ECDF of r values
     
+    % myPlotSettings(3, 1.5) % for poster
     allEventRs_ecdf = (allEventRs);
     rvals_shuff_ecdf= (vertcat(allShuffleRs{:}));
                 
@@ -293,9 +299,11 @@ for ithParamSet = 1:size(paramSetInds, 1)
     
     % Decodes
     myPlotSettings(7, 6)
+    % myPlotSettings(6, 4) % for poster, main result
+    myPlotSettings(3.5, 5.5) % for poster, secondary results
     if nEventsToPlot>0
         [pvals_sorted, eventSortInd] = sort(bestEventpVals);
-        figure; tfig = tiledlayout('flow');
+        figure; tfig = tiledlayout('flow', 'Padding', 'none', 'TileSpacing', 'compact');
         title(tfig, ['Best ', num2str(numel(bestEvents_decode)), ' of ', num2str(nEvents), ' events'])
         for ithEventToPlot = eventSortInd'
             nexttile
@@ -377,8 +385,9 @@ for ithParamSet = 1:size(paramSetInds, 1)
         end
 
         % 'Peak Rate'
+        % myPlotSettings(3, 1.5) % for poster
         peakRate= max(PFmatE_all, [], 2);
-        figure; histogram(peakRate(peakRate>minPeakRate)); xlabel('Peak PF rate (Hz)'); ylabel('E cells (count)');
+        figure; histogram(peakRate(peakRate>minPeakRate)); xlabel('Place field peak (Hz)'); ylabel('Place cells (count)');
 
         % 'kstest'
         ksstat_vec = [];
@@ -386,15 +395,15 @@ for ithParamSet = 1:size(paramSetInds, 1)
             [~,p,ksstat,~] = kstest( ( PFmatE_all(i,:)-mean(PFmatE_all(i,:), 2) )./(std(PFmatE_all(i,:), [], 2)+eps  ) );
             ksstat_vec(i) = ksstat;
         end   
-        figure; histogram(ksstat_vec(peakRate>minPeakRate)); xlabel('kstest stat'); ylabel('E cells (count)');
+        figure; histogram(ksstat_vec(peakRate>minPeakRate)); xlabel('kstest stat'); ylabel('Place cells (count)');
 
         % 'sparsity'                
         cellSparsity =  mean( PFmatE_all>[0.25*max(PFmatE_all, [], 2)], 2 );
-        figure; histogram(cellSparsity(peakRate>minPeakRate)); xlabel('PF sparsity'); ylabel('E cells (count)');
+        figure; histogram(cellSparsity(peakRate>minPeakRate)); xlabel('PF sparsity'); ylabel('Place cells (count)');
 
         % 'information'
         spatialInfo = nanmean( [PFmatE_all./mean(PFmatE_all, 2)] .* log(( PFmatE_all+eps )./mean(PFmatE_all, 2) ), 2 );
-        figure; histogram(spatialInfo(peakRate>minPeakRate)); xlabel('PF information'); ylabel('E cells (count)');
+        figure; histogram(spatialInfo(peakRate>minPeakRate)); xlabel('Spatial information (bits/s)'); ylabel('Place cells (count)');
 
         
         figure; scatter(cellSparsity, spatialInfo); xlabel('PF sparsity'); ylabel('Spatial info.')

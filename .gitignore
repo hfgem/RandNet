@@ -1,4 +1,16 @@
+# Ignore temp MacOS and MATLAB files
 **/*.DS_Store
-Results/
 *.m~
 *.asv
+
+# Ignore results folder
+/Results/**
+
+# Don't ignore saved parameter files in the results folder
+#!/Results/**/
+#!*parameters.mat
+#!*pfsim.mat
+
+
+
+

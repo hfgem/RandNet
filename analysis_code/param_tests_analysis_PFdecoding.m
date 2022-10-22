@@ -133,9 +133,15 @@ for ithParam1 = 1:size(resultsStruct, 1)
                     figure; hold on; ecdf(rvals_preplay); ecdf(rvals_shuffle); legend({'Preplays', 'Shuffles'}, 'Location', 'Best')
                 end
                 
-                [H,P,KSSTAT] = kstest2(rvals_preplay, rvals_shuffle);
-                temp(1, ithNet) = P;
-                temp(2, ithNet) = KSSTAT;
+                try
+                    [H,P,KSSTAT] = kstest2(rvals_preplay, rvals_shuffle);
+                    temp(1, ithNet) = P;
+                    temp(2, ithNet) = KSSTAT;
+                catch 
+                    disp('Error, no events')
+                    temp(1, ithNet) = nan;
+                    temp(2, ithNet) = nan;
+                end
                 
                 allNetPvals(ithParam1, ithParam2, ithNet) = P;
                 allNetKSstat(ithParam1, ithParam2, ithNet) = KSSTAT;

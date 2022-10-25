@@ -29,14 +29,14 @@ variedParam(2).name
 % Analysis and plotting parameters
 minPeakRate = 2; % minimum peak PF rate to be considered a place cell
 useWeightedDecode = 0 % slope and R2 for correlations by either peak prob or weighted prob
-nEventsToPlot = 25; 
+nEventsToPlot = 12; 
 useMeanPFDensity = true
 
 % Analysis and plotting options
 calcScore = false
 plotExtraPlots = false % if 1, plot place fields of every network
 plotNetsBest = false
-plotPvalMat = true 
+plotPvalMat = false 
 plotClusterPFs = false
 plotNetStruct = false
 
@@ -61,6 +61,8 @@ for ithParamSet = 1:size(paramSetInds, 1)
     nClustMemb_all = []; % number of clusters each cell is a member of
     PFscores_all = [];
     bestEventpVals = inf(nEventsToPlot, 1); % nEventsToPlot best event pvals
+    bestEventAbsrVals = inf(nEventsToPlot, 1); % nEventsToPlot best event pvals
+    bestEventjdVals = inf(nEventsToPlot, 1); % nEventsToPlot best event pvals
     bestEvents_decode = cell(nEventsToPlot, 1);
     bestEvents_relRank = cell(nEventsToPlot, 1);
     bestEvents_relRankColor = cell(nEventsToPlot, 1);
@@ -101,6 +103,7 @@ for ithParamSet = 1:size(paramSetInds, 1)
                 rsqrs_shuffle = rsqrs_shuffle(:,1);
                 rsqrs_shuffle = cellfun(@transpose,rsqrs_shuffle,'UniformOutput',false); 
                 rsqrs_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.weightedR2(:,1); 
+                tBinSz = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.tBinSz;
                 
                 % pvals_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pvalue(:,1); % pvalue, relative to shuffle
                 pvals_preplay = nan(size(rsqrs_preplay));
@@ -190,6 +193,8 @@ for ithParamSet = 1:size(paramSetInds, 1)
                 if any(pvals_preplay(ithEvent) < bestEventpVals )
                     [~, minInd] = max(bestEventpVals);
                     bestEventpVals(minInd) = pvals_preplay(ithEvent);
+                    bestEventjdVals(minInd) = maxJumps_preplay(ithEvent);
+                    bestEventAbsrVals(minInd) =  sqrt(rsqrs_preplay(ithEvent));
                     bestEvents_decode{minInd} = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pMat{ithEvent}{1}.pMat;
                     bestEvents_relRank{minInd} = x(PFpeaksSequence,ithEvent);
                     bestEvents_relRankColor{minInd} = clustColor(PFpeaksSequence);
@@ -243,6 +248,8 @@ for ithParamSet = 1:size(paramSetInds, 1)
             ij
         end
 
+        % myPlotSettings(4, 3, 2, 14, [], [], 2) % ppt format
+        
         % Plot with linear colormap
         figure; imagesc(jumpThres_vec, rvalThresh_vec, op', 'AlphaData', ~isnan(op')); colorbar
         xlabel('<|Max Jump Distance|')
@@ -281,6 +288,9 @@ for ithParamSet = 1:size(paramSetInds, 1)
     %% Plot ECDF of r values
     
     % myPlotSettings(3, 1.5) % for poster
+    
+    myPlotSettings(4, 2.75, 2, 14, [], [], 2) % ppt format
+    
     allEventRs_ecdf = (allEventRs);
     rvals_shuff_ecdf= (vertcat(allShuffleRs{:}));
                 
@@ -294,25 +304,41 @@ for ithParamSet = 1:size(paramSetInds, 1)
         ' pval=', num2str(P), ...
         ' nEvents=', num2str(numel(allEventRs_ecdf))])
 
-    
+    title ''
+    legend({'Pre-Run', 'Time-bin shuffle'}, 'Location', 'Best'); legend boxoff
+
     %% Plot best sequences
     
     % Decodes
     myPlotSettings(7, 6)
     % myPlotSettings(6, 4) % for poster, main result
-    myPlotSettings(3.5, 5.5) % for poster, secondary results
+    % myPlotSettings(3.5, 5.5) % for poster, secondary results
+     myPlotSettings(4.5, 3, 2, 12, [], [], 2) % ppt format
+    
     if nEventsToPlot>0
         [pvals_sorted, eventSortInd] = sort(bestEventpVals);
         figure; tfig = tiledlayout('flow', 'Padding', 'none', 'TileSpacing', 'compact');
         title(tfig, ['Best ', num2str(numel(bestEvents_decode)), ' of ', num2str(nEvents), ' events'])
         for ithEventToPlot = eventSortInd'
             nexttile
-            imagesc(bestEvents_decode{ithEventToPlot})
-            title(['pval=', num2str(bestEventpVals(ithEventToPlot))])
+            
+            [yt, xt] = size(bestEvents_decode{ithEventToPlot});
+            imagesc([1:xt]*(tBinSz), [1:yt]*(pfsim.spatialBin*100), bestEvents_decode{ithEventToPlot})
+            colormap hot
+            title(['pval=', num2str(bestEventpVals(ithEventToPlot))], 'FontWeight', 'normal')
+            title(['r=', num2str(bestEventAbsrVals(ithEventToPlot), 2), '; jd=', num2str(bestEventjdVals(ithEventToPlot), 2)], 'FontWeight', 'normal')            
             % caxis(([0, 0.75*max(bestEvents_decode{ithEventToPlot}, [], 'all')]))
-             caxis(([0, 0.25]))
+            caxis(([0, 0.25]))
+             
+            set(gca,'ytick',[])
+            %yt = yticks; yticklabels(yt*(pfsim.spatialBin*100)); ylabel('Position (cm)')
+            %xt = xticks; xticklabels(xt*(tBinSz)); xlabel('Time (ms)')
+            %xticks('auto')
         end
     end
+    title(tfig, '')
+    
+    
     myPlotSettings
     
     % Relative ranks (corresponding to decodes)
@@ -332,6 +358,9 @@ for ithParamSet = 1:size(paramSetInds, 1)
     
 
     %% Plot combined place fields
+    
+    % myPlotSettings(4, 3, 2, 14, [], [], 2) % ppt format
+    
     row_all_zeros1 = find(all( PFmatE_all==0, 2)) ;
     row_n_all_zeros1 = find(~all( PFmatE_all==0, 2)) ;
     [peakRate,peakRateLocation] = max(squeeze(PFmatE_all(row_n_all_zeros1,:)), [], 2);
@@ -348,10 +377,13 @@ for ithParamSet = 1:size(paramSetInds, 1)
         caxmax = max(PFmatE_all, [], 'all');
     end
     
-    figure; imagesc( PFmatE_all(PFpeaksSequence(rateDenomAll>minPeakRate),:)./rateDenomAll(rateDenomAll>minPeakRate)); title('All nets'); colorbar; caxis([0, caxmax])
+    PFdatatoplot = PFmatE_all(PFpeaksSequence(rateDenomAll>minPeakRate),:)./rateDenomAll(rateDenomAll>minPeakRate);
+    figure; imagesc( fliplr(PFdatatoplot(:,5:end)) ); title('All nets'); colorbar; caxis([0, caxmax])
     xlabel('Position (2 cm bin)'); ylabel('Cell (sorted)');
-    % colormap(flipud(bone)); title ''
     
+    colormap(jet); title ''; colorbar off
+    xt = xticks; xticklabels(xt*(pfsim.spatialBin*100)); xlabel('Position (cm)')
+    % set(gca,'xtick',[]); xlabel('')
     
     %% Plot cluster-wise place fields
     if plotClusterPFs
@@ -452,6 +484,14 @@ for ithParamSet = 1:size(paramSetInds, 1)
         spatialInfo = nanmean( [PFmatE_all./mean(PFmatE_all, 2)] .* log(( PFmatE_all+eps )./mean(PFmatE_all, 2) ), 2 );
         figure; histogram(spatialInfo(peakRate>minPeakRate), 10, 'Normalization', 'probability'); xlabel('Spatial Information (bits)'); ylabel('E cells (count)'); ylabel('Place cells (Prob.)');
         xlim([-0.05, 3.45]); ylim([0, 0.3]); box off
+        
+        % myPlotSettings(4, 2, 2, 14, [], [], 2) % ppt format
+        xx = 0:0.1:10;
+        yy = gaussmf(xx,[1 5]);
+        figure; plot(xx,yy)
+        xlabel('Position'); ylabel('Input rate (Hz)')
+        box off; set(gca,'xtick',[]); set(gca,'ytick',[])
+        
     end
     
     

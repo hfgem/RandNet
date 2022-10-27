@@ -5,6 +5,8 @@ else
     addpath( fullfile( '..', 'functions' ) )
 end
 
+% load(['C:\Users\Jordan\Box\Data\RandNet-Data\temp, new PF sim code grids\', 'results_2022-07-22T18-29.mat'])
+
 
 %% Plot preplay decoding results across grid search
 %
@@ -31,7 +33,7 @@ plotCombinedCDFs = 0
 maxNEvents = inf % downsample number of replay events for kstest to maxNEvents, use inf for no downsampling
 % maxNEvents = 500 
 
-useWeightedDecode = 1; % slope and R2 for correlations by either peak prob or weighted prob
+useWeightedDecode = 0; % slope and R2 for correlations by either peak prob or weighted prob
 
 %downSample = 0
 %downSampleFracEvents = 0.5;
@@ -123,10 +125,14 @@ for ithParam1 = 1:size(resultsStruct, 1)
                     pvals_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pvalue(:,1);
                     
                     slopes_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.slopes(:,1);
+                    try % Struct field added to later simulation
                     slopes_shuffle = vertcat(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.shuffle_slopes{:});
                     slopes_shuffle = slopes_shuffle(:,1); % take just forward traj
                     slopes_shuffle = cellfun(@transpose,slopes_shuffle,'UniformOutput',false); 
                     slopes_shuffle = vertcat([slopes_shuffle{:,1}]');
+                    catch
+                        slopes_shuffle = nan;
+                    end
                 end
                 
                 if plotAllCDFs
@@ -264,7 +270,7 @@ title(analysisTitle)
 % hold on; plot(variedParam(1).range, exp(variedParam(1).range/1.1)-1); plot(variedParam(1).range, exp((variedParam(1).range-1)*5)+15);
 
 
-% Plot with better colormap
+%% Plot with better colormap
 figure; 
 imagesc(xParamvec, yParamvec, log10(squeeze(op(1,:,:))'), 'AlphaData', ~isnan(squeeze(op(1,:,:))'))
 set(gca,'YDir','normal')
@@ -284,6 +290,18 @@ set(gcf,'colormap',cm)
 colorbar
 colorbar('Direction','reverse','Ticks',[log10(.005),log10(.05),log10(.5)],'TickLabels',[.005,.05,.5])
 
+%% Plot slice of above p-val matrix
+
+% ithYval = 1:numel(yParamvec); 
+% ithYval = [2, 4,  8,  12]; 
+ ithYval = [2]; 
+xx = xParamvec;
+yy = squeeze(op(1,:,ithYval))';
+figure; hold on; 
+plot(xx, yy, '-o'); yline(0.05)
+xlabel('Mean cluster membership'); ylabel('KS-test p-value');
+set(gca, 'YScale', 'log')
+legend({num2str( yParamvec(ithYval)')}, 'Location', 'Best')
 
 %% Extra parameter grid plots
 

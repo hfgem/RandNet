@@ -4,8 +4,8 @@
 % load('C:\Users\Jordan\Box\Data\Replay project\RandNet\temp, new PF sim code grids\results_2022-07-21T15-05.mat')
 % load('../results/randnet_PF_param_tests/results_2022-07-21T15-05.mat')
 
-load(['C:\Users\Jordan\Box\Data\RandNet-Data\temp, new PF sim code grids\', ...
-    'results_2022-07-22T18-29.mat'])
+load(['C:\Users\Jordan\Box\Data\RandNet-Data\temp, new PF sim code grids\', 'results_2022-07-22T18-29.mat'])
+
 
 if isfolder('functions')
     addpath('functions')
@@ -39,6 +39,7 @@ plotNetsBest = false
 plotPvalMat = false 
 plotClusterPFs = false
 plotNetStruct = false
+plotPFStats = false
 
 %% Loop over parameter sets
 rng(1); tic
@@ -72,6 +73,8 @@ for ithParamSet = 1:size(paramSetInds, 1)
     allEventMaxJumps = [];
     allShuffleRs = [];
     allShuffleMaxJumps = [];
+    allEventLengths = [];
+    allShuffleLengths = [];
     avgDecodePos = zeros(size(pfsim.gridxvals));
     for ithNet = 1:size(resultsStruct, 3)
 
@@ -95,15 +98,25 @@ for ithParamSet = 1:size(paramSetInds, 1)
         nClustMemb_all = [nClustMemb_all; sum(network.cluster_mat(:,E_indices), 1)'];
         cluster_matAll = [cluster_matAll; network.cluster_mat(:,E_indices)'] ;
 
+        tBinSz = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.tBinSz;
+        
+        
+        % Calculate all pair-wise place field distances and their connectivity
+        % !!! TODO !!!
+        
+        
+        
+        %%
+
         %Accumulate best events, if there are any
         if ~isempty(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pvalue)
             
+
             if useWeightedDecode
                 rsqrs_shuffle = vertcat(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.shuffle_weightedR2{:}); 
                 rsqrs_shuffle = rsqrs_shuffle(:,1);
                 rsqrs_shuffle = cellfun(@transpose,rsqrs_shuffle,'UniformOutput',false); 
                 rsqrs_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.weightedR2(:,1); 
-                tBinSz = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.tBinSz;
                 
                 % pvals_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pvalue(:,1); % pvalue, relative to shuffle
                 pvals_preplay = nan(size(rsqrs_preplay));
@@ -124,6 +137,14 @@ for ithParamSet = 1:size(paramSetInds, 1)
             allEventMaxJumps = [allEventMaxJumps; maxJumps_preplay];
             allShuffleRs = [allShuffleRs; rsqrs_shuffle];
             allShuffleMaxJumps = [allShuffleMaxJumps; maxJumps_shuffle];
+            
+            % Extract nTimeBins for each event
+            allEventpMats = vertcat(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pMat{:});
+            firstTrajpMats = vertcat(allEventpMats{:,1});
+            firstTrajpMatLengths = arrayfun(@(x) numel(x.timevec), firstTrajpMats);
+            allEventLengths = [allEventLengths; firstTrajpMatLengths];
+            
+            allShuffleLengths = [allShuffleLengths; repelem(firstTrajpMatLengths, numel(rsqrs_shuffle{1}))]; % Note: Shuffles are same length as the corresponding original event
             
             % Accumulate decode probability across spatial positions
             tmpEvents = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pMat;
@@ -289,12 +310,12 @@ for ithParamSet = 1:size(paramSetInds, 1)
     
     % myPlotSettings(3, 1.5) % for poster
     
-    myPlotSettings(4, 2.75, 2, 14, [], [], 2) % ppt format
+    myPlotSettings(4, 2.75, 1.5, 14, [], [], 1.25) % ppt format
     
     allEventRs_ecdf = (allEventRs);
     rvals_shuff_ecdf= (vertcat(allShuffleRs{:}));
                 
-    figure; hold on; ecdf(sqrt(allEventRs_ecdf)); ecdf(sqrt(rvals_shuff_ecdf))
+    figure; hold on; ecdf(sqrt(allEventRs_ecdf)); ecdf(sqrt(rvals_shuff_ecdf)); %ecdf(sqrt(rvals_shuff_ecdf)); 
     % figure; hold on; ecdf(allEventRs_ecdf); ecdf(rvals_ecdf)
     legend({'Preplays', 'Shuffles'}, 'Location', 'Best')
     xlabel('|Correlation|'); ylabel('Cumulative proportion');
@@ -305,7 +326,16 @@ for ithParamSet = 1:size(paramSetInds, 1)
         ' nEvents=', num2str(numel(allEventRs_ecdf))])
 
     title ''
-    legend({'Pre-Run', 'Time-bin shuffle'}, 'Location', 'Best'); legend boxoff
+    legend({'Preplay', 'Shuffle'}, 'Location', 'Best'); legend boxoff
+    
+    
+    h = get(gca,'children');
+%    set(h(1), 'LineWidth', 1, 'color', [0.7, 0, 0], 'LineStyle', '-.')
+    set(h(1), 'LineWidth', 1, 'color', [1, 0.3, 0.3], 'LineStyle', '-.')
+
+    set(h(2), 'LineWidth', 1, 'color', [0, 0, 0.6])
+    %set(h(2), 'LineWidth', 1, 'color', 'k', 'LineStyle', '--'); set(h(3), 'LineWidth', 1, 'color', [0, 0, 0.6])
+
 
     %% Plot best sequences
     
@@ -471,7 +501,7 @@ for ithParamSet = 1:size(paramSetInds, 1)
     end
     
     % Plots for comparison to Shin et al., 2019
-    if 0
+    if plotPFStats
         % 'Peak Rate'
         peakRate= max(PFmatE_all, [], 2);
         figure; histogram(peakRate(peakRate>minPeakRate), 10, 'Normalization', 'probability'); xlabel('Place field peak (Hz)'); ylabel('Place cells (Prob.)');
@@ -487,12 +517,32 @@ for ithParamSet = 1:size(paramSetInds, 1)
         
         % myPlotSettings(4, 2, 2, 14, [], [], 2) % ppt format
         xx = 0:0.1:10;
-        yy = gaussmf(xx,[1 5]);
+        yy = [gaussmf(xx,[1 2]); gaussmf(xx,[1 3]); gaussmf(xx,[1 4]); gaussmf(xx,[1 5]); gaussmf(xx,[1 6]); gaussmf(xx,[1 7]); gaussmf(xx,[1 8]);]
+        yy = [gaussmf(xx,[1 3]); gaussmf(xx,[1 4]); gaussmf(xx,[1 5]);]
         figure; plot(xx,yy)
         xlabel('Position'); ylabel('Input rate (Hz)')
         box off; set(gca,'xtick',[]); set(gca,'ytick',[])
         
+        xx = 0:0.5:1;
+        yy = [ ([6, 6, 6].*xx(end)); (6.*xx); (6.*fliplr(xx))];
+        figure; plot(xx,yy')
+        xlabel('Position'); ylabel('Input rate (kHz)')
+        box off;     
+        % set(gca,'xtick',[]); set(gca,'ytick',[]); ylabel('Input rate (Hz)')
     end
+    
+    %% Plot new analyses for Pizza talk questions/supplement
+    
+    % Correlation of event length with decode correlation
+    mdl_preplay = fitlm(allEventLengths, allEventRs); figure; plot(mdl_preplay); xlabel('Event time bins (count)'); ylabel('Decode correlation (|r|)'); 
+    title(['pval=', num2str(mdl_preplay.Coefficients.pValue(2), 2), ', rsqr=-', num2str(sqrt(mdl_preplay.Rsquared.Ordinary), 2)]); legend off; mdl_preplay
+    figure; scatterhist(allEventLengths, allEventRs); xlabel('Event time bins (count)'); ylabel('Decode correlation (|r|)'); 
+    
+    mdl_shuff = fitlm(allShuffleLengths, vertcat(allShuffleRs{:}) ); figure; plot(mdl_shuff); xlabel('Event time bins (count)'); ylabel('Decode correlation (|r|)'); 
+    title(['pval=', num2str(mdl_shuff.Coefficients.pValue(2), 2), ', rsqr=-', num2str(sqrt(mdl_shuff.Rsquared.Ordinary), 2)]); legend off; mdl_shuff
+    figure; scatterhist(allShuffleLengths, vertcat(allShuffleRs{:})); xlabel('Event time bins (count)'); ylabel('Decode correlation (|r|)'); 
+    
+    % 
     
     
 end

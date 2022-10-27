@@ -5,7 +5,17 @@ else
     addpath( fullfile( '..', 'functions' ) )
 end
 
-% load(['C:\Users\Jordan\Box\Data\RandNet-Data\temp, new PF sim code grids\', 'results_2022-07-22T18-29.mat'])
+if ispc
+    addpath('C:\Users\Jordan\Box\Data\RandNet-Data\temp, new PF sim code grids')
+elseif ismac
+    addpath(['/Users/jordan/Library/CloudStorage/Box-Box/Data/RandNet-Data/temp, new PF sim code grids'])
+else
+    disp('error')
+end
+
+
+ load('results_2022-07-22T18-29.mat') % Primary clustersXmnc grid (smaller mnc values)
+% load('results_2022-07-13T11-44.mat') % clustersXmnc grid up to (5,5)
 
 
 %% Plot preplay decoding results across grid search
@@ -91,7 +101,8 @@ for ithParam1 = 1:size(resultsStruct, 1)
         for ithNet = 1:size(resultsStruct, 3)
             
             % if ~isempty(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pMat)
-            if [isfield(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory, 'pMat') && ...
+            if [~isempty(resultsStruct(ithParam1, ithParam2, ithNet).results) && ...
+                isfield(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory, 'pMat') && ...
                 ~isempty(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pMat)]
 
                 % keyboard
@@ -237,6 +248,11 @@ runTime = toc;
 disp([ 'Runtime: ', datestr(datenum(0,0,0,0,0,runTime),'HH:MM:SS') ])
 % disp( duration(0, 0, runTime) )
 
+
+% myPlotSettings(3, 1.5) % for poster
+% myPlotSettings(4, 3, 2, 14, [], [], 2) % ppt format
+
+
 figure; 
 imagesc(xParamvec, yParamvec, squeeze(op(1,:,:))', 'AlphaData', ~isnan(squeeze(op(1,:,:))'))
 set(gca,'YDir','normal')
@@ -271,8 +287,11 @@ title(analysisTitle)
 
 
 %% Plot with better colormap
+
+logPvalData = log10( squeeze(op(1,:,:))');
+
 figure; 
-imagesc(xParamvec, yParamvec, log10(squeeze(op(1,:,:))'), 'AlphaData', ~isnan(squeeze(op(1,:,:))'))
+imagesc(xParamvec, yParamvec, logPvalData, 'AlphaData', ~isnan(squeeze(op(1,:,:))'))
 set(gca,'YDir','normal')
 cb = colorbar(); cb.Label.String = cbLabel2;
 xlabel(xName,'Interpreter','none')
@@ -285,21 +304,29 @@ cm(:,1) = [ones(n,1);linspace(1,0,N-n)';];
 cm(:,2) = [linspace(0,1,n)';linspace(1,0,N-n)']; 
 cm(:,3) = [linspace(0,1,n)';ones(N-n,1)]; 
 
-set(gca,'clim',[log10(.05)*2 0])
+
+alpha = 0.05;
+% bonferroniCorr = false
+% if bonferroniCorr; alpha = 0.05./numel(logPvalData); end
+
+set(gca,'clim',[log10(alpha)*2 0])
 set(gcf,'colormap',cm)
-colorbar
-colorbar('Direction','reverse','Ticks',[log10(.005),log10(.05),log10(.5)],'TickLabels',[.005,.05,.5])
+cb = colorbar('Direction','reverse','Ticks',[log10(alpha/10),log10(alpha),log10(alpha*10)],'TickLabels',[alpha/10,alpha,alpha*10]);
+cb.Label.String = 'KS test p-value';
+title(''); xlabel('Mean cluster membership'); ylabel('Number of clusters')
+
+% set(gca, 'XTick',xParamvec, 'XTickLabel',num2str(xParamvec')) % For grid starting at mnc=1.5
 
 %% Plot slice of above p-val matrix
 
 % ithYval = 1:numel(yParamvec); 
-% ithYval = [2, 4,  8,  12]; 
- ithYval = [2]; 
+%  ithYval = [2, 4,  8,  12]; 
+ithYval = [2]; 
 xx = xParamvec;
 yy = squeeze(op(1,:,ithYval))';
 figure; hold on; 
 plot(xx, yy, '-o'); yline(0.05)
-xlabel('Mean cluster membership'); ylabel('KS-test p-value');
+xlabel('Mean cluster membership'); ylabel('KS test p-value');
 set(gca, 'YScale', 'log')
 legend({num2str( yParamvec(ithYval)')}, 'Location', 'Best')
 

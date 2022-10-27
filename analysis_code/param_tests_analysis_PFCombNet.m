@@ -4,8 +4,17 @@
 % load('C:\Users\Jordan\Box\Data\Replay project\RandNet\temp, new PF sim code grids\results_2022-07-21T15-05.mat')
 % load('../results/randnet_PF_param_tests/results_2022-07-21T15-05.mat')
 
-load(['C:\Users\Jordan\Box\Data\RandNet-Data\temp, new PF sim code grids\', 'results_2022-07-22T18-29.mat'])
+if ispc
+    addpath('C:\Users\Jordan\Box\Data\RandNet-Data\temp, new PF sim code grids')
+elseif ismac
+    addpath('/Users/jordan/Library/CloudStorage/Box-Box/Data/RandNet-Data/temp, new PF sim code grids')
+else
+    disp('error')
+end
 
+
+% load('results_2022-07-22T18-29.mat') % Primary clustersXmnc grid (smaller mnc values)
+% load('results_2022-07-13T11-44.mat') % clustersXmnc grid up to (5,5)
 
 if isfolder('functions')
     addpath('functions')
@@ -101,9 +110,49 @@ for ithParamSet = 1:size(paramSetInds, 1)
         tBinSz = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.tBinSz;
         
         
-        % Calculate all pair-wise place field distances and their connectivity
-        % !!! TODO !!!
+        %% Calculate all pair-wise place field distances and their connectivity
+        % !!! TODO !!! 
+        % Note: need to normalize by density of Place-field-peak-distances
+        % TODO: add option for peak PF vs expected PF pos
+        % TODO: validate that connection probabilities are correct with parameterization
+        myPlotSettings(4, 3, 2, 14, [], [], 2) % ppt format
         
+        nValidPairs = 0;
+        posDepConProb = zeros(size(pfsim.gridxvals)); % Position depenedent connection probability
+        rand_posDepConProb = zeros(size(pfsim.gridxvals)); % Rand-pos Position depenedent connection probability
+        rand2_posDepConProb = zeros(size(pfsim.gridxvals)); % Rand-pos Position depenedent connection probability
+        for ithCell = 1:numel(E_indices)
+            for jthCell = (ithCell+1):numel(E_indices)
+                PFi = PFmatE_all(ithCell,:);
+                PFj =  PFmatE_all(jthCell,:);
+                
+                if max(PFi)<minPeakRate || max(PFj)<minPeakRate
+                    continue
+                end
+                nValidPairs = nValidPairs+1;
+                [iMax, iInd] = max(PFi);
+                [jMax, jInd] = max(PFj);
+                pairDist = abs(iInd-jInd)+1;
+                pairConns = network.conns(E_indices(ithCell), E_indices(jthCell)) + ...
+                             network.conns(E_indices(jthCell), E_indices(ithCell));
+                posDepConProb(pairDist) = posDepConProb(pairDist)+ pairConns;
+                rand_posDepConProb(randi(numel(rand_posDepConProb))) = rand_posDepConProb(pairDist)+ pairConns;
+                rand2_posDepConProb(pairDist) = rand2_posDepConProb(pairDist) + [rand(1)>0.5];
+            end
+        end
+        posDepConProb = posDepConProb./nValidPairs;
+        rand_posDepConProb = rand_posDepConProb./nValidPairs;
+        rand2_posDepConProb = rand2_posDepConProb .* [sum(posDepConProb)/sum(rand2_posDepConProb)];
+        
+        xPosVals = [0:(numel(rand_posDepConProb)-1)];
+        figure; hold on; title(['Network #', num2str(ithNet)])
+        plot(xPosVals, rand_posDepConProb, 'k:'); plot(xPosVals, rand2_posDepConProb, 'b--'); 
+        plot(xPosVals, posDepConProb, 'r');
+        legend({'Shuffle peak-dist.', 'Shuffle conn.-prob.', 'Actual'}, 'Location', 'Best')
+        xlabel('PF peak distance (2 cm bins)'); ylabel('Connection prob.');
+        drawnow
+        
+        %keyboard
         
         
         %%

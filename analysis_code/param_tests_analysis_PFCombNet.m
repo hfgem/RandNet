@@ -84,6 +84,9 @@ for ithParamSet = 1:size(paramSetInds, 1)
     allShuffleMaxJumps = [];
     allEventLengths = [];
     allShuffleLengths = [];
+    allPosDepConProb = zeros(size(resultsStruct, 3), size(pfsim.gridxvals, 2)); % Position depenedent connection probability
+    allRand_posDepConProb = zeros(size(resultsStruct, 3), size(pfsim.gridxvals, 2)); % Rand-pos Position depenedent connection probability
+    allRand2_posDepConProb = zeros(size(resultsStruct, 3), size(pfsim.gridxvals, 2)); % Rand-pos Position depenedent connection probability
     avgDecodePos = zeros(size(pfsim.gridxvals));
     for ithNet = 1:size(resultsStruct, 3)
 
@@ -118,13 +121,13 @@ for ithParamSet = 1:size(paramSetInds, 1)
         myPlotSettings(4, 3, 2, 14, [], [], 2) % ppt format
         
         nValidPairs = 0;
-        posDepConProb = zeros(size(pfsim.gridxvals)); % Position depenedent connection probability
-        rand_posDepConProb = zeros(size(pfsim.gridxvals)); % Rand-pos Position depenedent connection probability
-        rand2_posDepConProb = zeros(size(pfsim.gridxvals)); % Rand-pos Position depenedent connection probability
+        net_posDepConProb = zeros(size(pfsim.gridxvals)); % Position depenedent connection probability
+        net_rand_posDepConProb = zeros(size(pfsim.gridxvals)); % Rand-pos Position depenedent connection probability
+        net_rand2_posDepConProb = zeros(size(pfsim.gridxvals)); % Rand-pos Position depenedent connection probability
         for ithCell = 1:numel(E_indices)
             for jthCell = (ithCell+1):numel(E_indices)
-                PFi = PFmatE_all(ithCell,:);
-                PFj =  PFmatE_all(jthCell,:);
+                PFi = PFmat(ithCell,:);
+                PFj =  PFmat(jthCell,:);
                 
                 if max(PFi)<minPeakRate || max(PFj)<minPeakRate
                     continue
@@ -135,24 +138,18 @@ for ithParamSet = 1:size(paramSetInds, 1)
                 pairDist = abs(iInd-jInd)+1;
                 pairConns = network.conns(E_indices(ithCell), E_indices(jthCell)) + ...
                              network.conns(E_indices(jthCell), E_indices(ithCell));
-                posDepConProb(pairDist) = posDepConProb(pairDist)+ pairConns;
-                rand_posDepConProb(randi(numel(rand_posDepConProb))) = rand_posDepConProb(pairDist)+ pairConns;
-                rand2_posDepConProb(pairDist) = rand2_posDepConProb(pairDist) + [rand(1)>0.5];
+                net_posDepConProb(pairDist) = net_posDepConProb(pairDist)+ pairConns;
+                net_rand_posDepConProb(randi(numel(net_rand_posDepConProb))) = net_rand_posDepConProb(pairDist)+ pairConns;
+                net_rand2_posDepConProb(pairDist) = net_rand2_posDepConProb(pairDist) + [rand(1)>0.5];
             end
         end
-        posDepConProb = posDepConProb./nValidPairs;
-        rand_posDepConProb = rand_posDepConProb./nValidPairs;
-        rand2_posDepConProb = rand2_posDepConProb .* [sum(posDepConProb)/sum(rand2_posDepConProb)];
-        
-        xPosVals = [0:(numel(rand_posDepConProb)-1)];
-        figure; hold on; title(['Network #', num2str(ithNet)])
-        plot(xPosVals, rand_posDepConProb, 'k:'); plot(xPosVals, rand2_posDepConProb, 'b--'); 
-        plot(xPosVals, posDepConProb, 'r');
-        legend({'Shuffle peak-dist.', 'Shuffle conn.-prob.', 'Actual'}, 'Location', 'Best')
-        xlabel('PF peak distance (2 cm bins)'); ylabel('Connection prob.');
-        drawnow
-        
-        %keyboard
+        net_posDepConProb = net_posDepConProb./nValidPairs;
+        net_rand_posDepConProb = net_rand_posDepConProb./nValidPairs;
+        net_rand2_posDepConProb = net_rand2_posDepConProb .* [sum(net_posDepConProb)/sum(net_rand2_posDepConProb)];
+
+        allPosDepConProb(ithNet,:) = net_posDepConProb;
+        allRand_posDepConProb(ithNet,:) = net_rand_posDepConProb;
+        allRand2_posDepConProb(ithNet,:) = net_rand2_posDepConProb;
         
         
         %%
@@ -464,6 +461,13 @@ for ithParamSet = 1:size(paramSetInds, 1)
     xt = xticks; xticklabels(xt*(pfsim.spatialBin*100)); xlabel('Position (cm)')
     % set(gca,'xtick',[]); xlabel('')
     
+    % Mean Place field activity
+    figure; plot(mean(fliplr(PFdatatoplot), 1))
+    
+    % Distribution of PF peaks
+    figure; plot(mean(fliplr(PFdatatoplot==1)))
+
+
     %% Plot cluster-wise place fields
     if plotClusterPFs
         figure; tiledlayout(parameters.clusters,1);
@@ -594,6 +598,35 @@ for ithParamSet = 1:size(paramSetInds, 1)
     % 
     
     
+    %% Plot PF-distance dependent connection probability and analysis
+    
+    xPosVals = [0:(numel(net_rand_posDepConProb)-1)];
+    for ithNet = 1:size(resultsStruct, 3)
+        figure; hold on; title(['Network #', num2str(ithNet)])
+        plot(xPosVals, allRand_posDepConProb(ithNet,:), 'k:'); plot(xPosVals, allRand2_posDepConProb(ithNet,:), 'b--'); 
+        plot(xPosVals, allPosDepConProb(ithNet,:), 'r');
+        legend({'Shuffle peak-dist.', 'Shuffle conn.-prob.', 'Actual'}, 'Location', 'Best')
+        xlabel('PF peak distance (2 cm bins)'); ylabel('Connection prob.');
+    end
+    
+    figure; hold on; title(['All networks'])
+    plot(xPosVals, mean(allRand_posDepConProb, 1), 'k:'); plot(xPosVals, mean(allRand2_posDepConProb, 1), 'b--'); 
+    plot(xPosVals, mean(allPosDepConProb, 1), 'r');
+    legend({'Shuffle peak-dist.', 'Shuffle conn.-prob.', 'Actual'}, 'Location', 'Best')
+    xlabel('PF peak distance (2 cm bins)'); ylabel('Connection prob.');    
+        
+    % Compare shuffle and nonshuffed
+      X = [allPosDepConProb; allRand2_posDepConProb; allRand_posDepConProb]';
+    % X = [allPosDepConProb; allRand2_posDepConProb]';
+    [p,tbl,stats] = anova2(X, size(allPosDepConProb, 1));
+    figure; [c,m,h,gnames] = multcompare(stats)
+    
+    %{
+    X = [allPosDepConProb; allRand2_posDepConProb];
+    [p,tbl,stats] = anova2(X, size(allPosDepConProb, 1))
+    figure; [c,m,h,gnames] = multcompare(stats)
+    %}
+
 end
 
 runTime = toc;

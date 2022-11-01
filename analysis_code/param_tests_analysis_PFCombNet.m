@@ -15,9 +15,9 @@ end
 % paramSetInds = combvec([1:size(resultsStruct, 1)], [1:size(resultsStruct, 2)])'
 variedParam(:).name
 variedParam(:).range
-paramSetInds = combvec([2], [4])'
-% paramSetInds = combvec([1], [2])'
-paramSetInds = combvec([2], [2])'
+paramSetInds = combvec([2], [4])' % best example, for 2022-07-22T18-29 data
+% paramSetInds = combvec([1], [1])' % stationary example, for 2022-07-22T18-29 data
+% paramSetInds = combvec([9], [1])' % diffuse example, for 2022-07-22T18-29 data
 
 parameters.n
 parameters.del_G_sra

@@ -11,15 +11,17 @@ t = [0:parameters.dt:parameters.t_max];
 rng(1)
 % PFpeaksSequence = randperm(parameters.n_E)'; % dummy data, for testing
 
+MarkerFormat = struct;
 %% Plot sequences against PF sequence
+MarkerFormat.MarkerSize = 10;
 
-for ithEvent = 1:size(events, 1);
+for ithEvent = 1:size(network_spike_sequences.events, 1);
 % spike_ranks = network_spike_sequences(ithTrial).ranks_vec(:,ithEvent);
 events = network_spike_sequences.events;
 reordered_spikes = [E_spikes_V_m(PFpeaksSequence,events(ithEvent,1):events(ithEvent,2))];
 reordered_spikes = reordered_spikes(sum(reordered_spikes, 2)>0,:);
 figure;
-plotSpikeRaster( reordered_spikes, 'TimePerBin', parameters.dt*1000, 'PlotType', 'scatter');
+plotSpikeRaster( reordered_spikes, 'TimePerBin', parameters.dt*1000, 'PlotType', 'scatter', 'MarkerFormat', MarkerFormat);
 title(num2str(ithEvent))
 end
 
@@ -30,7 +32,7 @@ plot_randnet_results(parameters, network, V_m, G_in, network_spike_sequences, it
 
 %% Plot multiple sequences with different sortings
 [network_spike_sequences] = detect_PBE(E_spikes_V_m, parameters);
-plotIDs = [1, 2]; % indexes of the sequences to plot
+plotIDs = [4:6]; % indexes of the sequences to plot
 plot_ixj_sequences(network_spike_sequences, plotIDs, spikes_V_m, parameters, network);
 
 

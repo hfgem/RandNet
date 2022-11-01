@@ -44,7 +44,7 @@ useMeanPFDensity = true
 % Analysis and plotting options
 calcScore = false
 plotExtraPlots = false % if 1, plot place fields of every network
-plotNetsBest = false
+plotNetsBest = true
 plotPvalMat = false 
 plotClusterPFs = false
 plotNetStruct = false
@@ -274,11 +274,24 @@ for ithParamSet = 1:size(paramSetInds, 1)
             
             % Plot ithNet's best event
             if plotNetsBest
+                %{
                 %figure; scatter(1:parameters.n_E, x(PFpeaksSequence,pvals_sorted(1))); title(['Best event of network ', num2str(ithNet)])
                 figure; imagesc(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pMat{pvals_sorted(1)}{1}.pMat )
                   xlabel('Time bin (10 ms)'); ylabel('Space bin (2 cm)'); title(['Best event of network ', num2str(ithNet)])
                 figure; scatter(1:parameters.n_E, x(PFpeaksSequence,pvals_sorted(1)), [], clustColor(PFpeaksSequence), 'filled'); colorbar; 
                   xlabel('Neuron (sort by PF expected location)'); ylabel('Event relative rank'); title(['Best event of network ', num2str(ithNet)])
+                %}
+                  
+                figure; scatter(x(PFpeaksSequence,pvals_sorted(1))', 1:parameters.n_E, 'k', '|', 'LineWidth', 5 )
+                ylabel('Place cell (sorted)'); xlabel('Event relative rank'); title(['Best event of network ', num2str(ithNet)]); ylim([0, parameters.n_E])
+                
+                eventPmat = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pMat{pvals_sorted(1)}{1}.pMat;
+                [yt, xt] = size(eventPmat);
+                figure; imagesc([1:xt]*(tBinSz), [1:yt]*(pfsim.spatialBin*100), eventPmat)
+                xlabel('Time (ms)'); ylabel('Position (cm)'); title(['Best event of network ', num2str(ithNet)])
+                colormap(hot); title ''; colorbar off; caxis(([0, 0.25]))
+                     
+                  keyboard
             end
             
         end

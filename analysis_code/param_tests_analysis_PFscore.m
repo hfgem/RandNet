@@ -5,6 +5,23 @@ else
     addpath( fullfile( '..', 'functions' ) )
 end
 
+if ispc
+    addpath('C:\Users\Jordan\Box\Data\RandNet-Data\temp, new PF sim code grids')
+elseif ismac
+    addpath(['/Users/jordan/Library/CloudStorage/Box-Box/Data/RandNet-Data/temp, new PF sim code grids'])
+else
+    disp('error')
+end
+
+
+
+ load('results_2022-07-22T18-29.mat') % Primary clustersXmnc grid (smaller mnc values)
+% load('results_2022-07-13T11-44.mat') % clustersXmnc grid up to (5,5)
+
+% For multi-env simulation
+% load('results_2022-10-12T09-22.mat')
+ithEnv = 1 % which environments decoding and place fields to plot/analyze
+
 
 %% Analyze sequence and place fields properties of results from randnet_PF_param_tests.m
 %
@@ -23,7 +40,7 @@ variedParam(2).name
 
 minPeakRate = 2; % minimum peak PF rate to be considered a place cell
 
-plotPFs = 1; % if 1, plot place fields of every network
+plotPFs = 0; % if 1, plot place fields of every network
 
 xParamvec = variedParam(1).range;
 xName = variedParam(1).name;

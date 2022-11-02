@@ -3,6 +3,10 @@
 % load('C:\Users\Jordan\Box\Data\Replay project\RandNet\temp, new PF sim code grids\results_2022-07-12T06-58.mat')
 % load('C:\Users\Jordan\Box\Data\Replay project\RandNet\temp, new PF sim code grids\results_2022-07-21T15-05.mat')
 % load('../results/randnet_PF_param_tests/results_2022-07-21T15-05.mat')
+%
+% Note: Since create_clusters() changed on add-multi-env branch, re-created
+% networks might not be correct
+
 
 if ispc
     addpath('C:\Users\Jordan\Box\Data\RandNet-Data\temp, new PF sim code grids')
@@ -15,6 +19,10 @@ end
 
 % load('results_2022-07-22T18-29.mat') % Primary clustersXmnc grid (smaller mnc values)
 % load('results_2022-07-13T11-44.mat') % clustersXmnc grid up to (5,5)
+
+% For multi-env simulation
+% load('results_2022-10-12T09-22.mat')
+ithEnv = 1 % which environments decoding and place fields to plot/analyze
 
 if isfolder('functions')
     addpath('functions')
@@ -29,6 +37,7 @@ variedParam(:).range
 paramSetInds = combvec([2], [4])' % best example, for 2022-07-22T18-29 data
 % paramSetInds = combvec([1], [1])' % stationary example, for 2022-07-22T18-29 data
 % paramSetInds = combvec([9], [1])' % diffuse example, for 2022-07-22T18-29 data
+% paramSetInds = combvec([2], [2])' % best example, for 2022-07-22T18-29 data
 
 parameters.n
 parameters.del_G_sra
@@ -43,12 +52,15 @@ useMeanPFDensity = true
 
 % Analysis and plotting options
 calcScore = false
-plotExtraPlots = false % if 1, plot place fields of every network
+plotExtraPlots = true % if 1, plot place fields of every network
 plotNetsBest = true
-plotPvalMat = false 
-plotClusterPFs = false
-plotNetStruct = false
-plotPFStats = false
+plotPvalMat = true 
+plotClusterPFs = true
+plotNetStruct = true
+plotPFStats = true
+
+plotEventLengthAnalysis = true
+plotPFdistAnalysis = true
 
 %% Loop over parameter sets
 rng(1); tic
@@ -91,8 +103,11 @@ for ithParamSet = 1:size(paramSetInds, 1)
     for ithNet = 1:size(resultsStruct, 3)
 
         % Get matrix of PFs
-        ithLinfield = 1;
-        PFmat = PFresultsStruct(ithParam1, ithParam2, ithNet).results{1}.linfields{ithLinfield};
+        if pfsim.nEnvironments>1
+            PFmat = PFresultsStruct(ithParam1, ithParam2, ithNet).results{1}.linfields{ithEnv};
+        else
+            PFmat = PFresultsStruct(ithParam1, ithParam2, ithNet).results{1}.linfields;
+        end
         E_indices = PFresultsStruct(ithParam1, ithParam2, ithNet).results{1}.E_indices;
         netSeed = PFresultsStruct(ithParam1, ithParam2, ithNet).results{1}.netSeed;
 
@@ -101,7 +116,7 @@ for ithParamSet = 1:size(paramSetInds, 1)
 
         % Recreate network
         netParams=parameters;
-        netParams.envIDs = pfsim.envIDs;
+        netParams.envIDs = 1;% pfsim.envIDs;
         for i = 1:size(variedParam, 2)
             netParams.(variedParam(i).name) = variedParam(i).range(paramSetInds(i));
         end
@@ -154,17 +169,16 @@ for ithParamSet = 1:size(paramSetInds, 1)
         allRand2_posDepConProb(ithNet,:) = net_rand2_posDepConProb;
         
         
-        %%
-
-        %Accumulate best events, if there are any
+        %% Accumulate best events, if there are any
+        
         if ~isempty(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pvalue)
             
 
             if useWeightedDecode
                 rsqrs_shuffle = vertcat(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.shuffle_weightedR2{:}); 
-                rsqrs_shuffle = rsqrs_shuffle(:,1);
+                rsqrs_shuffle = rsqrs_shuffle(:,ithEnv);
                 rsqrs_shuffle = cellfun(@transpose,rsqrs_shuffle,'UniformOutput',false); 
-                rsqrs_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.weightedR2(:,1); 
+                rsqrs_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.weightedR2(:,ithEnv); 
                 
                 % pvals_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pvalue(:,1); % pvalue, relative to shuffle
                 pvals_preplay = nan(size(rsqrs_preplay));
@@ -174,13 +188,13 @@ for ithParamSet = 1:size(paramSetInds, 1)
             else
                 rsqrs_shuffle = vertcat(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.shuffle_rsquare{:}); 
                 rsqrs_shuffle = rsqrs_shuffle(:,1);
-                rsqrs_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.rsquare(:,1); 
-                pvals_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pvalue(:,1); % pvalue, relative to shuffle
+                rsqrs_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.rsquare(:,ithEnv); 
+                pvals_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pvalue(:,ithEnv); % pvalue, relative to shuffle
             end
             
-            maxJumps_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.maxJump(:,1); 
+            maxJumps_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.maxJump(:,ithEnv); 
             maxJumps_shuffle = vertcat(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.shuffle_maxJump{:}); 
-            maxJumps_shuffle = maxJumps_shuffle(:,1);
+            maxJumps_shuffle = maxJumps_shuffle(:,ithEnv);
             allEventRs = [allEventRs; rsqrs_preplay];
             allEventMaxJumps = [allEventMaxJumps; maxJumps_preplay];
             allShuffleRs = [allShuffleRs; rsqrs_shuffle];
@@ -188,7 +202,7 @@ for ithParamSet = 1:size(paramSetInds, 1)
             
             % Extract nTimeBins for each event
             allEventpMats = vertcat(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pMat{:});
-            firstTrajpMats = vertcat(allEventpMats{:,1});
+            firstTrajpMats = vertcat(allEventpMats{:,ithEnv});
             firstTrajpMatLengths = arrayfun(@(x) numel(x.timevec), firstTrajpMats);
             allEventLengths = [allEventLengths; firstTrajpMatLengths];
             
@@ -204,13 +218,15 @@ for ithParamSet = 1:size(paramSetInds, 1)
         end
         
         
+        %% plotNetStruct
         if plotNetStruct
             figure; histogram(sum(network.cluster_mat, 1)); xlabel('n Clusters'); ylabel('Neurons (count)')
             histcounts(sum(network.cluster_mat, 1))
             % figure; histogram(sum(network.cluster_mat, 2)); xlabel('n Neurons'); ylabel('Clusters (count)')
         end
         
-        % PF: plot and calculate score
+        
+        %% PF: plot and calculate score
         if calcScore
             % network = struct; linfields = {}; network.E_indices = E_indices; network.all_indices = 1:parameters.n;
             day = 1; epoch = 1; tetrode = 1; tr = 1;
@@ -223,6 +239,7 @@ for ithParamSet = 1:size(paramSetInds, 1)
         end
         
         
+        %% If plotting events...
         if nEventsToPlot>0
             if isempty(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pvalue); continue; end
             
@@ -290,11 +307,8 @@ for ithParamSet = 1:size(paramSetInds, 1)
                 xlabel('Time (ms)'); ylabel('Position (cm)'); title(['Best event of network ', num2str(ithNet)])
                 colormap(hot); title ''; colorbar off; caxis(([0, 0.25]))
                      
-                  keyboard
             end
-            
         end
-        
 
     end
 
@@ -476,11 +490,6 @@ for ithParamSet = 1:size(paramSetInds, 1)
     xt = xticks; xticklabels(xt*(pfsim.spatialBin*100)); xlabel('Position (cm)')
     % set(gca,'xtick',[]); xlabel('')
     
-    % Mean Place field activity
-    figure; plot(mean(fliplr(PFdatatoplot), 1))
-    
-    % Distribution of PF peaks
-    figure; plot(mean(fliplr(PFdatatoplot==1)))
 
 
     %% Plot cluster-wise place fields
@@ -560,6 +569,13 @@ for ithParamSet = 1:size(paramSetInds, 1)
         xlabel('Location (2 cm bins)'); ylabel('Firing rate (Hz)'); title('Good example place fields')
         figure; plot(1:size(PFmatE_all, 2), PFmatE_all(SIind(9:12),:))
         xlabel('Location (2 cm bins)'); ylabel('Firing rate (Hz)'); title('Good example place fields')
+        
+        
+        % Mean Place field activity
+        figure; plot(mean(fliplr(PFdatatoplot), 1))
+
+        % Distribution of PF peaks
+        figure; plot(mean(fliplr(PFdatatoplot==1)))
     end
     
     
@@ -601,47 +617,49 @@ for ithParamSet = 1:size(paramSetInds, 1)
     
     %% Plot new analyses for Pizza talk questions/supplement
     
-    % Correlation of event length with decode correlation
-    mdl_preplay = fitlm(allEventLengths, allEventRs); figure; plot(mdl_preplay); xlabel('Event time bins (count)'); ylabel('Decode correlation (|r|)'); 
-    title(['pval=', num2str(mdl_preplay.Coefficients.pValue(2), 2), ', rsqr=-', num2str(sqrt(mdl_preplay.Rsquared.Ordinary), 2)]); legend off; mdl_preplay
-    figure; scatterhist(allEventLengths, allEventRs); xlabel('Event time bins (count)'); ylabel('Decode correlation (|r|)'); 
-    
-    mdl_shuff = fitlm(allShuffleLengths, vertcat(allShuffleRs{:}) ); figure; plot(mdl_shuff); xlabel('Event time bins (count)'); ylabel('Decode correlation (|r|)'); 
-    title(['pval=', num2str(mdl_shuff.Coefficients.pValue(2), 2), ', rsqr=-', num2str(sqrt(mdl_shuff.Rsquared.Ordinary), 2)]); legend off; mdl_shuff
-    figure; scatterhist(allShuffleLengths, vertcat(allShuffleRs{:})); xlabel('Event time bins (count)'); ylabel('Decode correlation (|r|)'); 
-    
-    % 
+    if plotEventLengthAnalysis
+        % Correlation of event length with decode correlation
+        mdl_preplay = fitlm(allEventLengths, allEventRs); figure; plot(mdl_preplay); xlabel('Event time bins (count)'); ylabel('Decode correlation (|r|)'); 
+        title(['pval=', num2str(mdl_preplay.Coefficients.pValue(2), 2), ', rsqr=-', num2str(sqrt(mdl_preplay.Rsquared.Ordinary), 2)]); legend off; mdl_preplay
+        figure; scatterhist(allEventLengths, allEventRs); xlabel('Event time bins (count)'); ylabel('Decode correlation (|r|)'); 
+
+        mdl_shuff = fitlm(allShuffleLengths, vertcat(allShuffleRs{:}) ); figure; plot(mdl_shuff); xlabel('Event time bins (count)'); ylabel('Decode correlation (|r|)'); 
+        title(['pval=', num2str(mdl_shuff.Coefficients.pValue(2), 2), ', rsqr=-', num2str(sqrt(mdl_shuff.Rsquared.Ordinary), 2)]); legend off; mdl_shuff
+        figure; scatterhist(allShuffleLengths, vertcat(allShuffleRs{:})); xlabel('Event time bins (count)'); ylabel('Decode correlation (|r|)'); 
+    end
     
     
     %% Plot PF-distance dependent connection probability and analysis
     
-    xPosVals = [0:(numel(net_rand_posDepConProb)-1)];
-    for ithNet = 1:size(resultsStruct, 3)
-        figure; hold on; title(['Network #', num2str(ithNet)])
-        plot(xPosVals, allRand_posDepConProb(ithNet,:), 'k:'); plot(xPosVals, allRand2_posDepConProb(ithNet,:), 'b--'); 
-        plot(xPosVals, allPosDepConProb(ithNet,:), 'r');
+    if plotPFdistAnalysis
+        xPosVals = [0:(numel(net_rand_posDepConProb)-1)];
+        for ithNet = 1:size(resultsStruct, 3)
+            figure; hold on; title(['Network #', num2str(ithNet)])
+            plot(xPosVals, allRand_posDepConProb(ithNet,:), 'k:'); plot(xPosVals, allRand2_posDepConProb(ithNet,:), 'b--'); 
+            plot(xPosVals, allPosDepConProb(ithNet,:), 'r');
+            legend({'Shuffle peak-dist.', 'Shuffle conn.-prob.', 'Actual'}, 'Location', 'Best')
+            xlabel('PF peak distance (2 cm bins)'); ylabel('Connection prob.');
+        end
+
+        figure; hold on; title(['All networks'])
+        plot(xPosVals, mean(allRand_posDepConProb, 1), 'k:'); plot(xPosVals, mean(allRand2_posDepConProb, 1), 'b--'); 
+        plot(xPosVals, mean(allPosDepConProb, 1), 'r');
         legend({'Shuffle peak-dist.', 'Shuffle conn.-prob.', 'Actual'}, 'Location', 'Best')
-        xlabel('PF peak distance (2 cm bins)'); ylabel('Connection prob.');
+        xlabel('PF peak distance (2 cm bins)'); ylabel('Connection prob.');    
+
+        % Compare shuffle and nonshuffed
+          X = [allPosDepConProb; allRand2_posDepConProb; allRand_posDepConProb]';
+        % X = [allPosDepConProb; allRand2_posDepConProb]';
+        [p,tbl,stats] = anova2(X, size(allPosDepConProb, 1));
+        figure; [c,m,h,gnames] = multcompare(stats)
+
+        %{
+        X = [allPosDepConProb; allRand2_posDepConProb];
+        [p,tbl,stats] = anova2(X, size(allPosDepConProb, 1))
+        figure; [c,m,h,gnames] = multcompare(stats)
+        %}
     end
     
-    figure; hold on; title(['All networks'])
-    plot(xPosVals, mean(allRand_posDepConProb, 1), 'k:'); plot(xPosVals, mean(allRand2_posDepConProb, 1), 'b--'); 
-    plot(xPosVals, mean(allPosDepConProb, 1), 'r');
-    legend({'Shuffle peak-dist.', 'Shuffle conn.-prob.', 'Actual'}, 'Location', 'Best')
-    xlabel('PF peak distance (2 cm bins)'); ylabel('Connection prob.');    
-        
-    % Compare shuffle and nonshuffed
-      X = [allPosDepConProb; allRand2_posDepConProb; allRand_posDepConProb]';
-    % X = [allPosDepConProb; allRand2_posDepConProb]';
-    [p,tbl,stats] = anova2(X, size(allPosDepConProb, 1));
-    figure; [c,m,h,gnames] = multcompare(stats)
-    
-    %{
-    X = [allPosDepConProb; allRand2_posDepConProb];
-    [p,tbl,stats] = anova2(X, size(allPosDepConProb, 1))
-    figure; [c,m,h,gnames] = multcompare(stats)
-    %}
-
 end
 
 runTime = toc;

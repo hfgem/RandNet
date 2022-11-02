@@ -14,9 +14,12 @@ else
 end
 
 
- load('results_2022-07-22T18-29.mat') % Primary clustersXmnc grid (smaller mnc values)
+% load('results_2022-07-22T18-29.mat') % Primary clustersXmnc grid (smaller mnc values)
 % load('results_2022-07-13T11-44.mat') % clustersXmnc grid up to (5,5)
 
+% For multi-env simulation
+% load('results_2022-10-12T09-22.mat')
+ithEnv = 1 % which environments decoding and place fields to plot/analyze
 
 %% Plot preplay decoding results across grid search
 %
@@ -95,6 +98,7 @@ for ithParam1 = 1:size(resultsStruct, 1)
         
         temp = nan(1, num_nets);
         allRvecs = [];
+        allRvecsAllEnv = [];
         allRvecs_shuff = [];
         nEvents_accum = 0;
         nSigEvents_accum = 0;
@@ -111,34 +115,34 @@ for ithParam1 = 1:size(resultsStruct, 1)
 
                 if useWeightedDecode
                     allshuff_rvals = vertcat(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.shuffle_weightedR2{:});
-                    allshuff_rvals = allshuff_rvals(:,1); % take just forward traj
-                    rvals_shuffle = vertcat([allshuff_rvals{:,1}]');
+                    rvals_shuffle = vertcat(allshuff_rvals{:,ithEnv}); % take just forward traj
                     
-                    rvals_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.weightedR2(:,1);
+                    rvals_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.weightedR2(:,ithEnv);
                 
                     pvals_preplay = nan(size(rvals_preplay));
                     for ithEvent=1:numel(rvals_preplay)
                         pvals_preplay(ithEvent) = mean(rvals_preplay(ithEvent)<allshuff_rvals{ithEvent});
                     end
                     
-                    slopes_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.weightedSlope(:,1);
+                    slopes_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.weightedSlope(:,ithEnv);
                     slopes_shuffle = vertcat(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.shuffle_weightedSlope{:});
-                    slopes_shuffle = slopes_shuffle(:,1); % take just forward traj
-                    slopes_shuffle = vertcat([slopes_shuffle{:,1}]');
+                    slopes_shuffle = vertcat(slopes_shuffle{:,ithEnv}); % take just forward traj
                 else
                     allshuff_rvals = vertcat(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.shuffle_rsquare{:});
-                    allshuff_rvals = allshuff_rvals(:,1); % take just forward traj
-                    rvals_shuffle = vertcat(allshuff_rvals{:,1});
+                    rvals_shuffle = vertcat(allshuff_rvals{:,ithEnv}); % take just forward traj
                     
-                    rvals_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.rsquare(:,1);
+                    rvals_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.rsquare(:,ithEnv);
                 
-                    % Equal to frac of shuffle events with greater R2 than actual event's R2
-                    pvals_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pvalue(:,1);
+                    rvals_allenv_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.rsquare;
                     
-                    slopes_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.slopes(:,1);
+                    
+                    % Equal to frac of shuffle events with greater R2 than actual event's R2
+                    pvals_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pvalue(:,ithEnv);
+                    
+                    slopes_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.slopes(:,ithEnv);
                     try % Struct field added to later simulation
                     slopes_shuffle = vertcat(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.shuffle_slopes{:});
-                    slopes_shuffle = slopes_shuffle(:,1); % take just forward traj
+                    slopes_shuffle = slopes_shuffle(:,ithEnv); % take just forward traj
                     slopes_shuffle = cellfun(@transpose,slopes_shuffle,'UniformOutput',false); 
                     slopes_shuffle = vertcat([slopes_shuffle{:,1}]');
                     catch
@@ -148,6 +152,7 @@ for ithParam1 = 1:size(resultsStruct, 1)
                 
                 if plotAllCDFs
                     figure; hold on; ecdf(rvals_preplay); ecdf(rvals_shuffle); legend({'Preplays', 'Shuffles'}, 'Location', 'Best')
+                    figure; hold on; ecdf(rvals_allenv_preplay(:,1)); ecdf(rvals_allenv_preplay(:,2)); ecdf(rvals_allenv_preplay(:,3)); ecdf(rvals_allenv_preplay(:,4));
                 end
                 
                 try
@@ -174,6 +179,7 @@ for ithParam1 = 1:size(resultsStruct, 1)
                 % if allNetMedianDiff(ithParam1, ithParam2, ithNet)>0.04; keyboard; end
                 
                 allRvecs = [allRvecs, rvals_preplay'];
+                allRvecsAllEnv = [allRvecsAllEnv; rvals_allenv_preplay];
                 allRvecs_shuff = [allRvecs_shuff, rvals_shuffle'];
                 
                 nEvents_accum = nEvents_accum + numel(pvals_preplay);
@@ -186,12 +192,12 @@ for ithParam1 = 1:size(resultsStruct, 1)
                 allNetDecodeSlopes(ithParam1, ithParam2, ithNet) = mean(abs(slopes_preplay));
                 allNetDecodeSlopes_zscored(ithParam1, ithParam2, ithNet) = [mean(abs(slopes_preplay)) - mean(abs(slopes_shuffle))] / [std(abs(slopes_shuffle))];
 
-                entropy_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.Entropy(:,1);
+                entropy_preplay = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.Entropy(:,ithEnv);
                 allNetDecodeEntropy(ithParam1, ithParam2, ithNet) = mean(entropy_preplay);
                 
                 temp = 0;
                 for ithEvent = 1:numel(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pMat)
-                    temp = temp + mean(var(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pMat{ithEvent}{1}.pMat, [], 1));
+                    temp = temp + mean(var(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pMat{ithEvent}{ithEnv}.pMat, [], 1));
                 end
                 allNetDecodeVar(ithParam1, ithParam2, ithNet) = temp./ numel(resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pMat);
                                 
@@ -203,9 +209,41 @@ for ithParam1 = 1:size(resultsStruct, 1)
                 temp(2, ithNet) = nan;
                 temp(3, ithNet) = nan;
             end
-                
+            
+            
+
         end
         
+        %% Cross-env analysis and plots
+        
+        if pfsim.nEnvironments>1
+            pValMat_temp = zeros(size(allRvecsAllEnv, 2), size(allRvecsAllEnv, 2));
+            for envI = 1:size(allRvecsAllEnv, 2)
+                for envJ = 1:size(allRvecsAllEnv, 2)
+                    [~,p_kstest,~] = kstest2(allRvecsAllEnv(:,envI), allRvecsAllEnv(:,envJ));
+                    pValMat_temp(envI, envJ) = p_kstest;
+                end
+            end
+            pValMat_temp
+
+            pValMat_all_temp = zeros(1, size(allRvecsAllEnv, 2));
+            for envI = 1:size(allRvecsAllEnv, 2)
+                [~,p_kstest,~] = kstest2(allRvecsAllEnv(:), allRvecsAllEnv(:,envI));
+                pValMat_all_temp(envI) = p_kstest;
+            end
+            pValMat_all_temp
+
+            figure; hold on; [f1,x1]=ecdf(allRvecsAllEnv(:)); plot(x1,f1, 'k:')
+            ecdf(allRvecsAllEnv(:,1)); ecdf(allRvecsAllEnv(:,2)); ecdf(allRvecsAllEnv(:,3)); ecdf(allRvecsAllEnv(:,4)); 
+            title([variedParam(1).name, '=', num2str(variedParam(1).range(ithParam1)), ' ', variedParam(2).name, '=', num2str(variedParam(2).range(ithParam2)), ...
+                ' min(p-val)=', num2str(min(pValMat_all_temp), 3)])
+            legend({'Combined', 'R1', 'L1', 'R2', 'L2'}, 'Location', 'Best')
+            xlabel("|correlation|"); ylabel('Cumulative fraction')
+            disp(['Params: ', num2str(ithParam1), ' ', num2str(ithParam2)])
+        end
+        
+        
+        %% save parameter point data for analysis
         if combineNetData
             if ~isempty(allRvecs)
                 allRvecs = allRvecs(randperm(numel(allRvecs))); % permute, to mix networks' events

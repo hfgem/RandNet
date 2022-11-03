@@ -154,60 +154,34 @@ figure; hold on; xline(C_l, '--k', 'LineWidth', 2); xline(CVec, ':r', 'LineWidth
 title('C_l for lattice networks'); legend({'Analytic', 'Monte Carlo'}, 'Location', 'Best')
 
 
-%% Calcualte clustering for clustered vs lattice network
-
-N = 375;
-p = 0.08
-K = round(N*p);
-beta = 0.00;
-
-nClusts = 2;
-
-W_lattice = adjacency(WattsStrogatz(N, K, beta));
-% figure; imagesc(W_lattice); keyboard
-
-% W_clust = adjacency(WattsStrogatz(N, K, beta));
-% figure; imagesc(W_lattice); keyboard
-
-n = size(W_lattice, 1);
-k = sum(W_lattice, 'all')/n; % divide by 2 if symmetric?
-
-wDistances = distances(digraph(W));
-wDistances(wDistances==0)=nan;
-L_lattice = nanmean(wDistances, 'all');
-
-C_lattice = fagioloCC(W_lattice);
-
-
-% Predicted for lattice network
-L_l = (n*(n+k-2) ) / (2*k*(n-1)) 
-C_l = (3 * (k-2) )/(4 * (k-1) )
-
-% Actual for lattice newtork
-L_lattice
-C_lattice
-
 
 %% Calculate SWI for WS network
+% WS network, an undirected graph with
+% N: number of nodes
+% K: mean degree
+% beta: probability of randomly re-wiring an edge from an initial ring
+%     lattice network
+%
+% (N*K)/2 number of edges
 
-N = 1000; K = 10; beta = 0.01;
-N = 375; K = round(N* (0.08/2)); beta = 0.01;
+% Default parameters
+ params.N = 1000; params.K = 200; params.beta = 0.01;
+ params.N = 375; params.K = round(params.N* (0.08/2)); params.beta = 0.01;
 
-param_vec = 0:0.01:0.2; % for beta
-param_vec = [0:0.001:0.05, 0.05:0.01:0.2]; % for beta
-% param_vec = 1:25; % for K
-% param_vec = 100:100:2000; % for N
+% Parameters to vary
+ variedParam.name = 'beta'; variedParam.range = 0:0.01:0.2; % for beta
+% variedParam.name = 'K'; variedParam.range = 1:25; % for K
+% variedParam.name = 'N'; variedParam.range = 100:100:2000; % for N
 
+egamma = double(eulergamma);
 
 tic
-op = zeros(size(param_vec));
-for ithParam = 1:numel(param_vec)
+op = zeros(size(variedParam.range));
+for ithParam = 1:numel(variedParam.range)
     
-     beta = param_vec(ithParam);
-    % K = param_vec(ithParam);
-    % N = param_vec(ithParam);
+	params.(variedParam.name) = variedParam.range(ithParam);
     
-    W = adjacency(WattsStrogatz(N,K,beta));
+    W = adjacency(WattsStrogatz(params.N,params.K,params.beta));
 
     n = size(W, 1);
     k = sum(W, 'all')/n; % divide by 2 if symmetric?
@@ -251,9 +225,11 @@ for ithParam = 1:numel(param_vec)
 end
 runTime = toc
 
-
-figure; plot(param_vec, op)
-xlabel('WS Beta'); ylabel('SWI')
+otherParams = params; otherParams = rmfield(otherParams, variedParam.name);
+figure; plot(variedParam.range, op)
+xlabel([variedParam.name]); ylabel('SWI')
+% title(strtrim(formattedDisplayText(otherParams)))
+title(erase(formattedDisplayText(otherParams), newline))
 ylim([0, 1])
 
 
@@ -300,7 +276,7 @@ end
 runTime = toc
 
 figure; histogram(op); title('SWI, ER random graph')
-xlim([0, 0.1])
+% xlim([0, 0.1])
 
 
 %% Calculate SWI for randNet across nclusters and mnc
@@ -316,8 +292,9 @@ mncVec = 1:0.5:6;  nClustersVec = 1:1:36;
 mncVec = 1:0.5:11; nClustersVec = 2:1:21; % to match 'results_2022-05-08T15-43.mat'
 % mncVec = 1:0.25:6; nClustersVec = 2:2:42; % to match 'results_2022-04-29T23-05.mat'
 
-mncVec = 1:0.25:3.0; nClustersVec = 5:5:60; % to match 'results_2022-05-08T15-43.mat'
-% mncVec = 1.5:0.5:5.0; nClustersVec = 2:3:25; % to match 'results_2022-05-08T15-43.mat'
+mncVec = 1:0.25:3.0; nClustersVec = 5:5:60; % to match 'results_....mat'
+mncVec = 1:0.025:3.0; nClustersVec = 1:1:60; % finer grid
+% mncVec = 1.5:0.5:5.0; nClustersVec = 2:3:25; %
 
 
 parameters.p_E = 0.75;
@@ -436,7 +413,7 @@ wrongConnectivity = ([(1./nClustersVec).*(parameters.n_E.*mncVec')].*mncVec') < 
 
 op2 = op;
 op2(wrongConnectivity) = nan;
-AlphaData =  (~isnan(op2')+1) / 2;
+AlphaData =  (~isnan(op2')+0.25) / 1.5;
 
 figure; imagesc(mncVec, nClustersVec, op', 'AlphaData', AlphaData);
 colorbar; set(gca,'YDir','normal')
@@ -492,6 +469,8 @@ if plotExtra
 end
 
 
+
+
 %% Functions
 
 function fcc = fagioloCC(W)
@@ -505,6 +484,7 @@ nodeCCs = diag([ (W + W')^3]) ./ [2 .* (dtot.*(dtot-1) - 2.*dbi ) ]; % eq 8
 fcc = mean(nodeCCs);
 
 end
+
 
 function [acc, c] = avgClusteringCoefficient(graph)
     %

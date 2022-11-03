@@ -83,6 +83,8 @@ allNetDecodeEntropy = zeros(numel(xParamvec), numel(yParamvec), num_nets); % Mea
 
 allNetDecodeVar = zeros(numel(xParamvec), numel(yParamvec), num_nets); % Mean decoded slope of each network for each parameter point
 
+allNetSWI = nan(numel(xParamvec), numel(yParamvec), num_nets); % Mean decoded slope of each network for each parameter point
+
 figure(515); hold on
 imagesc(xParamvec, yParamvec, squeeze(op(1,:,:))', 'AlphaData', ~isnan(squeeze(op(1,:,:))')); drawnow
 set(gca,'YDir','normal')
@@ -210,7 +212,41 @@ for ithParam1 = 1:size(resultsStruct, 1)
                 temp(3, ithNet) = nan;
             end
             
+            %% Calculate network structure and SWI
             
+            % Recreate network
+            E_indices = PFresultsStruct(ithParam1, ithParam2, ithNet).results{1}.E_indices;
+            netSeed = PFresultsStruct(ithParam1, ithParam2, ithNet).results{1}.netSeed;
+            netParams=parameters;
+            netParams.envIDs = 1;% pfsim.envIDs;
+            % for i = 1:size(variedParam, 2)
+                netParams.(variedParam(1).name) = variedParam(1).range(ithParam1);
+                netParams.(variedParam(2).name) = variedParam(2).range(ithParam2);
+            % end
+            netParams = set_depedent_parameters(netParams);
+            network = create_clusters(netParams, 'seed', netSeed, 'include_all', netParams.include_all, 'global_inhib', netParams.global_inhib);
+            if ~all(network.E_indices==E_indices); error('Incorrect network'); end
+        
+            W = network.conns(network.E_indices, network.E_indices);
+            W = W>0;
+            n = size(W, 1); 
+            
+            % Validated calculations
+            egamma = double(eulergamma);
+            k = sum(W, 'all')/n;
+            p = sum(W, 'all')/(n^2-n);
+            C_r = p;
+            L_r = ( (log(n)-egamma) /log(k)) + 0.5;
+            C_l = (3 * (k-2) )/(4 * (k-1) );
+            L_l = (n-egamma) / (2*k)+0.5; 
+            
+            wDistances = distances(digraph(W));
+            wDistances(wDistances==0)=nan;
+            L = nanmean(wDistances, 'all');
+            C = fagioloCC(W);
+            
+            SWI_actual = [(L - L_l) / (L_r - L_l)] * [(C - C_r) / (C_l - C_r) ];
+            allNetSWI(ithParam1, ithParam2, ithNet) = SWI_actual;
 
         end
         
@@ -436,3 +472,47 @@ try
 end
 
 
+
+%% SWI correlation analysis
+
+% figure; scatter(allNetSWI(:), (allNetKSstat(:)))
+% figure; scatter(allNetSWI(:), (allNetMedianDiff(:)))
+figure; scatter(allNetSWI(:), (allNetPvals(:)))
+xlabel('SWI'); ylabel('')
+% set(gca,'XScale','log','YScale','log')
+set(gca,'YScale','log')
+
+
+X = squeeze(median(allNetSWI, 3)); % figure; imagesc(X); colorbar
+Y = squeeze(op(1,:,:)); % figure; imagesc(Y); colorbar
+figure; scatter(X(:), Y(:))
+
+set(gca,'XScale','log','YScale','log')
+
+
+X0 = allNetSWI(:); % figure; imagesc(X); colorbar
+Y0 = allNetPvals(:); % figure; imagesc(Y); colorbar
+X = X0(~isnan(X0) & ~isinf(X0)); Y = Y0(~isnan(X0) & ~isinf(X0)); 
+% Y = log10(Y);
+mdl_SWI = fitlm(X, Y); 
+figure; plot(mdl_SWI); 
+xlabel('SWI'); ylabel('Decode p-val'); 
+title(['pval=', num2str(mdl_SWI.Coefficients.pValue(2), 2), ', abs(r)=', num2str(sqrt(mdl_SWI.Rsquared.Ordinary), 2)]); 
+legend off; mdl_SWI
+
+figure; scatterhist(X, log10(Y)); xlabel(''); ylabel(''); 
+
+
+
+
+%% Functions
+function fcc = fagioloCC(W)
+% From Fagiolo, 2007.
+% Uses equations 6-8 to calculate the clustering coefficient of a
+% directed binary graph W
+
+dtot = (W' + W)* ones( 1, size(W,1) )'; % eq 6
+dbi = diag(W^2); % eq 7
+nodeCCs = diag([ (W + W')^3]) ./ [2 .* (dtot.*(dtot-1) - 2.*dbi ) ]; % eq 8
+fcc = mean(nodeCCs);
+end

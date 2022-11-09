@@ -10,8 +10,8 @@
 
 clear all
 
-parameters.saveFlag = 1; % 1 to save simulation results
-parameters.selectPath = 0; % 1 to select save destination, 0 to save in current dir
+parameters.saveFlag = 0; % 1 to save simulation results
+parameters.selectPath = 1; % 1 to select save destination, 0 to save in current dir
 parameters.plotResults = 1; % 1 to plot basic simulation results
 
 if parameters.saveFlag & parameters.selectPath
@@ -141,6 +141,17 @@ parameters.Win_var = (8e-12)^2;
 parameters.Win_mean = 73 *10^-12;
 parameters.del_G_syn_E_E = 120*10^(-12); %synaptic conductance step following spike (S)
 parameters.del_G_syn_E_I = 150*10^(-12); %synaptic conductance step following spike (S)
+%}
+
+
+%{
+% Uncomment for example network visualization
+% Then run randnet_plotting.m network section
+PFsimFlag = 0;
+PFscoreFlag = 0;
+preplaySimFlag = 0;
+parameters.clusters = 8
+parameters.mnc = 1.5
 %}
 
 

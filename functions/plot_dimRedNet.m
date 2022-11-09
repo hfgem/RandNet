@@ -123,10 +123,24 @@ plot(digraph(W), 'XData', Y_PCA(:,1),'YData', Y_PCA(:,2), ...
 title('PCA');
 
 
+if 0
+    % Changes to plot an example for presenting
+    scatterSize = [1, 1];   
+    c1 = network.cluster_mat(1,network_indices)';
+    c2 = network.cluster_mat(6,network_indices)';
+    c = c1*[0, 1, 0] + c2*[1, 0, 0]; % color of scatter plot points
+    sz = scatterSize(1) + scatterSize(2)*sum(network.cluster_mat(:,network_indices))'; % size of scatter plot points
+    %Wdigraph = digraph( W .* [any(c, 2)*any(c, 2)']);
+    Wdigraph = digraph( W .* [c1*c1']); % both pre and post synaptic neurons are in group 1
+    % Wdigraph = digraph( W .* [c1]); % presynaptic neuron is in group 1
+else
+    Wdigraph = digraph(W);
+end
+
 % Plot just t-sne
 figHandleSingle = figure; 
 Xpos = Y_tsne(:,1); Ypos = Y_tsne(:,2);
-plot(digraph(W), 'XData', Xpos,'YData', Ypos, ...
+plot(Wdigraph, 'XData', Xpos,'YData', Ypos, ...
     'MarkerSize',sz, 'NodeColor', c, 'EdgeColor', 0.3*[1 1 1], 'EdgeAlpha',0.2)
 title(['tsne plot of [' dimRedInput, ']'])
 hold on; h = zeros(4, 1);
@@ -155,5 +169,7 @@ if isequal(dimRedInput, 'clust')
     xlabel('1-2 group connections'); ylabel('3-4 group connections'); 
 end
 
+
+keyboard
 
 end

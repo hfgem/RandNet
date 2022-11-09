@@ -125,7 +125,9 @@ title('PCA');
 
 if 0
     % Changes to plot an example for presenting
-    scatterSize = [1, 1];   
+    % myPlotSettings(9, 6, 3, 24, [], [], 3) % SfN-poster format
+    
+    scatterSize = 2.5*[1, 1];   
     c1 = network.cluster_mat(1,network_indices)';
     c2 = network.cluster_mat(6,network_indices)';
     c = c1*[0, 1, 0] + c2*[1, 0, 0]; % color of scatter plot points
@@ -141,7 +143,7 @@ end
 figHandleSingle = figure; 
 Xpos = Y_tsne(:,1); Ypos = Y_tsne(:,2);
 plot(Wdigraph, 'XData', Xpos,'YData', Ypos, ...
-    'MarkerSize',sz, 'NodeColor', c, 'EdgeColor', 0.3*[1 1 1], 'EdgeAlpha',0.2)
+    'MarkerSize',sz, 'NodeColor', c, 'EdgeColor', 0.3*[1 1 1], 'EdgeAlpha',0.5, 'LineWidth',1.0) % 'EdgeAlpha',0.5, 'LineWidth',1.0)
 title(['tsne plot of [' dimRedInput, ']'])
 hold on; h = zeros(4, 1);
 h(1) = scatter(NaN,NaN,'r', 'filled');

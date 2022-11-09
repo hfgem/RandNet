@@ -37,6 +37,7 @@ plot_ixj_sequences(network_spike_sequences, plotIDs, spikes_V_m, parameters, net
 
 
 %% Use dimensionality reduction techniques to plot network structure
+seed = 1;
 E_only = 1; % only plot E-E connections
 dimRedInput = 'WW'; % 'W', 'WW', 'normClust', 'clust' 
 scatterSize = [1, 1];

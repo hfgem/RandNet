@@ -52,15 +52,15 @@ useMeanPFDensity = true
 
 % Analysis and plotting options
 calcScore = false
-plotExtraPlots = true % if 1, plot place fields of every network
-plotNetsBest = true
-plotPvalMat = true 
-plotClusterPFs = true
-plotNetStruct = true
-plotPFStats = true
+plotExtraPlots = false % if 1, plot place fields of every network
+plotNetsBest = false
+plotPvalMat = false 
+plotClusterPFs = false
+plotNetStruct = false
+plotPFStats = false
 
-plotEventLengthAnalysis = true
-plotPFdistAnalysis = true
+plotEventLengthAnalysis = false
+plotPFdistAnalysis = false
 
 %% Loop over parameter sets
 rng(1); tic
@@ -206,7 +206,7 @@ for ithParamSet = 1:size(paramSetInds, 1)
             firstTrajpMatLengths = arrayfun(@(x) numel(x.timevec), firstTrajpMats);
             allEventLengths = [allEventLengths; firstTrajpMatLengths];
             
-            allShuffleLengths = [allShuffleLengths; repelem(firstTrajpMatLengths, numel(rsqrs_shuffle{1}))]; % Note: Shuffles are same length as the corresponding original event
+            allShuffleLengths = [allShuffleLengths; repelem(firstTrajpMatLengths, numel(rsqrs_shuffle{1}), 1)]; % Note: Shuffles are same length as the corresponding original event
             
             % Accumulate decode probability across spatial positions
             tmpEvents = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pMat;
@@ -297,15 +297,22 @@ for ithParamSet = 1:size(paramSetInds, 1)
                 figure; scatter(1:parameters.n_E, x(PFpeaksSequence,pvals_sorted(1)), [], clustColor(PFpeaksSequence), 'filled'); colorbar; 
                   xlabel('Neuron (sort by PF expected location)'); ylabel('Event relative rank'); title(['Best event of network ', num2str(ithNet)])
                 %}
-                  
+                
+                % myPlotSettings(3, 2.5, 3, 24, [], [], 3) % SfN-poster format
+                
                 figure; scatter(x(PFpeaksSequence,pvals_sorted(1))', 1:parameters.n_E, 'k', '|', 'LineWidth', 5 )
                 ylabel('Place cell (sorted)'); xlabel('Event relative rank'); title(['Best event of network ', num2str(ithNet)]); ylim([0, parameters.n_E])
+                ylabel('Cell (sorted)'); title ''
+                ylim([0, 400]); yticks([0, 200, 400]); %yticklabels({'0', '50', '100'})
                 
                 eventPmat = resultsStruct(ithParam1, ithParam2, ithNet).results.replaytrajectory.pMat{pvals_sorted(1)}{1}.pMat;
                 [yt, xt] = size(eventPmat);
                 figure; imagesc([1:xt]*(tBinSz), [1:yt]*(pfsim.spatialBin*100), eventPmat)
                 xlabel('Time (ms)'); ylabel('Position (cm)'); title(['Best event of network ', num2str(ithNet)])
                 colormap(hot); title ''; colorbar off; caxis(([0, 0.25]))
+                yticks([1, 50, 100]); yticklabels({'0', '50', '100'})
+                
+                disp(['Best event of network ', num2str(ithNet)]);
                      
             end
         end
@@ -316,6 +323,8 @@ for ithParamSet = 1:size(paramSetInds, 1)
     %% Plot p-value matrix
     
     % myPlotSettings(3, 1.5) % for poster
+    % myPlotSettings(6, 3, 3, 24, [], [], 3) % SfN-poster format
+    
     if plotPvalMat
         rvalThresh_vec = 0.0:0.1:0.9;
         jumpThres_vec =  0.1:0.1:1.0;
@@ -348,6 +357,7 @@ for ithParamSet = 1:size(paramSetInds, 1)
         
         % Plot with linear colormap
         figure; imagesc(jumpThres_vec, rvalThresh_vec, op', 'AlphaData', ~isnan(op')); colorbar
+        set(gca,'color',0*[1 1 1])
         xlabel('<|Max Jump Distance|')
         ylabel('>|Correlation|')
         caxis([0, 0.1])
@@ -356,6 +366,7 @@ for ithParamSet = 1:size(paramSetInds, 1)
         % Plot with better colormap
         figure; 
         imagesc(jumpThres_vec, rvalThresh_vec, log10(op'), 'AlphaData', ~isnan(op'))
+        set(gca,'color',0*[1 1 1])
         % set(gca,'YDir','normal')
         cb = colorbar(); %cb.Label.String = cbLabel2;
         xlabel('<|Max Jump Distance|')
@@ -374,6 +385,7 @@ for ithParamSet = 1:size(paramSetInds, 1)
         hold on; 
         [xnan, ynan] = find(isnan(op));
         scatter(rvalThresh_vec(xnan), jumpThres_vec(ynan), 300, 'x')
+        
     end
 
     %% Plot mean decode position
@@ -383,9 +395,9 @@ for ithParamSet = 1:size(paramSetInds, 1)
     
     %% Plot ECDF of r values
     
+    % myPlotSettings(4, 2.75, 1.5, 14, [], [], 1.25) % ppt format
     % myPlotSettings(3, 1.5) % for poster
-    
-    myPlotSettings(4, 2.75, 1.5, 14, [], [], 1.25) % ppt format
+    % myPlotSettings(6, 3, 3, 24, [], [], 3) % SfN-poster format
     
     allEventRs_ecdf = (allEventRs);
     rvals_shuff_ecdf= (vertcat(allShuffleRs{:}));
@@ -393,7 +405,7 @@ for ithParamSet = 1:size(paramSetInds, 1)
     figure; hold on; ecdf(sqrt(allEventRs_ecdf)); ecdf(sqrt(rvals_shuff_ecdf)); %ecdf(sqrt(rvals_shuff_ecdf)); 
     % figure; hold on; ecdf(allEventRs_ecdf); ecdf(rvals_ecdf)
     legend({'Preplays', 'Shuffles'}, 'Location', 'Best')
-    xlabel('|Correlation|'); ylabel('Cumulative proportion');
+    xlabel('|Correlation|'); ylabel({'Cumulative','proportion'});
     [H,P,KSSTAT] = kstest2(sqrt(allEventRs_ecdf), sqrt(rvals_shuff_ecdf) )
     title([variedParam(1).name, '=', num2str(variedParam(1).range(ithParam1)), ' ', ...
         variedParam(2).name, '=', num2str(variedParam(2).range(ithParam2)), ...
@@ -419,6 +431,9 @@ for ithParamSet = 1:size(paramSetInds, 1)
     % myPlotSettings(6, 4) % for poster, main result
     % myPlotSettings(3.5, 5.5) % for poster, secondary results
      myPlotSettings(4.5, 3, 2, 12, [], [], 2) % ppt format
+    % myPlotSettings(9, 6, 3, 24, [], [], 3) % SfN-poster format, Primary
+    % myPlotSettings(5, 5, 3, 18, [], [], 3) % SfN-poster format, Secondary
+    % myPlotSettings(7, 7, 3, 24, [], [], 3) % SfN-poster format, Too big for location for secondary
     
     if nEventsToPlot>0
         [pvals_sorted, eventSortInd] = sort(bestEventpVals);
@@ -465,6 +480,7 @@ for ithParamSet = 1:size(paramSetInds, 1)
     %% Plot combined place fields
     
     % myPlotSettings(4, 3, 2, 14, [], [], 2) % ppt format
+    % myPlotSettings(8, 7, 3, 24, [], [], 3) % SfN-poster format
     
     row_all_zeros1 = find(all( PFmatE_all==0, 2)) ;
     row_n_all_zeros1 = find(~all( PFmatE_all==0, 2)) ;
@@ -522,11 +538,14 @@ for ithParamSet = 1:size(paramSetInds, 1)
             figure; imagesc( PFmatE_all(PFpeaksSequence(cellsToPlot),:)./rateDenomAll(cellsToPlot)); title('Example net'); colorbar; caxis([0, caxmax])
             xlabel('Position (2 cm bin)'); ylabel('Cell (sorted)');
         end
+        
+        % myPlotSettings(3, 1.5) % for poster
+        % myPlotSettings(4, 3.5, 3, 24, [], [], 3) % SfN-poster format
 
         % 'Peak Rate'
-        % myPlotSettings(3, 1.5) % for poster
         peakRate= max(PFmatE_all, [], 2);
-        figure; histogram(peakRate(peakRate>minPeakRate)); xlabel('Place field peak (Hz)'); ylabel('Place cells (count)');
+        figure; histogram(peakRate(peakRate>minPeakRate), 20); xlabel('Place field peak (Hz)'); ylabel('Place cells (count)');
+        box off
 
         % 'kstest'
         ksstat_vec = [];
@@ -542,7 +561,8 @@ for ithParamSet = 1:size(paramSetInds, 1)
 
         % 'information'
         spatialInfo = nanmean( [PFmatE_all./mean(PFmatE_all, 2)] .* log(( PFmatE_all+eps )./mean(PFmatE_all, 2) ), 2 );
-        figure; histogram(spatialInfo(peakRate>minPeakRate)); xlabel('Spatial information (bits/s)'); ylabel('Place cells (count)');
+        figure; histogram(spatialInfo(peakRate>minPeakRate), 20); xlabel('Information (bits/s)'); ylabel('Place cells (count)');
+        box off
 
         
         figure; scatter(cellSparsity, spatialInfo); xlabel('PF sparsity'); ylabel('Spatial info.')
@@ -599,13 +619,17 @@ for ithParamSet = 1:size(paramSetInds, 1)
         figure; histogram(spatialInfo(peakRate>minPeakRate), 10, 'Normalization', 'probability'); xlabel('Spatial Information (bits)'); ylabel('E cells (count)'); ylabel('Place cells (Prob.)');
         xlim([-0.05, 3.45]); ylim([0, 0.3]); box off
         
+        
         % myPlotSettings(4, 2, 2, 14, [], [], 2) % ppt format
+        % myPlotSettings(6, 3, 3, 24, [], [], 3) % SfN-poster format
         xx = 0:0.1:10;
         yy = [gaussmf(xx,[1 2]); gaussmf(xx,[1 3]); gaussmf(xx,[1 4]); gaussmf(xx,[1 5]); gaussmf(xx,[1 6]); gaussmf(xx,[1 7]); gaussmf(xx,[1 8]);]
         yy = [gaussmf(xx,[1 3]); gaussmf(xx,[1 4]); gaussmf(xx,[1 5]);]
         figure; plot(xx,yy)
         xlabel('Position'); ylabel('Input rate (Hz)')
         box off; set(gca,'xtick',[]); set(gca,'ytick',[])
+        % legend({'Cell 3''s input', 'Cell 4''s input', 'Cell 5''s input'}); legend boxoff
+        % legend({'Input to cell 3', 'Input to cell 4', 'Input to cell 5'}); legend boxoff
         
         xx = 0:0.5:1;
         yy = [ ([6, 6, 6].*xx(end)); (6.*xx); (6.*fliplr(xx))];
@@ -613,6 +637,8 @@ for ithParamSet = 1:size(paramSetInds, 1)
         xlabel('Position'); ylabel('Input rate (kHz)')
         box off;     
         % set(gca,'xtick',[]); set(gca,'ytick',[]); ylabel('Input rate (Hz)')
+        % legend({'Location cue 1', 'Location cue 1', 'Context cue'})
+         
     end
     
     %% Plot new analyses for Pizza talk questions/supplement

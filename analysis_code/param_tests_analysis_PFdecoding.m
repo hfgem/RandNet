@@ -368,6 +368,8 @@ title(analysisTitle)
 
 %% Plot with better colormap
 
+% myPlotSettings(6, 6, 3, 24, [], [], 3) % SfN-poster format
+
 logPvalData = log10( squeeze(op(1,:,:))');
 
 figure; 

@@ -134,6 +134,8 @@ if exist('myPlotSettings'); myPlotSettings(8.5, 5.5); end
 % 
 % myPlotSettings(8.5, 4.5, 2, 14, [], [], 2) % ppt format
 % MarkerFormat.MarkerSize = 6;
+% myPlotSettings(10, 6, 3, 24, [], [], 3) % SfN-poster format
+% MarkerFormat.MarkerSize = 6; % SfN-poster format
 
 
 figure; 
@@ -171,7 +173,7 @@ if exist('events')==1
 end
 plotSpikeRaster( reordered_spikes, ...
     'TimePerBin', parameters.dt, 'PlotType', 'scatter', 'MarkerFormat', MarkerFormat); % 
-ylabel('E Cell');
+ylabel('Cell');
 
 % Plot population firing rate
 ax2 = subplot(2,1,2); hold on
@@ -183,7 +185,7 @@ if exist('events')==1
     end
 end
 plot(t, meanEPopRate)
-ylabel('E cell mean rate (Hz)'); xlabel('Time (s)'); 
+ylabel({'Population rate', '(Hz)'}); xlabel('Time (s)'); 
 
 yline(mean(meanEPopRate), 'g')
 yline(mean(meanEPopRate)+ std(meanEPopRate))
@@ -192,7 +194,10 @@ yline(PBEthresh, 'r');
 
 linkaxes([ax1, ax2], 'x')
 
-%xlim([3.5, 5.5]); sgtitle ''; ylim([0, 375]); ylim([0, 10])
+% For SfN poster
+% xlim([3.5, 5.5]); sgtitle '';  ylim([0, 10])
+% ylim([0, 375]); set(gca,'XColor','none')
+
 
 if exist('myPlotSettings'); myPlotSettings; end
 

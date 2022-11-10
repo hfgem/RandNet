@@ -360,8 +360,9 @@ end
 
 %% Modifications for plotting
 
-% pfsim.nTrials = 6
-% netsToPlot = [10]
+pfsim.nTrials = 1
+netsToPlot = [7] % For PF raster
+% netsToPlot = [10] % For preplay raster
 
 
 %% Create Networks and Check Spike Progression
@@ -384,7 +385,7 @@ end
 %___Run Simulations for Different Networks___
 %____________________________________________
 
-for ithNet = 1 %netsToPlot %1:parameters.nNets
+for ithNet = netsToPlot %1:parameters.nNets
     
     %CREATE NETWORK SAVE PATH
     net_save_path = strcat(save_path,'/network_',string(ithNet));
@@ -428,7 +429,7 @@ for ithNet = 1 %netsToPlot %1:parameters.nNets
                     
                     % Set up for simulation
                     V_m = zeros(parameters.n,numel(pfsim.t)); %membrane potential for each neuron at each timestep
-                    V_m(:,1) = -55e-3 + 10e-3*randn([parameters.n,1]); %set all neurons to baseline reset membrane potential with added noise
+                    V_m(:,1) = -60e-3 + 5e-3*randn([parameters.n,1]); %set all neurons to baseline reset membrane potential with added noise
                     pfsim.G_in = G_in_PFs(:,:,ithEnv,ithTrial);
                     trialSeed = randi(10^6);
                     
@@ -479,11 +480,13 @@ for ithNet = 1 %netsToPlot %1:parameters.nNets
             
             myPlotSettings(4, 3, 2, 14, [], [], 2) % ppt format
             MarkerFormat.MarkerSize = 3;
+            % myPlotSettings(9, 3.5, 3, 24, [], [], 3) % SfN-poster format
+            % MarkerFormat.MarkerSize = 6; % SfN-poster format
             
             figure; plotSpikeRaster( logical( [opS(network.E_indices(PFpeaksSequence),:,1,trialToPlot); opS(network.I_indices(rpermIcells),:,1,trialToPlot) ]), 'TimePerBin', parameters.dt, 'PlotType', 'scatter', 'MarkerFormat', MarkerFormat);
             title(['Net: ', num2str(ithNet), ' Trial: ', num2str(trialToPlot)])
-            xlim([0.08, 1.99]); title ''; xlabel('Time (s)'); ylabel('Neurons (sorted)');
-            
+            xlim([0.08, 1.99]); title ''; xlabel('Time (s)'); ylabel('Cell (sorted)');
+            ylim([0, 250])
         end
         
         figure; histogram( sum(opS, [2:4])./parameters.t_max./parameters.nTrials, 50 )

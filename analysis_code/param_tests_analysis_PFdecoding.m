@@ -18,7 +18,9 @@ end
 % load('results_2022-07-13T11-44.mat') % clustersXmnc grid up to (5,5)
 
 % For multi-env simulation
-% load('results_2022-10-12T09-22.mat')
+% load('results_2022-10-12T09-22.mat') % 3x3 grid
+ load('results_2022-10-18T02-35.mat') % larger grid
+
 ithEnv = 1 % which environments decoding and place fields to plot/analyze
 
 %% Plot preplay decoding results across grid search
@@ -77,13 +79,16 @@ allNetMedianDiff = zeros(numel(xParamvec), numel(yParamvec), num_nets);
 allNetGroupID = nan(numel(xParamvec), numel(yParamvec), num_nets);
 
 allNetDecodeSlopes = zeros(numel(xParamvec), numel(yParamvec), num_nets); % Mean decoded slope of each network for each parameter point
-allNetDecodeSlopes_zscored = zeros(numel(xParamvec), numel(yParamvec), num_nets); % Mean decoded slope of each network for each parameter point
+allNetDecodeSlopes_zscored = zeros(numel(xParamvec), numel(yParamvec), num_nets); % 
 
-allNetDecodeEntropy = zeros(numel(xParamvec), numel(yParamvec), num_nets); % Mean decoded slope of each network for each parameter point
+allNetDecodeEntropy = zeros(numel(xParamvec), numel(yParamvec), num_nets); % 
 
-allNetDecodeVar = zeros(numel(xParamvec), numel(yParamvec), num_nets); % Mean decoded slope of each network for each parameter point
+allNetDecodeVar = zeros(numel(xParamvec), numel(yParamvec), num_nets); % 
 
-allNetSWI = nan(numel(xParamvec), numel(yParamvec), num_nets); % Mean decoded slope of each network for each parameter point
+allNetSWI = nan(numel(xParamvec), numel(yParamvec), num_nets); % 
+
+allNet_multiEnvMinPval = nan(numel(xParamvec), numel(yParamvec));
+
 
 figure(515); hold on
 imagesc(xParamvec, yParamvec, squeeze(op(1,:,:))', 'AlphaData', ~isnan(squeeze(op(1,:,:))')); drawnow
@@ -250,7 +255,7 @@ for ithParam1 = 1:size(resultsStruct, 1)
 
         end
         
-        %% Cross-env analysis and plots
+        %% Cross-env analysis and plots, combined correlations for all networks
         
         if pfsim.nEnvironments>1
             pValMat_temp = zeros(size(allRvecsAllEnv, 2), size(allRvecsAllEnv, 2));
@@ -268,7 +273,9 @@ for ithParam1 = 1:size(resultsStruct, 1)
                 pValMat_all_temp(envI) = p_kstest;
             end
             pValMat_all_temp
-
+            
+            allNet_multiEnvMinPval(ithParam1, ithParam2) = min(pValMat_all_temp);
+            
             figure; hold on; [f1,x1]=ecdf(allRvecsAllEnv(:)); plot(x1,f1, 'k:')
             ecdf(allRvecsAllEnv(:,1)); ecdf(allRvecsAllEnv(:,2)); ecdf(allRvecsAllEnv(:,3)); ecdf(allRvecsAllEnv(:,4)); 
             title([variedParam(1).name, '=', num2str(variedParam(1).range(ithParam1)), ' ', variedParam(2).name, '=', num2str(variedParam(2).range(ithParam2)), ...
@@ -504,6 +511,16 @@ legend off; mdl_SWI
 
 figure; scatterhist(X, log10(Y)); xlabel(''); ylabel(''); 
 
+
+%%
+
+figure; 
+imagesc(xParamvec, yParamvec, allNet_multiEnvMinPval')
+set(gca,'YDir','normal')
+cb = colorbar(); cb.Label.String = 'p-value';
+xlabel(xName,'Interpreter','none')
+ylabel(yName,'Interpreter','none')
+title('Min(KS test pval) for outlier traj PFs')
 
 
 

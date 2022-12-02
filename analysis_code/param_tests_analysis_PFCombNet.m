@@ -17,7 +17,7 @@ else
 end
 
 
-% load('results_2022-07-22T18-29.mat') % Primary clustersXmnc grid (smaller mnc values)
+ load('results_2022-07-22T18-29.mat') % Primary clustersXmnc grid (smaller mnc values)
 % load('results_2022-07-13T11-44.mat') % clustersXmnc grid up to (5,5)
 
 % For multi-env simulation
@@ -37,7 +37,7 @@ variedParam(:).range
 paramSetInds = combvec([2], [4])' % best example, for 2022-07-22T18-29 data
 % paramSetInds = combvec([1], [1])' % stationary example, for 2022-07-22T18-29 data
 % paramSetInds = combvec([9], [1])' % diffuse example, for 2022-07-22T18-29 data
-% paramSetInds = combvec([2], [2])' % best example, for 2022-07-22T18-29 data
+ paramSetInds = combvec([2], [2])' % best example, for 2022-07-22T18-29 data
 
 parameters.n
 parameters.del_G_sra
@@ -55,12 +55,12 @@ calcScore = false
 plotExtraPlots = false % if 1, plot place fields of every network
 plotNetsBest = false
 plotPvalMat = false 
-plotClusterPFs = false
+plotClusterPFs = true
 plotNetStruct = false
 plotPFStats = false
 
 plotEventLengthAnalysis = false
-plotPFdistAnalysis = false
+plotPFdistAnalysis = true
 
 %% Loop over parameter sets
 rng(1); tic
@@ -99,6 +99,7 @@ for ithParamSet = 1:size(paramSetInds, 1)
     allPosDepConProb = zeros(size(resultsStruct, 3), size(pfsim.gridxvals, 2)); % Position depenedent connection probability
     allRand_posDepConProb = zeros(size(resultsStruct, 3), size(pfsim.gridxvals, 2)); % Rand-pos Position depenedent connection probability
     allRand2_posDepConProb = zeros(size(resultsStruct, 3), size(pfsim.gridxvals, 2)); % Rand-pos Position depenedent connection probability
+    allPosDepConProb_norm = zeros(size(resultsStruct, 3), size(pfsim.gridxvals, 2)); % Position depenedent connection probability
     avgDecodePos = zeros(size(pfsim.gridxvals));
     for ithNet = 1:size(resultsStruct, 3)
 
@@ -141,6 +142,7 @@ for ithParamSet = 1:size(paramSetInds, 1)
         net_posDepConProb = zeros(size(pfsim.gridxvals)); % Position depenedent connection probability
         net_rand_posDepConProb = zeros(size(pfsim.gridxvals)); % Rand-pos Position depenedent connection probability
         net_rand2_posDepConProb = zeros(size(pfsim.gridxvals)); % Rand-pos Position depenedent connection probability
+        distance_counts = zeros(size(pfsim.gridxvals));
         for ithCell = 1:numel(E_indices)
             for jthCell = (ithCell+1):numel(E_indices)
                 PFi = PFmat(ithCell,:);
@@ -149,15 +151,25 @@ for ithParamSet = 1:size(paramSetInds, 1)
                 if max(PFi)<minPeakRate || max(PFj)<minPeakRate
                     continue
                 end
-                nValidPairs = nValidPairs+1;
+                nValidPairs = nValidPairs+2; % counts bi-directionally
                 [iMax, iInd] = max(PFi);
                 [jMax, jInd] = max(PFj);
+                useEV = 1;
+                if useEV
+                    iInd = sum(PFi.*[1:numel(PFi)])/sum(PFi);
+                    jInd = sum(PFj.*[1:numel(PFj)])/sum(PFj);
+                end
                 pairDist = abs(iInd-jInd)+1;
+                if useEV
+                    pairDist = round(pairDist);
+                end
+                distance_counts(pairDist) = distance_counts(pairDist)+2; % counts bi-directionally
+                
                 pairConns = network.conns(E_indices(ithCell), E_indices(jthCell)) + ...
                              network.conns(E_indices(jthCell), E_indices(ithCell));
                 net_posDepConProb(pairDist) = net_posDepConProb(pairDist)+ pairConns;
                 net_rand_posDepConProb(randi(numel(net_rand_posDepConProb))) = net_rand_posDepConProb(pairDist)+ pairConns;
-                net_rand2_posDepConProb(pairDist) = net_rand2_posDepConProb(pairDist) + [rand(1)>0.5];
+                net_rand2_posDepConProb(pairDist) = net_rand2_posDepConProb(pairDist) + [rand(1)<0.1];
             end
         end
         net_posDepConProb = net_posDepConProb./nValidPairs;
@@ -168,6 +180,9 @@ for ithParamSet = 1:size(paramSetInds, 1)
         allRand_posDepConProb(ithNet,:) = net_rand_posDepConProb;
         allRand2_posDepConProb(ithNet,:) = net_rand2_posDepConProb;
         
+        net_posDepConProb_norm = net_posDepConProb./distance_counts*nValidPairs;
+        allPosDepConProb_norm(ithNet,:) = net_posDepConProb_norm;
+        % figure; plot(net_posDepConProb_norm); keyboard
         
         %% Accumulate best events, if there are any
         
@@ -406,7 +421,7 @@ for ithParamSet = 1:size(paramSetInds, 1)
     % figure; hold on; ecdf(allEventRs_ecdf); ecdf(rvals_ecdf)
     legend({'Preplays', 'Shuffles'}, 'Location', 'Best')
     xlabel('|Correlation|'); ylabel({'Cumulative','proportion'});
-    [H,P,KSSTAT] = kstest2(sqrt(allEventRs_ecdf), sqrt(rvals_shuff_ecdf) )
+    [H,P,KSSTAT] = kstest2(sqrt(abs(allEventRs_ecdf)), sqrt(abs(rvals_shuff_ecdf)) )
     title([variedParam(1).name, '=', num2str(variedParam(1).range(ithParam1)), ' ', ...
         variedParam(2).name, '=', num2str(variedParam(2).range(ithParam2)), ...
         ' pval=', num2str(P), ...
@@ -659,7 +674,9 @@ for ithParamSet = 1:size(paramSetInds, 1)
     
     if plotPFdistAnalysis
         xPosVals = [0:(numel(net_rand_posDepConProb)-1)];
-        for ithNet = 1:size(resultsStruct, 3)
+        
+        %{
+        for ithNet = 1:3%size(resultsStruct, 3)
             figure; hold on; title(['Network #', num2str(ithNet)])
             plot(xPosVals, allRand_posDepConProb(ithNet,:), 'k:'); plot(xPosVals, allRand2_posDepConProb(ithNet,:), 'b--'); 
             plot(xPosVals, allPosDepConProb(ithNet,:), 'r');
@@ -678,7 +695,21 @@ for ithParamSet = 1:size(paramSetInds, 1)
         % X = [allPosDepConProb; allRand2_posDepConProb]';
         [p,tbl,stats] = anova2(X, size(allPosDepConProb, 1));
         figure; [c,m,h,gnames] = multcompare(stats)
+        %}
+                
+        figure; hold on; title(['All networks'])
+        plot(xPosVals, mean(allPosDepConProb_norm, 1), 'r');
+        xlabel('PF peak distance (2 cm bins)'); ylabel('P(connection | PF dist.)'); 
+        
+        mdl = fitlm(xPosVals, mean(allPosDepConProb_norm, 1));
+        figure; plot(mdl)
 
+        for ithNet = 1:3%size(resultsStruct, 3)
+            figure; hold on; title(['Network #', num2str(ithNet)])
+            plot(xPosVals, allPosDepConProb_norm(ithNet,:), 'r');
+            xlabel('PF peak distance (2 cm bins)'); ylabel('P(connection | PF dist.)');
+        end
+        
         %{
         X = [allPosDepConProb; allRand2_posDepConProb];
         [p,tbl,stats] = anova2(X, size(allPosDepConProb, 1))

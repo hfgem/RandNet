@@ -21,7 +21,7 @@ end
 % load('results_2022-07-13T11-44.mat') % clustersXmnc grid up to (5,5)
 
 % For multi-env simulation
-% load('results_2022-10-12T09-22.mat')
+%load('results_2022-10-12T09-22.mat')
 ithEnv = 1 % which environments decoding and place fields to plot/analyze
 
 if isfolder('functions')
@@ -37,7 +37,7 @@ variedParam(:).range
 paramSetInds = combvec([2], [4])' % best example, for 2022-07-22T18-29 data
 % paramSetInds = combvec([1], [1])' % stationary example, for 2022-07-22T18-29 data
 % paramSetInds = combvec([9], [1])' % diffuse example, for 2022-07-22T18-29 data
- paramSetInds = combvec([2], [2])' % best example, for 2022-07-22T18-29 data
+% paramSetInds = combvec([2], [2])' % best example, for 2022-07-22T18-29 data
 
 parameters.n
 parameters.del_G_sra
@@ -138,6 +138,10 @@ for ithParamSet = 1:size(paramSetInds, 1)
         % TODO: validate that connection probabilities are correct with parameterization
         myPlotSettings(4, 3, 2, 14, [], [], 2) % ppt format
         
+        % Analysis choices
+        useEV = 0 % Use mean PF location, rather than PF peak
+        singleClust = 0 % Only consider cells in single cluster
+                
         nValidPairs = 0;
         net_posDepConProb = zeros(size(pfsim.gridxvals)); % Position depenedent connection probability
         net_rand_posDepConProb = zeros(size(pfsim.gridxvals)); % Rand-pos Position depenedent connection probability
@@ -145,16 +149,22 @@ for ithParamSet = 1:size(paramSetInds, 1)
         distance_counts = zeros(size(pfsim.gridxvals));
         for ithCell = 1:numel(E_indices)
             for jthCell = (ithCell+1):numel(E_indices)
-                PFi = PFmat(ithCell,:);
-                PFj =  PFmat(jthCell,:);
+                PFi = PFmat(E_indices(ithCell),:);
+                PFj =  PFmat(E_indices(jthCell),:);
                 
                 if max(PFi)<minPeakRate || max(PFj)<minPeakRate
+                    continue
+                end
+                
+                if singleClust && ...
+                    [ sum(network.cluster_mat(:,E_indices(ithCell)))~=1 || ...
+                    sum(network.cluster_mat(:,E_indices(jthCell)))~=1 ]
                     continue
                 end
                 nValidPairs = nValidPairs+2; % counts bi-directionally
                 [iMax, iInd] = max(PFi);
                 [jMax, jInd] = max(PFj);
-                useEV = 1;
+
                 if useEV
                     iInd = sum(PFi.*[1:numel(PFi)])/sum(PFi);
                     jInd = sum(PFj.*[1:numel(PFj)])/sum(PFj);
@@ -710,6 +720,12 @@ for ithParamSet = 1:size(paramSetInds, 1)
             xlabel('PF peak distance (2 cm bins)'); ylabel('P(connection | PF dist.)');
         end
         
+        for ithNet = 1:10
+            mdl = fitlm(xPosVals, allPosDepConProb_norm(ithNet, :));
+            mdl.Coefficients.Estimate(2)
+            mdl.Coefficients.pValue(2)
+        end
+        
         %{
         X = [allPosDepConProb; allRand2_posDepConProb];
         [p,tbl,stats] = anova2(X, size(allPosDepConProb, 1))
@@ -722,3 +738,14 @@ end
 runTime = toc;
 disp([ 'Runtime: ', datestr(datenum(0,0,0,0,0,runTime),'HH:MM:SS') ])
 
+
+
+%% Temp, network analysis
+%{
+for i = 1:100
+    for j = 1:100
+        network.cluster_mat(:,i)
+        network.cluster_mat(:,j)
+    end
+end
+%}

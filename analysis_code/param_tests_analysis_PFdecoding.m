@@ -6,9 +6,9 @@ else
 end
 
 if ispc
-    addpath('C:\Users\Jordan\Box\Data\RandNet-Data\temp, new PF sim code grids')
+    addpath('C:\Users\Jordan\Box\Data\RandNet-Data\RandNet param sweeps')
 elseif ismac
-    addpath(['/Users/jordan/Library/CloudStorage/Box-Box/Data/RandNet-Data/temp, new PF sim code grids'])
+    addpath(['/Users/jordan/Library/CloudStorage/Box-Box/Data/RandNet-Data/RandNet param sweeps'])
 else
     disp('error')
 end

@@ -24,6 +24,7 @@ addpath('functions')
 [s,sim_git_hash_string] = system('git rev-parse HEAD');
 parameters.sim_git_hash_string = sim_git_hash_string;
 
+
 %% Initialize parameters
 
 % Network structure parameters
@@ -315,14 +316,9 @@ parameters.PBE_max_combine = 10 * (1/1000); % Combine adjacent PBEs separaeted b
 % parameters.PBE_zscore = 1.0; % minimum stds above mean rate to detect PBE
 % parameters.returnToMean = 1; % if 1, terminate events at leave/return to mean; else, leave/return to PBE_zscore
 
+
 %% __set/update Dependent Parameters__ %%
-
 parameters = set_depedent_parameters(parameters);
-
-%Save to computer
-if parameters.saveFlag == 1
-    save(strcat(save_path,'/parameters.mat'),'parameters')
-end
 
 
 %% Place field simulation parameters
@@ -355,30 +351,23 @@ pfsim.minPeakRate = 3; % minimum PF peak rate to consider a cell a place cell
 % set depedendent parameters for PF sim
 pfsim = set_depedent_parameters(pfsim);
 
-%Save to computer
-if parameters.saveFlag == 1
-    save(strcat(save_path,'/pfsim.mat'),'pfsim')
+
+%% Save parameter files
+if parameters.saveFlag
+    if ~isfolder(save_path)
+        mkdir(save_path);
+    end
+    save(strcat(save_path,'/parameters.mat'),'parameters'); 
+	save(strcat(save_path,'/pfsim.mat'),'pfsim')
 end
 
-%% Create Networks and Check Spike Progression
+
+%% ___Run Simulations for Different Networks___
+% _____________________________________________
 %Runs through a series of different random number generator seeds to change
 %the network connectivity and setup, and then automatically outputs
 %sequence data to a folder in save_path
 
-%If uploading a parameter file, uncomment the next line
-% load(strcat(save_path,'/parameters.mat'))
-
-if parameters.saveFlag & ~isfolder(save_path)
-    mkdir(save_path);
-end
-    
-if parameters.saveFlag
-    save(strcat(save_path,'/parameters.mat'),'parameters'); 
-end
-
-%____________________________________________
-%___Run Simulations for Different Networks___
-%____________________________________________
 
 for ithNet = 1:parameters.nNets
     

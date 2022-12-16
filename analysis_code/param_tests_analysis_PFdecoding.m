@@ -275,14 +275,15 @@ for ithParam1 = 1:size(resultsStruct, 1)
             pValMat_all_temp
             
             allNet_multiEnvMinPval(ithParam1, ithParam2) = min(pValMat_all_temp);
-            
-            figure; hold on; [f1,x1]=ecdf(allRvecsAllEnv(:)); plot(x1,f1, 'k:')
-            ecdf(allRvecsAllEnv(:,1)); ecdf(allRvecsAllEnv(:,2)); ecdf(allRvecsAllEnv(:,3)); ecdf(allRvecsAllEnv(:,4)); 
-            title([variedParam(1).name, '=', num2str(variedParam(1).range(ithParam1)), ' ', variedParam(2).name, '=', num2str(variedParam(2).range(ithParam2)), ...
-                ' min(p-val)=', num2str(min(pValMat_all_temp), 3)])
-            legend({'Combined', 'R1', 'L1', 'R2', 'L2'}, 'Location', 'Best')
-            xlabel("|correlation|"); ylabel('Cumulative fraction')
-            disp(['Params: ', num2str(ithParam1), ' ', num2str(ithParam2)])
+            if plotAllCDFs
+                figure; hold on; [f1,x1]=ecdf(allRvecsAllEnv(:)); plot(x1,f1, 'k:')
+                ecdf(allRvecsAllEnv(:,1)); ecdf(allRvecsAllEnv(:,2)); ecdf(allRvecsAllEnv(:,3)); ecdf(allRvecsAllEnv(:,4)); 
+                title([variedParam(1).name, '=', num2str(variedParam(1).range(ithParam1)), ' ', variedParam(2).name, '=', num2str(variedParam(2).range(ithParam2)), ...
+                    ' min(p-val)=', num2str(min(pValMat_all_temp), 3)])
+                legend({'Combined', 'R1', 'L1', 'R2', 'L2'}, 'Location', 'Best')
+                xlabel("|correlation|"); ylabel('Cumulative fraction')
+                disp(['Params: ', num2str(ithParam1), ' ', num2str(ithParam2)])
+            end
         end
         
         

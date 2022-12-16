@@ -9,9 +9,9 @@
 
 
 if ispc
-    addpath('C:\Users\Jordan\Box\Data\RandNet-Data\temp, new PF sim code grids')
+    addpath('C:\Users\Jordan\Box\Data\RandNet-Data\RandNet param sweeps')
 elseif ismac
-    addpath('/Users/jordan/Library/CloudStorage/Box-Box/Data/RandNet-Data/temp, new PF sim code grids')
+    addpath('/Users/jordan/Library/CloudStorage/Box-Box/Data/RandNet-Data/RandNet param sweeps')
 else
     disp('error')
 end
@@ -20,6 +20,9 @@ end
  load('results_2022-07-22T18-29.mat') % Primary clustersXmnc grid (smaller mnc values)
 % load('results_2022-07-13T11-44.mat') % clustersXmnc grid up to (5,5)
 
+% load('results_2022-08-06T22-55.mat') % Primary clustersXmnc grid, after fixing partial overlap at mnc=1
+% load('results_2022-08-10T21-41.mat') % Primary clustersXmnc grid, after fixing vanishing decode
+ 
 % For multi-env simulation
 %load('results_2022-10-12T09-22.mat')
 ithEnv = 1 % which environments decoding and place fields to plot/analyze
@@ -61,6 +64,10 @@ plotPFStats = false
 
 plotEventLengthAnalysis = false
 plotPFdistAnalysis = true
+
+
+% For pre-multiEnv simulations
+if ~isfield(pfsim, 'envIDs'); pfsim.envIDs = [1]; end;
 
 %% Loop over parameter sets
 rng(1); tic
@@ -117,7 +124,7 @@ for ithParamSet = 1:size(paramSetInds, 1)
 
         % Recreate network
         netParams=parameters;
-        netParams.envIDs = 1;% pfsim.envIDs;
+        netParams.envIDs = pfsim.envIDs;% pfsim.envIDs;
         for i = 1:size(variedParam, 2)
             netParams.(variedParam(i).name) = variedParam(i).range(paramSetInds(i));
         end
